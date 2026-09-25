@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Safety Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Semi+Condensed:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="hud-left">
+    <div class="stat">
+      <span class="label">Skóre</span>
+      <b id="score">0</b>
+    </div>
+    <div class="stat small">
+      <span class="label">Vzdálenost</span>
+      <b id="dist">0 m</b>
+    </div>
+  </div>
+  <div class="hud-right">
+    <div class="stat helmets">
+      <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M4 22a16 16 0 0 1 32 0z" fill="#ffc410"/><rect x="1" y="21" width="38" height="5" rx="2" fill="#e0a800"/><rect x="18" y="5" width="4" height="16" fill="#e0a800"/></svg>
+      <b id="helmets">0</b>
+    </div>
+    <button id="pauseBtn" class="icon-btn" aria-label="Pauza">II</button>
+  </div>
+  <div id="powerups"></div>
+  <div id="toast"></div>
+</div>
+
+<!-- MENU -->
+<div id="menu" class="overlay">
+  <div class="panel menu-panel">
+    <img class="hero" src="assets/chivava.png" alt="Čivava v reflexní vestě a přilbě">
+    <h1 class="title"><span>SAFETY</span><span>RUN</span></h1>
+    <p class="tag">Směna začíná. Uhýbej, skákej, sbírej přilby.</p>
+    <button id="playBtn" class="btn-main">PLAY</button>
+    <div class="controls">
+      <div><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> pruh</div>
+      <div><kbd>↑</kbd> / <kbd>W</kbd> / <kbd>mezerník</kbd> skok</div>
+      <div><kbd>↓</kbd> / <kbd>S</kbd> skrčení</div>
+      <div class="touch">Mobil: swipe ← → ↑ ↓</div>
+    </div>
+    <div class="legend">
+      <span><i class="pu vest"></i>Vesta = štít</span>
+      <span><i class="pu boots"></i>Obuv = vyšší skok</span>
+      <span><i class="pu goggles"></i>Brýle = skóre ×2</span>
+    </div>
+    <p class="best">Rekord: <b id="bestMenu">0</b></p>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause" class="overlay" hidden>
+  <div class="panel">
+    <h2 class="sub">PAUZA</h2>
+    <button id="resumeBtn" class="btn-main">POKRAČOVAT</button>
+    <button id="pauseMenuBtn" class="btn-ghost">MENU</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="over" class="overlay" hidden>
+  <div class="panel">
+    <h2 class="sub" id="overTitle">KONEC SMĚNY</h2>
+    <p class="reason" id="overReason"></p>
+    <div class="results">
+      <div><span class="label">Skóre</span><b id="finalScore">0</b></div>
+      <div><span class="label">Přilby</span><b id="finalHelmets">0</b></div>
+      <div><span class="label">Vzdálenost</span><b id="finalDist">0 m</b></div>
+    </div>
+    <p class="best" id="newBest" hidden>NOVÝ REKORD!</p>
+    <p class="best">Rekord: <b id="bestOver">0</b></p>
+    <button id="restartBtn" class="btn-main">ZNOVU</button>
+    <button id="overMenuBtn" class="btn-ghost">MENU</button>
+    <p class="hint">Enter / mezerník = okamžitý restart</p>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
