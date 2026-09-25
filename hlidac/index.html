@@ -1,0 +1,853 @@
+<title>Hlídač BOZP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap">
+<style>
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --surface-2: #e9ede8;
+  --ink: #17212b;
+  --muted: #5d6a74;
+  --line: #d5dbd4;
+  --accent: #1f7a45;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe2;
+  --red: #c4321f;
+  --red-soft: #fbe3de;
+  --amber: #a86a00;
+  --amber-soft: #fbefcf;
+  --ok: #2d7d4f;
+  --ok-soft: #e0f1e6;
+  --hazard-y: #f5c21b;
+  --shadow: 0 1px 2px rgba(23,33,43,.06), 0 4px 14px rgba(23,33,43,.06);
+  --display: "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11181f; --surface: #19232d; --surface-2: #22303c; --ink: #e8ece8; --muted: #9aa8b2; --line: #2e3d4a;
+    --accent: #4cc27c; --accent-ink: #0d1a12; --accent-soft: #173826;
+    --red: #ff7a66; --red-soft: #3d1d18; --amber: #f2b93b; --amber-soft: #3a2c10; --ok: #5fd08e; --ok-soft: #173826;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11181f; --surface: #19232d; --surface-2: #22303c; --ink: #e8ece8; --muted: #9aa8b2; --line: #2e3d4a;
+  --accent: #4cc27c; --accent-ink: #0d1a12; --accent-soft: #173826;
+  --red: #ff7a66; --red-soft: #3d1d18; --amber: #f2b93b; --amber-soft: #3a2c10; --ok: #5fd08e; --ok-soft: #173826;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.45 var(--body); }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.1; text-wrap: balance; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 0 96px; }
+
+/* horní lišta */
+.top {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-block: 16px 12px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 36px; height: 36px; border-radius: 6px; flex: none;
+  background: repeating-linear-gradient(-45deg, var(--hazard-y) 0 6px, #17212b 6px 12px);
+  position: relative;
+}
+.brand-mark::after { content: ""; position: absolute; inset: 7px; border-radius: 3px; background: var(--accent); }
+.brand h1 { font-size: 26px; letter-spacing: .01em; }
+.brand small { display: block; color: var(--muted); font-size: 13px; font-family: var(--body); font-weight: 500; }
+.sync { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.sync i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.sync.on i { background: var(--ok); }
+.sync.off i { background: var(--amber); }
+
+/* navigace */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.tab {
+  border: 0; background: none; padding: 10px 14px; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--muted);
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--body); font-size: 12px; font-weight: 700; background: var(--red); color: #fff; border-radius: 10px; padding: 1px 7px; margin-left: 4px; vertical-align: 2px; }
+@media (max-width: 640px) {
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0;
+    background: var(--surface); border-top: 1px solid var(--line); border-bottom: 0;
+    padding: 4px 4px calc(env(safe-area-inset-bottom, 0px) + 4px);
+  }
+  .tab { flex: 1; padding: 10px 2px 8px; font-size: 15px; border-bottom: 0; border-top: 3px solid transparent; margin: 0; }
+  .tab[aria-selected="true"] { border-top-color: var(--accent); }
+}
+
+/* obecné */
+.banner {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  background: var(--amber-soft); color: var(--ink); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 15px;
+}
+.banner.info { background: var(--accent-soft); }
+.banner p { margin: 0; flex: 1 1 240px; }
+.section { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.section-head h2 { font-size: 22px; }
+.section-head .hint { color: var(--muted); font-size: 14px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 15px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--red); }
+.btn.danger.armed { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.small { padding: 5px 10px; font-size: 14px; }
+.btn.big { padding: 14px 18px; font-size: 18px; width: 100%; }
+.btn:disabled { opacity: .5; cursor: default; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toolbar .grow { flex: 1 1 200px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label, .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+input[type=text], input[type=date], input[type=number], input[type=search], select, textarea {
+  width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 9px 11px; min-height: 42px;
+}
+textarea { min-height: 90px; resize: vertical; }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.grid-form .wide { grid-column: 1 / -1; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.panel h3 { font-size: 19px; }
+.form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.empty { color: var(--muted); padding: 18px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+
+/* přehledová čísla */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.tile {
+  background: var(--surface); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 2px; border: 0; text-align: left; cursor: pointer; border-top: 4px solid var(--line);
+}
+.tile b { font-family: var(--display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--muted); font-size: 14px; font-weight: 600; }
+.tile.red { border-top-color: var(--red); } .tile.red b { color: var(--red); }
+.tile.amber { border-top-color: var(--amber); } .tile.amber b { color: var(--amber); }
+.tile.ok b { color: var(--ok); } .tile.ok { border-top-color: var(--ok); }
+
+/* řádky seznamu */
+.list { display: flex; flex-direction: column; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.row {
+  display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center;
+  padding: 12px 14px; border-top: 1px solid var(--line);
+}
+.row:first-child { border-top: 0; }
+.row .who { font-weight: 700; }
+.row .what { color: var(--muted); font-size: 14px; }
+.row .when { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); }
+.row .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; }
+  .row .pillcell { grid-column: 1 / -1; }
+  .row .acts { grid-column: 1 / -1; justify-content: flex-start; }
+}
+.pill {
+  display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 700; white-space: nowrap;
+  font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--muted);
+}
+.pill.red { background: var(--red-soft); color: var(--red); }
+.pill.amber { background: var(--amber-soft); color: var(--amber); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.tag { font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+
+/* závady */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 14px 12px 18px; position: relative;
+  display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+}
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--line); }
+.card.sev-vysoka::before { background: var(--red); }
+.card.sev-stredni::before { background: var(--amber); }
+.card.sev-nizka::before { background: var(--ok); }
+.card.done { opacity: .72; }
+.card .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+.card p { margin: 0; }
+.card .desc { font-weight: 600; }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs button { border: 0; padding: 0; background: var(--surface-2); border-radius: 6px; overflow: hidden; width: 72px; height: 72px; cursor: zoom-in; }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumbs .pending { position: relative; }
+.thumbs .pending span { position: absolute; right: 2px; top: 2px; background: rgba(0,0,0,.6); color: #fff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; font-size: 14px; text-align: center; }
+
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg label { flex: 1; text-align: center; padding: 10px 6px; cursor: pointer; font-weight: 700; font-size: 15px; background: var(--surface); border-left: 1px solid var(--line); }
+.seg label:first-child { border-left: 0; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg input:checked + span { color: var(--accent-ink); }
+.seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+.seg label.v:has(input:checked) { background: var(--red); color: #fff; }
+.seg label.s:has(input:checked) { background: var(--amber); color: #fff; }
+.seg label:focus-within { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+.photo-drop {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 64px;
+  border: 2px dashed var(--line); border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--accent); background: var(--surface);
+}
+.photo-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 50; max-width: calc(100% - 32px);
+}
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+.muted { color: var(--muted); }
+.small-note { font-size: 13px; color: var(--muted); margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div><h1>Hlídač BOZP</h1><small id="today"></small></div>
+    </div>
+    <div class="sync" id="sync"><i></i><span>Připojuji…</span></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="prehled" id="tab-prehled">Přehled</button>
+    <button class="tab" role="tab" data-tab="terminy" id="tab-terminy">Termíny</button>
+    <button class="tab" role="tab" data-tab="kontrola" id="tab-kontrola">Kontrola</button>
+    <button class="tab" role="tab" data-tab="zavady" id="tab-zavady">Závady</button>
+  </nav>
+
+  <div id="notice"></div>
+
+  <!-- PŘEHLED -->
+  <main id="view-prehled" data-view hidden>
+    <div class="section">
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Co řešit</h2><span class="hint">prošlé a do 30 dní</span></div>
+      <div id="urgent"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Závady po termínu nápravy</h2></div>
+      <div id="lateFindings"></div>
+    </div>
+  </main>
+
+  <!-- TERMÍNY -->
+  <main id="view-terminy" data-view hidden>
+    <div class="section">
+      <div class="toolbar">
+        <input type="search" id="tSearch" class="grow" placeholder="Hledat jméno, typ, firmu…" aria-label="Hledat">
+        <select id="tCompany" aria-label="Firma"></select>
+        <select id="tStatus" aria-label="Stav">
+          <option value="all">Všechny stavy</option>
+          <option value="late">Prošlé</option>
+          <option value="30">Do 30 dní</option>
+          <option value="90">Do 90 dní</option>
+        </select>
+      </div>
+      <div class="toolbar">
+        <button class="btn primary" data-action="new-term">+ Přidat termín</button>
+        <button class="btn" data-action="toggle-bulk">Vložit z Excelu</button>
+        <button class="btn" data-action="export-terms">Export CSV</button>
+      </div>
+
+      <form class="panel" id="termForm" hidden>
+        <h3 id="termFormTitle">Nový termín</h3>
+        <div class="grid-form">
+          <div class="field"><label for="fName">Osoba / zařízení</label><input type="text" id="fName" required placeholder="Jan Novák"></div>
+          <div class="field"><label for="fCompany">Firma / závod</label><input type="text" id="fCompany" list="companies" required placeholder="Závod Litice"></div>
+          <div class="field"><label for="fType">Typ</label><select id="fType"></select></div>
+          <div class="field" id="fCustomWrap" hidden><label for="fCustom">Vlastní název</label><input type="text" id="fCustom" placeholder="např. Školení vazačů"></div>
+          <div class="field"><label for="fLast">Naposledy provedeno</label><input type="date" id="fLast" required></div>
+          <div class="field"><label for="fMonths">Opakovat po (měsíců)</label><input type="number" id="fMonths" min="1" max="120" required></div>
+          <div class="field wide"><label for="fNote">Poznámka</label><input type="text" id="fNote" placeholder="nepovinné"></div>
+        </div>
+        <p class="small-note" id="fDuePreview"></p>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Uložit</button>
+          <button class="btn" type="button" data-action="cancel-term">Zrušit</button>
+        </div>
+      </form>
+
+      <div class="panel" id="bulkPanel" hidden>
+        <h3>Vložit z Excelu</h3>
+        <p class="small-note">Zkopíruj v Excelu sloupce <b>Jméno · Firma · Typ · Datum posledního · Interval v měsících</b> a vlož je sem. Interval můžeš vynechat, pokud typ odpovídá některé předvolbě. Datum může být 12.3.2025 nebo 2025-03-12.</p>
+        <textarea id="bulkText" rows="6" placeholder="Jan Novák	Závod Litice	Školení BOZP	12.3.2025	24"></textarea>
+        <p class="small-note" id="bulkPreview"></p>
+        <div class="form-actions">
+          <button class="btn primary" data-action="bulk-import" id="bulkBtn" disabled>Importovat</button>
+          <button class="btn" data-action="toggle-bulk">Zavřít</button>
+        </div>
+      </div>
+
+      <div id="termList"></div>
+    </div>
+  </main>
+
+  <!-- KONTROLA -->
+  <main id="view-kontrola" data-view hidden>
+    <form class="section" id="findForm">
+      <div class="section-head"><h2>Nová závada z kontroly</h2><span class="hint">vyfoť, popiš, ulož, další</span></div>
+      <div class="panel">
+        <div class="grid-form">
+          <div class="field"><label for="kCompany">Firma / závod</label><input type="text" id="kCompany" list="companies" required placeholder="Závod Litice"></div>
+          <div class="field"><label for="kPlace">Místo</label><input type="text" id="kPlace" placeholder="Hala 2, formovna"></div>
+          <div class="field wide">
+            <span class="label">Fotky</span>
+            <label class="photo-drop" id="photoDrop">
+              <input type="file" id="kPhotos" accept="image/*" multiple>
+              <span>📷 Vyfotit / přidat fotky</span>
+            </label>
+            <div class="thumbs" id="kThumbs"></div>
+          </div>
+          <div class="field wide"><label for="kText">Popis závady</label><textarea id="kText" required placeholder="Chybí zábradlí u plošiny, výška 1,8 m"></textarea></div>
+          <div class="field wide">
+            <span class="label">Závažnost</span>
+            <div class="seg" role="radiogroup" aria-label="Závažnost">
+              <label class="v"><input type="radio" name="sev" value="vysoka"><span>Vysoká</span></label>
+              <label class="s"><input type="radio" name="sev" value="stredni" checked><span>Střední</span></label>
+              <label><input type="radio" name="sev" value="nizka"><span>Nízká</span></label>
+            </div>
+          </div>
+          <div class="field"><label for="kOwner">Odpovídá</label><input type="text" id="kOwner" placeholder="mistr výroby"></div>
+          <div class="field"><label for="kDue">Termín nápravy</label><input type="date" id="kDue"></div>
+        </div>
+        <button class="btn primary big" type="submit" id="kSave">Uložit závadu</button>
+        <p class="small-note" id="kStatus"></p>
+      </div>
+    </form>
+  </main>
+
+  <!-- ZÁVADY -->
+  <main id="view-zavady" data-view hidden>
+    <div class="section">
+      <div class="toolbar">
+        <select id="zCompany" aria-label="Firma"></select>
+        <select id="zStatus" aria-label="Stav">
+          <option value="open">Otevřené</option>
+          <option value="done">Vyřešené</option>
+          <option value="all">Vše</option>
+        </select>
+        <button class="btn" data-action="copy-protocol">Kopírovat text do protokolu</button>
+        <button class="btn" data-action="export-findings">Export CSV</button>
+      </div>
+      <p class="small-note">Tip: napiš Claudovi „udělej protokol z kontroly v závodě …“ a data si odtud přečte.</p>
+      <div id="findList"></div>
+    </div>
+  </main>
+</div>
+
+<datalist id="companies"></datalist>
+<div class="toast" id="toast" hidden></div>
+<div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt="Fotka závady"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- předvolby ----------
+  const PRESETS = [
+    { type: 'Školení BOZP – zaměstnanci', months: 24, kind: 'skoleni' },
+    { type: 'Školení BOZP – vedoucí', months: 24, kind: 'skoleni' },
+    { type: 'Školení PO', months: 24, kind: 'skoleni' },
+    { type: 'Školení řidičů VZV', months: 12, kind: 'skoleni' },
+    { type: 'Práce ve výškách', months: 12, kind: 'skoleni' },
+    { type: 'Lékařská prohlídka – kat. 2 (do 50 let)', months: 48, kind: 'prohlidka' },
+    { type: 'Lékařská prohlídka – kat. 2 (nad 50 let)', months: 24, kind: 'prohlidka' },
+    { type: 'Lékařská prohlídka – kat. 2R a 3', months: 24, kind: 'prohlidka' },
+    { type: 'Lékařská prohlídka – kat. 4', months: 12, kind: 'prohlidka' },
+    { type: 'Kontrola hasicích přístrojů', months: 12, kind: 'zarizeni' },
+  ];
+  const presetOf = t => PRESETS.find(p => p.type.toLowerCase() === String(t).toLowerCase().trim());
+  const SEV = { vysoka: 'Vysoká', stredni: 'Střední', nizka: 'Nízká' };
+
+  // ---------- pomocné ----------
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = n => String(n).padStart(2, '0');
+  const now = new Date();
+  const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  function parseISO(iso) { const [y, m, d] = String(iso).split('-').map(Number); return { y, m, d }; }
+  function addMonths(iso, months) {
+    const { y, m, d } = parseISO(iso);
+    const first = new Date(Date.UTC(y, m - 1 + Number(months), 1));
+    const lastDay = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+    return `${first.getUTCFullYear()}-${pad(first.getUTCMonth() + 1)}-${pad(Math.min(d, lastDay))}`;
+  }
+  function addDays(iso, days) {
+    const { y, m, d } = parseISO(iso);
+    const t = new Date(Date.UTC(y, m - 1, d + days));
+    return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+  }
+  function daysUntil(iso) {
+    const a = parseISO(iso), b = parseISO(todayISO);
+    return Math.round((Date.UTC(a.y, a.m - 1, a.d) - Date.UTC(b.y, b.m - 1, b.d)) / 864e5);
+  }
+  function fmt(iso) { if (!iso) return '–'; const { y, m, d } = parseISO(iso); return `${d}. ${m}. ${y}`; }
+  function parseUserDate(s) {
+    s = String(s || '').trim();
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+    m = s.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
+    if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+    return null;
+  }
+  function dayWord(n) { n = Math.abs(n); return n === 1 ? 'den' : n >= 2 && n <= 4 ? 'dny' : 'dní'; }
+  function statusOf(days) {
+    if (days < 0) return { cls: 'red', text: `Prošlé o ${-days} ${dayWord(days)}` };
+    if (days === 0) return { cls: 'red', text: 'Dnes' };
+    if (days <= 30) return { cls: 'amber', text: `Za ${days} ${dayWord(days)}` };
+    if (days <= 90) return { cls: '', text: `Za ${days} dní` };
+    return { cls: 'ok', text: 'V pořádku' };
+  }
+  let toastT = 0;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600);
+  }
+  $('#today').textContent = 'Dnes ' + fmt(todayISO);
+
+  // ---------- data ----------
+  let db = null, assets = null, downloads = null, readOnly = false;
+  let terms = [], findings = [];
+  const mem = { terminy: new Map(), zavady: new Map() };
+
+  function setSync(state, text) {
+    const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
+  }
+  function memSync(col) {
+    const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
+    if (col === 'terminy') terms = arr; else findings = arr;
+    render();
+  }
+  async function put(col, id, data) {
+    if (db) {
+      try { await db.collection(col).doc(id).set(data); }
+      catch (e) { handleWriteError(e); throw e; }
+    } else { mem[col].set(id, data); memSync(col); }
+  }
+  async function patch(col, id, data) {
+    if (db) {
+      try { await db.collection(col).doc(id).update(data); }
+      catch (e) { handleWriteError(e); throw e; }
+    } else { mem[col].set(id, { ...mem[col].get(id), ...data }); memSync(col); }
+  }
+  async function del(col, id) {
+    if (db) {
+      try { await db.collection(col).doc(id).delete(); }
+      catch (e) { handleWriteError(e); throw e; }
+    } else { mem[col].delete(id); memSync(col); }
+  }
+  function handleWriteError(e) {
+    const code = e && e.code;
+    if (code === 'invalid_argument' || code === 'not_granted') {
+      readOnly = true;
+      toast('Nemáš oprávnění ukládat změny. Požádej vlastníka o roli Contributor.');
+    } else if (code === 'quota_exceeded') {
+      toast('Databáze je plná. Smaž staré vyřešené závady nebo termíny.');
+    } else {
+      toast('Uložení se nepovedlo. Zkus to znovu.');
+    }
+  }
+
+  async function connect() {
+    const use = window.claude && window.claude.use;
+    if (!use) { setSync('off', 'Jen v tomto okně'); showNotice(); render(); return; }
+    const [dbNs, asNs, dlNs, user] = await Promise.all([
+      use('db').catch(() => null), use('assets').catch(() => null),
+      use('downloads').catch(() => null), use('user').catch(() => null),
+    ]);
+    db = dbNs; assets = asNs; downloads = dlNs;
+    if (user) {
+      try { const c = await user.can('data.write'); if (c === false) readOnly = true; } catch (e) { /* neznámé */ }
+    }
+    if (!db) { setSync('off', 'Jen v tomto okně'); showNotice(); render(); return; }
+    setSync('on', 'Ukládá se online');
+    db.collection('terminy').onSnapshot(s => {
+      terms = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, () => setSync('off', 'Spojení přerušeno, obnov stránku'));
+    db.collection('zavady').onSnapshot(s => {
+      findings = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, () => setSync('off', 'Spojení přerušeno, obnov stránku'));
+    showNotice();
+  }
+
+  function showNotice() {
+    const n = $('#notice');
+    let html = '';
+    if (!db) html += `<div class="banner"><p>Data se v tomto zobrazení neukládají a po zavření zmizí. Otevři aplikaci přes odkaz na claude.ai.</p></div>`;
+    else if (readOnly) html += `<div class="banner"><p>Máš jen čtení. Pro úpravy potřebuješ od vlastníka roli Contributor.</p></div>`;
+    const ex = terms.some(t => t.example) || findings.some(f => f.example);
+    if (ex) html += `<div class="banner info"><p>Vidíš <b>ukázková data</b> (označená štítkem UKÁZKA). Až přidáš vlastní, smaž je.</p><button class="btn small" data-action="clear-examples">Smazat ukázky</button></div>`;
+    n.innerHTML = html;
+  }
+
+  // ---------- navigace ----------
+  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady'];
+  let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'prehled';
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    document.querySelectorAll('[data-view]').forEach(v => (v.hidden = v.id !== 'view-' + t));
+    try { history.replaceState(null, '', '#' + t); } catch (e) { /* ignor */ }
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+  // ---------- výpočty ----------
+  const withDue = t => { const due = addMonths(t.last, t.months); return { ...t, due, days: daysUntil(due) }; };
+  const companiesOf = () => [...new Set([...terms.map(t => t.company), ...findings.map(f => f.company)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs'));
+
+  function fillSelect(sel, list, allLabel) {
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${allLabel}</option>` + list.map(c => `<option>${esc(c)}</option>`).join('');
+    if (list.includes(cur)) sel.value = cur;
+  }
+
+  // ---------- vykreslení ----------
+  function termRow(t, compact) {
+    const st = statusOf(t.days);
+    return `<div class="row">
+      <div class="pillcell"><span class="pill ${st.cls}">${st.text}</span></div>
+      <div>
+        <div class="who">${esc(t.name)}${t.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
+        <div class="what">${esc(t.type)} · ${esc(t.company)}</div>
+        <div class="when">Termín ${fmt(t.due)} · naposledy ${fmt(t.last)} · po ${t.months} měs.${t.note ? ' · ' + esc(t.note) : ''}</div>
+      </div>
+      <div class="acts">
+        <button class="btn small" data-action="renew" data-id="${t.id}">Obnoveno dnes</button>
+        ${compact ? '' : `<button class="btn small" data-action="edit-term" data-id="${t.id}">Upravit</button>
+        <button class="btn small danger" data-action="del-term" data-id="${t.id}">Smazat</button>`}
+      </div>
+    </div>`;
+  }
+
+  function findingCard(f) {
+    const late = f.status !== 'done' && f.due && daysUntil(f.due) < 0;
+    const dueSt = f.status === 'done' ? { cls: 'ok', text: 'Vyřešeno ' + fmt(f.doneAt) } : f.due ? statusOf(daysUntil(f.due)) : { cls: '', text: 'Bez termínu' };
+    const photos = (f.photos || []).map(id => `<button data-action="zoom" data-src="/_blob/${esc(id)}" aria-label="Zvětšit fotku"><img src="/_blob/${esc(id)}" alt="" loading="lazy"></button>`).join('');
+    return `<article class="card sev-${esc(f.severity)} ${f.status === 'done' ? 'done' : ''}">
+      <div class="meta"><span class="pill ${dueSt.cls}">${dueSt.text}</span><span>${SEV[f.severity] || ''} závažnost</span>${f.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
+      <p class="desc">${esc(f.text)}</p>
+      <div class="meta">${esc(f.company)}${f.place ? ' · ' + esc(f.place) : ''}</div>
+      <div class="meta">${f.owner ? 'Odpovídá: ' + esc(f.owner) + ' · ' : ''}Náprava do ${fmt(f.due)} · zjištěno ${fmt(f.createdAt)}</div>
+      ${photos ? `<div class="thumbs">${photos}</div>` : ''}
+      <div class="form-actions">
+        ${f.status === 'done'
+          ? `<button class="btn small" data-action="reopen" data-id="${f.id}">Znovu otevřít</button>`
+          : `<button class="btn small primary" data-action="resolve" data-id="${f.id}">Vyřešeno</button>`}
+        <button class="btn small danger" data-action="del-find" data-id="${f.id}">Smazat</button>
+      </div>
+    </article>`;
+  }
+
+  function render() {
+    const all = terms.filter(t => t.last && t.months).map(withDue).sort((a, b) => a.days - b.days);
+    const late = all.filter(t => t.days < 0);
+    const d30 = all.filter(t => t.days >= 0 && t.days <= 30);
+    const d90 = all.filter(t => t.days > 30 && t.days <= 90);
+    const openF = findings.filter(f => f.status !== 'done');
+    const lateF = openF.filter(f => f.due && daysUntil(f.due) < 0).sort((a, b) => a.due.localeCompare(b.due));
+
+    // počet na záložce
+    const tt = $('#tab-terminy'), tz = $('#tab-zavady');
+    tt.innerHTML = 'Termíny' + (late.length ? `<span class="count">${late.length}</span>` : '');
+    tz.innerHTML = 'Závady' + (lateF.length ? `<span class="count">${lateF.length}</span>` : '');
+
+    // datalist a filtry
+    const comps = companiesOf();
+    $('#companies').innerHTML = comps.map(c => `<option value="${esc(c)}">`).join('');
+    fillSelect($('#tCompany'), comps, 'Všechny firmy');
+    fillSelect($('#zCompany'), comps, 'Všechny firmy');
+
+    // přehled
+    $('#tiles').innerHTML = `
+      <button class="tile ${late.length ? 'red' : 'ok'}" data-action="goto-status" data-status="late"><b>${late.length}</b><span>Prošlé termíny</span></button>
+      <button class="tile ${d30.length ? 'amber' : 'ok'}" data-action="goto-status" data-status="30"><b>${d30.length}</b><span>Do 30 dní</span></button>
+      <button class="tile" data-action="goto-status" data-status="90"><b>${d90.length}</b><span>Za 31–90 dní</span></button>
+      <button class="tile ${lateF.length ? 'red' : openF.length ? 'amber' : 'ok'}" data-action="goto-findings"><b>${openF.length}</b><span>Otevřené závady${lateF.length ? `, ${lateF.length} po termínu` : ''}</span></button>`;
+    const urgent = [...late, ...d30];
+    $('#urgent').innerHTML = urgent.length
+      ? `<div class="list">${urgent.slice(0, 12).map(t => termRow(t, true)).join('')}</div>${urgent.length > 12 ? `<p class="small-note">+ dalších ${urgent.length - 12} v záložce Termíny</p>` : ''}`
+      : `<div class="empty">${all.length ? 'Nic nehoří. Nejbližší termín je ' + (all[0] ? fmt(all[0].due) : '–') + '.' : 'Zatím žádné termíny. Přidej je v záložce Termíny.'}</div>`;
+    $('#lateFindings').innerHTML = lateF.length
+      ? `<div class="cards">${lateF.slice(0, 6).map(findingCard).join('')}</div>`
+      : `<div class="empty">Žádná závada po termínu.</div>`;
+
+    // termíny
+    const q = $('#tSearch').value.trim().toLowerCase();
+    const comp = $('#tCompany').value;
+    const stF = $('#tStatus').value;
+    const shown = all.filter(t =>
+      (!comp || t.company === comp) &&
+      (!q || [t.name, t.type, t.company, t.note].join(' ').toLowerCase().includes(q)) &&
+      (stF === 'all' || (stF === 'late' && t.days < 0) || (stF === '30' && t.days >= 0 && t.days <= 30) || (stF === '90' && t.days >= 0 && t.days <= 90)));
+    $('#termList').innerHTML = shown.length
+      ? `<div class="list">${shown.map(t => termRow(t, false)).join('')}</div>`
+      : `<div class="empty">${all.length ? 'Filtru nic neodpovídá.' : 'Zatím žádné termíny. Přidej první nebo je vlož z Excelu.'}</div>`;
+
+    // závady
+    const zc = $('#zCompany').value, zs = $('#zStatus').value;
+    const fs = findings.filter(f => (!zc || f.company === zc) && (zs === 'all' || (zs === 'open' ? f.status !== 'done' : f.status === 'done')))
+      .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
+    $('#findList').innerHTML = fs.length ? `<div class="cards">${fs.map(findingCard).join('')}</div>` : `<div class="empty">Žádné závady v tomto výběru.</div>`;
+
+    showNotice();
+  }
+  ['#tSearch', '#tCompany', '#tStatus', '#zCompany', '#zStatus'].forEach(s => $(s).addEventListener('input', render));
+
+  // ---------- formulář termínu ----------
+  const fType = $('#fType');
+  fType.innerHTML = PRESETS.map(p => `<option>${esc(p.type)}</option>`).join('') + '<option value="__custom">Vlastní…</option>';
+  let editingId = null;
+  function updateDuePreview() {
+    const last = $('#fLast').value, m = Number($('#fMonths').value);
+    $('#fDuePreview').textContent = last && m ? `Příští termín: ${fmt(addMonths(last, m))}` : '';
+  }
+  fType.addEventListener('change', () => {
+    const custom = fType.value === '__custom';
+    $('#fCustomWrap').hidden = !custom;
+    const p = presetOf(fType.value);
+    if (p) $('#fMonths').value = p.months;
+    updateDuePreview();
+  });
+  ['#fLast', '#fMonths'].forEach(s => $(s).addEventListener('input', updateDuePreview));
+  function openTermForm(t) {
+    editingId = t ? t.id : null;
+    $('#termFormTitle').textContent = t ? 'Upravit termín' : 'Nový termín';
+    $('#fName').value = t ? t.name : '';
+    $('#fCompany').value = t ? t.company : ($('#tCompany').value || '');
+    const p = t ? presetOf(t.type) : PRESETS[0];
+    fType.value = p ? p.type : '__custom';
+    $('#fCustomWrap').hidden = !!p;
+    $('#fCustom').value = t && !p ? t.type : '';
+    $('#fLast').value = t ? t.last : todayISO;
+    $('#fMonths').value = t ? t.months : PRESETS[0].months;
+    $('#fNote').value = t ? t.note || '' : '';
+    updateDuePreview();
+    $('#termForm').hidden = false;
+    $('#bulkPanel').hidden = true;
+    $('#fName').focus();
+  }
+  $('#termForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const type = fType.value === '__custom' ? $('#fCustom').value.trim() : fType.value;
+    if (!type) { toast('Vyplň název typu.'); return; }
+    const p = presetOf(type);
+    const data = {
+      name: $('#fName').value.trim(), company: $('#fCompany').value.trim(), type,
+      kind: p ? p.kind : 'jine', last: $('#fLast').value, months: Number($('#fMonths').value),
+      note: $('#fNote').value.trim(), updatedAt: new Date().toISOString(),
+    };
+    const old = editingId && terms.find(t => t.id === editingId);
+    if (old && old.example) data.example = true;
+    try {
+      await put('terminy', editingId || newId(), data);
+      $('#termForm').hidden = true;
+      toast(editingId ? 'Termín upraven.' : 'Termín přidán.');
+      editingId = null;
+    } catch (err) { /* hláška už zobrazena */ }
+  });
+
+  // ---------- hromadný import ----------
+  let bulkRows = [];
+  $('#bulkText').addEventListener('input', () => {
+    const lines = $('#bulkText').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const ok = [], bad = [];
+    lines.forEach((l, i) => {
+      const c = l.split(/\t|;/).map(x => x.trim());
+      if (/^jm[eé]no$/i.test(c[0])) return; // hlavička
+      const [name, company, type, date, months] = c;
+      const last = parseUserDate(date);
+      const p = presetOf(type);
+      const m = Number(months) || (p && p.months);
+      if (name && company && type && last && m) ok.push({ name, company, type: p ? p.type : type, kind: p ? p.kind : 'jine', last, months: m, note: '' });
+      else bad.push(i + 1);
+    });
+    bulkRows = ok;
+    $('#bulkPreview').textContent = lines.length
+      ? `Připraveno k importu: ${ok.length}.` + (bad.length ? ` Nepoznané řádky: ${bad.slice(0, 10).join(', ')}${bad.length > 10 ? '…' : ''} (chybí sloupec, datum nebo interval).` : '')
+      : '';
+    $('#bulkBtn').disabled = !ok.length;
+  });
+  async function bulkImport() {
+    const btn = $('#bulkBtn'); btn.disabled = true;
+    let n = 0;
+    for (const r of bulkRows) {
+      try { await put('terminy', newId(), { ...r, updatedAt: new Date().toISOString() }); n++; btn.textContent = `Importuji ${n}/${bulkRows.length}…`; }
+      catch (e) { break; }
+    }
+    btn.textContent = 'Importovat';
+    toast(`Importováno ${n} termínů.`);
+    if (n === bulkRows.length) { $('#bulkText').value = ''; bulkRows = []; $('#bulkPreview').textContent = ''; $('#bulkPanel').hidden = true; }
+    else btn.disabled = false;
+  }
+
+  // ---------- kontrola z mobilu ----------
+  let pending = []; // {blob, url}
+  $('#kDue').value = addDays(todayISO, 14);
+  function renderPending() {
+    $('#kThumbs').innerHTML = pending.map((p, i) => `<button type="button" class="pending" data-action="drop-photo" data-i="${i}" aria-label="Odebrat fotku"><img src="${p.url}" alt=""><span>×</span></button>`).join('');
+  }
+  async function compress(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const max = 1600, s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+    } finally { URL.revokeObjectURL(url); }
+  }
+  $('#kPhotos').addEventListener('change', async e => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    for (const f of files) {
+      try { const blob = await compress(f); if (blob) pending.push({ blob, url: URL.createObjectURL(blob) }); }
+      catch (err) { toast('Fotku se nepodařilo načíst.'); }
+    }
+    renderPending();
+  });
+  $('#findForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#kSave'); btn.disabled = true;
+    const status = $('#kStatus');
+    const ids = [];
+    try {
+      if (pending.length && !assets) {
+        status.textContent = 'Fotky se v tomto zobrazení nedají uložit. Závada se uloží bez nich.';
+      }
+      if (assets) {
+        for (let i = 0; i < pending.length; i++) {
+          btn.textContent = `Nahrávám fotku ${i + 1}/${pending.length}…`;
+          const r = await assets.upload(pending[i].blob, { type: 'image/jpeg' });
+          ids.push(r.id);
+        }
+      }
+      btn.textContent = 'Ukládám…';
+      await put('zavady', newId(), {
+        company: $('#kCompany').value.trim(), place: $('#kPlace').value.trim(), text: $('#kText').value.trim(),
+        severity: (document.querySelector('input[name=sev]:checked') || {}).value || 'stredni',
+        owner: $('#kOwner').value.trim(), due: $('#kDue').value || '', status: 'open',
+        photos: ids, createdAt: todayISO, doneAt: '',
+      });
+      pending.forEach(p => URL.revokeObjectURL(p.url));
+      pending = []; renderPending();
+      $('#kText').value = ''; $('#kOwner').value = '';
+      $('#kDue').value = addDays(todayISO, 14);
+      status.textContent = 'Uloženo. Firma a místo zůstaly vyplněné pro další závadu.';
+      toast('Závada uložena.');
+      $('#kText').focus();
+    } catch (err) {
+      const code = err && err.code;
+      if (code === 'too_large') status.textContent = 'Fotka je příliš velká. Zkus ji vyfotit znovu.';
+      else if (code === 'quota_or_state') status.textContent = 'Úložiště fotek je plné. Smaž staré vyřešené závady.';
+      else if (code === 'rate_limited') status.textContent = 'Moc rychle za sebou. Počkej chvilku a ulož znovu.';
+      else if (!status.textContent) status.textContent = 'Uložení se nepovedlo. Zkus to znovu.';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Uložit závadu';
+    }
+  });
+
+  // ---------- export ----------
+  function csv(rows) {
+    return '﻿' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  }
+  async function offer(filename, text) {
+    if (downloads) {
+      try { await downloads.save({ filename, data: new Blob([text], { type: 'text/csv' }) }); return; }
+      catch (e) { if (e && e.code === 'declined') return; }
+    }
+    try { await navigator.clipboard.writeText(text); toast('Uloženo do schránky. Vlož to do Excelu.'); }
+    catch (e) { toast('Export se nepodařil.'); }
+  }
+  function exportTerms() {
+    const rows = [['Osoba / zařízení', 'Firma', 'Typ', 'Naposledy', 'Interval (měs.)', 'Příští termín', 'Zbývá dní', 'Poznámka']];
+    terms.filter(t => t.last && t.months).map(withDue).sort((a, b) => a.days - b.days)
+      .forEach(t => rows.push([t.name, t.company, t.type, fmt(t.last), t.months, fmt(t.due), t.days, t.note]));
+    offer(`terminy-bozp-${todayISO}.csv`, csv(rows));
+  }
+  function exportFindings() {
+    const rows = [['Firma', 'Místo', 'Závada', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Vyřešeno', 'Fotek']];
+    findings.forEach(f => rows.push([f.company, f.place, f.text, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'vyřešeno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), (f.photos || []).length]));
+    offer(`zavady-bozp-${todayISO}.csv`, csv(rows));
+  }
+  async function copyProtocol() {
+    const zc = $('#zCompany').value;
+    const open = findings.filter(f => f.status !== 'done' && (!zc || f.company === zc));
+    if (!open.length) { toast('Žádné otevřené závady k zkopírování.'); return; }
+    const text = `Zjištěné nedostatky${zc ? ' – ' + zc : ''} (stav k ${fmt(todayISO)})\n\n` + open.map((f, i) =>
+      `${i + 1}. ${f.text}\n   Místo: ${f.place || '–'} | Závažnost: ${SEV[f.severity]} | Odpovídá: ${f.owner || '–'} | Termín nápravy: ${fmt(f.due)}`).join('\n\n');
+    try { await navigator.clipboard.writeText(text); toast('Text zkopírován. Vlož ho do protokolu.'); }
+    catch (e) { toast('Schránka není dostupná.'); }
+  }
+
+  // ---------- akce ----------
+  const armed = new Map();
+  function confirmTwice(btn, fn) {
+    if (armed.get(btn.dataset.id)) { armed.delete(btn.dataset.id); fn(); return; }
+    armed.set(btn.dataset.id, true);
+    btn.classList.add('armed'); btn.textContent = 'Opravdu smazat?';
+    setTimeout(() => { armed.delete(btn.dataset.id); if (btn.isConnected) { btn.classList.remove('armed'); btn.textContent = 'Smazat'; } }, 3500);
+  }
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-action]');
+    if (!b) return;
+    const id = b.dataset.id;
+    switch (b.dataset.action) {
+      case 'new-term': openTermForm(null); break;
+      case 'edit-term': setTab('terminy'); openTermForm(terms.find(t => t.id === id)); break;
+      case 'cancel-term': $('#termForm').hidden = true; editingId = null; break;
+      case 'renew': try { await patch('terminy', id, { last: todayISO, updatedAt: new Date().toISOString() }); toast('Obnoveno. Nový termín je spočítaný.'); } catch (err) { /* */ } break;
+      case 'del-term': confirmTwice(b, async () => { try { await del('terminy', id); toast('Termín smazán.'); } catch (err) { /* */ } }); break;
+      case 'toggle-bulk': $('#bulkPanel').hidden = !$('#bulkPanel').hidden; $('#termForm').hidden = true; if (!$('#bulkPanel').hidden) $('#bulkText').focus(); break;
+      case 'bulk-import': bulkImport(); break;
+      case 'export-terms': exportTerms(); break;
+      case 'export-findings': exportFindings(); break;
+      case 'copy-protocol': copyProtocol(); break;
+      case 'resolve': try { await patch('zavady', id, { status: 'done', doneAt: todayISO }); toast('Označeno jako vyřešené.'); } catch (err) { /* */ } break;
+      case 'reopen': try { await patch('zavady', id, { status: 'open', doneAt: '' }); } catch (err) { /* */ } break;
+      case 'del-find': confirmTwice(b, async () => {
+        const f = findings.find(x => x.id === id);
+        try {
+          await del('zavady', id);
+          if (assets && f && f.photos) for (const pid of f.photos) { try { await assets.delete(pid); } catch (err) { /* */ } }
+          toast('Závada smazána.');
+        } catch (err) { /* */ }
+      }); break;
+      case 'drop-photo': { const i = Number(b.dataset.i); URL.revokeObjectURL(pending[i].url); pending.splice(i, 1); renderPending(); break; }
+      case 'zoom': $('#lightboxImg').src = b.dataset.src; $('#lightbox').hidden = false; break;
+      case 'goto-status': $('#tStatus').value = b.dataset.status; setTab('terminy'); render(); break;
+      case 'goto-findings': $('#zStatus').value = 'open'; setTab('zavady'); render(); break;
+      case 'clear-examples': {
+        b.disabled = true;
+        for (const t of terms.filter(x => x.example)) { try { await del('terminy', t.id); } catch (err) { break; } }
+        for (const f of findings.filter(x => x.example)) { try { await del('zavady', f.id); } catch (err) { break; } }
+        toast('Ukázková data smazána.');
+        break;
+      }
+    }
+  });
+  $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#lightbox').hidden = true; });
+
+  setTab(tab);
+  render();
+  connect();
+})();
+</script>
