@@ -148,6 +148,10 @@ textarea { min-height: 90px; resize: vertical; }
 .row .who { font-weight: 700; }
 .row .what { color: var(--muted); font-size: 14px; }
 .row .when { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); }
+.firm { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,2fr) auto auto; gap: 8px 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); }
+.firm:first-child { border-top: 0; }
+.firm .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+@media (max-width: 640px) { .firm { grid-template-columns: 1fr auto; } .firm input[type=text] { grid-column: 1 / -1; } }
 .row .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 640px) {
   .row { grid-template-columns: minmax(0, 1fr) auto; }
@@ -224,6 +228,7 @@ textarea { min-height: 90px; resize: vertical; }
     <button class="tab" role="tab" data-tab="terminy" id="tab-terminy">Termíny</button>
     <button class="tab" role="tab" data-tab="kontrola" id="tab-kontrola">Kontrola</button>
     <button class="tab" role="tab" data-tab="zavady" id="tab-zavady">Závady</button>
+    <button class="tab" role="tab" data-tab="firmy" id="tab-firmy">Firmy</button>
   </nav>
 
   <div id="notice"></div>
@@ -346,6 +351,16 @@ textarea { min-height: 90px; resize: vertical; }
       <div id="findList"></div>
     </div>
   </main>
+
+  <!-- FIRMY -->
+  <main id="view-firmy" data-view hidden>
+    <div class="section">
+      <div class="section-head"><h2>Firmy a e-maily</h2></div>
+      <div class="banner info"><p>Každé <b>pondělí ráno</b> přijde tobě souhrn a každé firmě se zapnutým upozorněním její seznam: termíny do 30 dní, prošlé termíny a závady po termínu nápravy. Ukázková data se neposílají.</p></div>
+      <p class="small-note" id="notifyLast"></p>
+      <div id="firmList"></div>
+    </div>
+  </main>
 </div>
 
 <datalist id="companies"></datalist>
@@ -421,15 +436,15 @@ textarea { min-height: 90px; resize: vertical; }
 
   // ---------- data ----------
   let db = null, assets = null, downloads = null, readOnly = false;
-  let terms = [], findings = [];
-  const mem = { terminy: new Map(), zavady: new Map() };
+  let terms = [], findings = [], firms = [], notifyInfo = null;
+  const mem = { terminy: new Map(), zavady: new Map(), firmy: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'terminy') terms = arr; else findings = arr;
+    if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -479,6 +494,14 @@ textarea { min-height: 90px; resize: vertical; }
       terms = s.docs.map(d => ({ id: d.id, ...d.data() }));
       render();
     }, () => setSync('off', 'Spojení přerušeno, obnov stránku'));
+    db.collection('firmy').onSnapshot(s => {
+      firms = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, () => {});
+    db.doc('system/notifikace').onSnapshot(s => {
+      notifyInfo = s.exists ? s.data() : null;
+      render();
+    }, () => {});
     db.collection('zavady').onSnapshot(s => {
       findings = s.docs.map(d => ({ id: d.id, ...d.data() }));
       render();
@@ -497,7 +520,7 @@ textarea { min-height: 90px; resize: vertical; }
   }
 
   // ---------- navigace ----------
-  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady'];
+  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady', 'firmy'];
   let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'prehled';
   function setTab(t) {
     tab = t;
@@ -606,8 +629,28 @@ textarea { min-height: 90px; resize: vertical; }
       .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
     $('#findList').innerHTML = fs.length ? `<div class="cards">${fs.map(findingCard).join('')}</div>` : `<div class="empty">Žádné závady v tomto výběru.</div>`;
 
+    // firmy
+    const firmNames = [...new Set([...comps, ...firms.map(f => f.name)])].filter(Boolean).sort((a, b) => a.localeCompare(b, 'cs'));
+    const fl = $('#firmList');
+    if (!fl.contains(document.activeElement)) {
+      fl.innerHTML = firmNames.length ? `<div class="list">${firmNames.map(n => {
+        const f = firms.find(x => x.name === n) || {};
+        const id = slug(n);
+        return `<div class="firm">
+          <div class="who">${esc(n)}</div>
+          <input type="text" id="fe-${id}" inputmode="email" placeholder="kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
+          <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
+          <button class="btn small" data-action="save-firm" data-name="${esc(n)}">Uložit</button>
+        </div>`;
+      }).join('')}</div>` : '<div class="empty">Firmy se tu objeví, jakmile přidáš termín nebo závadu.</div>';
+    }
+    $('#notifyLast').textContent = notifyInfo && notifyInfo.lastRun
+      ? `Poslední rozeslání: ${notifyInfo.lastRun}${notifyInfo.summary ? ' · ' + notifyInfo.summary : ''}`
+      : 'Zatím nebylo nic rozesláno.';
+
     showNotice();
   }
+  function slug(n) { return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'firma'; }
   ['#tSearch', '#tCompany', '#tStatus', '#zCompany', '#zStatus'].forEach(s => $(s).addEventListener('input', render));
 
   // ---------- formulář termínu ----------
@@ -811,6 +854,16 @@ textarea { min-height: 90px; resize: vertical; }
     const id = b.dataset.id;
     switch (b.dataset.action) {
       case 'new-term': openTermForm(null); break;
+      case 'save-firm': {
+        const name = b.dataset.name, id = slug(name);
+        const emails = $('#fe-' + id).value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+        const bad = emails.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+        if (bad.length) { toast('Neplatný e-mail: ' + bad[0]); break; }
+        const notify = $('#fn-' + id).checked;
+        if (notify && !emails.length) { toast('Pro zapnutí upozornění vyplň e-mail.'); break; }
+        try { await put('firmy', id, { name, email: emails.join(', '), notify, updatedAt: new Date().toISOString() }); toast('Uloženo.'); b.blur(); render(); } catch (err) { /* */ }
+        break;
+      }
       case 'edit-term': setTab('terminy'); openTermForm(terms.find(t => t.id === id)); break;
       case 'cancel-term': $('#termForm').hidden = true; editingId = null; break;
       case 'renew': try { await patch('terminy', id, { last: todayISO, updatedAt: new Date().toISOString() }); toast('Obnoveno. Nový termín je spočítaný.'); } catch (err) { /* */ } break;
