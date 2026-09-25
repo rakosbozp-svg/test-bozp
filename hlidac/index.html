@@ -358,6 +358,15 @@ textarea { min-height: 90px; resize: vertical; }
       <div class="section-head"><h2>Firmy a e-maily</h2></div>
       <div class="banner info"><p>Každé <b>pondělí ráno</b> přijde tobě souhrn a každé firmě se zapnutým upozorněním její seznam: termíny do 30 dní, prošlé termíny a závady po termínu nápravy. Ukázková data se neposílají.</p></div>
       <p class="small-note" id="notifyLast"></p>
+      <form class="panel" id="testMailForm">
+        <h3>Zkušební e-mail</h3>
+        <p class="small-note">Pošle tvým Gmailem na tvou adresu stejný souhrn, jaký chodí každé pondělí. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
+        <div class="toolbar">
+          <input type="text" id="ownerEmail" class="grow" inputmode="email" autocomplete="email" placeholder="tvuj@email.cz" aria-label="Tvůj e-mail">
+          <button class="btn primary" type="submit" id="testMailBtn">Poslat zkušební e-mail mně</button>
+        </div>
+        <p class="small-note" id="testMailStatus"></p>
+      </form>
       <div id="firmList"></div>
     </div>
   </main>
@@ -435,7 +444,7 @@ textarea { min-height: 90px; resize: vertical; }
   $('#today').textContent = 'Dnes ' + fmt(todayISO);
 
   // ---------- data ----------
-  let db = null, assets = null, downloads = null, readOnly = false;
+  let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
   let terms = [], findings = [], firms = [], notifyInfo = null;
   const mem = { terminy: new Map(), zavady: new Map(), firmy: new Map() };
 
@@ -480,11 +489,12 @@ textarea { min-height: 90px; resize: vertical; }
   async function connect() {
     const use = window.claude && window.claude.use;
     if (!use) { setSync('off', 'Jen v tomto okně'); showNotice(); render(); return; }
-    const [dbNs, asNs, dlNs, user] = await Promise.all([
+    const [dbNs, asNs, dlNs, user, mcpNs] = await Promise.all([
       use('db').catch(() => null), use('assets').catch(() => null),
-      use('downloads').catch(() => null), use('user').catch(() => null),
+      use('downloads').catch(() => null), use('user').catch(() => null), use('mcp').catch(() => null),
     ]);
-    db = dbNs; assets = asNs; downloads = dlNs;
+    db = dbNs; assets = asNs; downloads = dlNs; mcp = mcpNs;
+    if (!mcp) { $('#testMailBtn').disabled = true; $('#testMailStatus').textContent = 'Odesílání e-mailu funguje jen v aplikaci otevřené přes claude.ai.'; }
     if (user) {
       try { const c = await user.can('data.write'); if (c === false) readOnly = true; } catch (e) { /* neznámé */ }
     }
@@ -497,6 +507,11 @@ textarea { min-height: 90px; resize: vertical; }
     db.collection('firmy').onSnapshot(s => {
       firms = s.docs.map(d => ({ id: d.id, ...d.data() }));
       render();
+    }, () => {});
+    db.doc('system/nastaveni').onSnapshot(s => {
+      settings = s.exists ? s.data() : {};
+      const el = $('#ownerEmail');
+      if (document.activeElement !== el && settings.ownerEmail && !el.value) el.value = settings.ownerEmail;
     }, () => {});
     db.doc('system/notifikace').onSnapshot(s => {
       notifyInfo = s.exists ? s.data() : null;
@@ -839,6 +854,56 @@ textarea { min-height: 90px; resize: vertical; }
     try { await navigator.clipboard.writeText(text); toast('Text zkopírován. Vlož ho do protokolu.'); }
     catch (e) { toast('Schránka není dostupná.'); }
   }
+
+  // ---------- zkušební e-mail ----------
+  function buildSummary(includeExamples) {
+    const pick = x => includeExamples || !x.example;
+    const due = terms.filter(t => t.last && t.months && pick(t)).map(withDue).filter(t => t.days <= 30).sort((a, b) => a.days - b.days);
+    const lateF = findings.filter(f => pick(f) && f.status !== 'done' && f.due && daysUntil(f.due) < 0);
+    const comps = [...new Set([...due.map(t => t.company), ...lateF.map(f => f.company)])].sort((a, b) => a.localeCompare(b, 'cs'));
+    if (!comps.length) return { count: 0, text: 'Tento týden nic nepropadá. Žádné termíny do 30 dní ani závady po termínu nápravy.' };
+    const lines = [];
+    comps.forEach(c => {
+      lines.push(c.toUpperCase());
+      const late = due.filter(t => t.company === c && t.days < 0);
+      const soon = due.filter(t => t.company === c && t.days >= 0);
+      if (late.length) { lines.push('Prošlé termíny:'); late.forEach(t => lines.push(`  - ${t.name}: ${t.type}, termín ${fmt(t.due)} (prošlé o ${-t.days} ${dayWord(t.days)})`)); }
+      if (soon.length) { lines.push('Do 30 dní:'); soon.forEach(t => lines.push(`  - ${t.name}: ${t.type}, termín ${fmt(t.due)} (za ${t.days} ${dayWord(t.days)})`)); }
+      const lf = lateF.filter(f => f.company === c);
+      if (lf.length) { lines.push('Závady po termínu nápravy:'); lf.forEach(f => lines.push(`  - ${f.text}${f.place ? ' (' + f.place + ')' : ''}, náprava do ${fmt(f.due)}${f.owner ? ', odpovídá ' + f.owner : ''}`)); }
+      lines.push('');
+    });
+    return { count: due.length + lateF.length, text: lines.join('\n') };
+  }
+  $('#testMailForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const st = $('#testMailStatus'), btn = $('#testMailBtn');
+    const to = $('#ownerEmail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { st.textContent = 'Zadej platný e-mail.'; return; }
+    if (!mcp) { st.textContent = 'Odesílání e-mailu funguje jen v aplikaci otevřené přes claude.ai.'; return; }
+    btn.disabled = true; btn.textContent = 'Odesílám…'; st.textContent = '';
+    if (db && to !== settings.ownerEmail) { try { await db.doc('system/nastaveni').set({ ...settings, ownerEmail: to }); } catch (err) { /* uložení adresy není nutné */ } }
+    const sum = buildSummary(true);
+    const body = `ZKUŠEBNÍ E-MAIL – takhle bude vypadat pondělní souhrn.\n\nHlídač BOZP – přehled k ${fmt(todayISO)}\n\n${sum.text}\nOdesláno ručně tlačítkem v aplikaci Hlídač BOZP. Firmám nebylo nic odesláno.`;
+    try {
+      await mcp.callTool('Gmail', 'send_message', { to: [to], subject: `Hlídač BOZP – zkušební přehled (${fmt(todayISO)})`, body });
+      st.textContent = `Odesláno na ${to}. Zkontroluj schránku (případně spam).`;
+      toast('Zkušební e-mail odeslán.');
+    } catch (err) {
+      const c = err && err.code;
+      st.textContent =
+        c === 'server_not_connected' ? 'Gmail není připojený. Připoj ho v claude.ai → Nastavení → Konektory a zkus to znovu.' :
+        c === 'needs_reauth' ? 'Přihlášení ke Gmailu vypršelo. Připoj Gmail znovu v claude.ai → Nastavení → Konektory.' :
+        c === 'selection_required' ? 'Máš připojených víc Gmailů. Vyber jeden v nabídce claude.ai a zkus to znovu.' :
+        c === 'not_in_manifest' ? 'Odesílání přes Gmail není pro tuto stránku povolené. Obnov stránku a při dotazu ho povol.' :
+        c === 'blocked_by_policy' || c === 'approval_required' ? 'Odesílání e-mailů blokují pravidla vaší organizace.' :
+        c === 'tool_error' ? 'Gmail e-mail odmítl: ' + (err.message || 'neznámý důvod') :
+        c === 'server_unavailable' || c === 'upstream_error' ? 'Gmail teď neodpověděl. Než to zkusíš znovu, zkontroluj složku Odeslané, jestli e-mail neodešel.' :
+        'Odeslání se nepovedlo (' + (c || 'neznámá chyba') + ').';
+    } finally {
+      btn.disabled = !mcp; btn.textContent = 'Poslat zkušební e-mail mně';
+    }
+  });
 
   // ---------- akce ----------
   const armed = new Map();
