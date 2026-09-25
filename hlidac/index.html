@@ -356,11 +356,11 @@ textarea { min-height: 90px; resize: vertical; }
   <main id="view-firmy" data-view hidden>
     <div class="section">
       <div class="section-head"><h2>Firmy a e-maily</h2></div>
-      <div class="banner info"><p>Každé <b>pondělí ráno</b> přijde tobě souhrn a každé firmě se zapnutým upozorněním její seznam: termíny do 30 dní, prošlé termíny a závady po termínu nápravy. Ukázková data se neposílají.</p></div>
+      <div class="banner info"><p>Kontrola běží <b>každé ráno</b>. E-mail přijde tobě a firmě se zapnutým upozorněním: jednou <b>30 dní</b> před termínem, jednou <b>14 dní</b> před termínem a <b>každý den po termínu</b>, dokud ho neobnovíš. Závady po termínu nápravy chodí také denně. Když není co hlásit, nic nepřijde. Ukázková data se neposílají.</p></div>
       <p class="small-note" id="notifyLast"></p>
       <form class="panel" id="testMailForm">
         <h3>Zkušební e-mail</h3>
-        <p class="small-note">Pošle tvým Gmailem na tvou adresu stejný souhrn, jaký chodí každé pondělí. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
+        <p class="small-note">Pošle tvým Gmailem na tvou adresu přehled všeho, co je prošlé nebo propadá do 30 dní. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
         <div class="toolbar">
           <input type="text" id="ownerEmail" class="grow" inputmode="email" autocomplete="email" placeholder="tvuj@email.cz" aria-label="Tvůj e-mail">
           <button class="btn primary" type="submit" id="testMailBtn">Poslat zkušební e-mail mně</button>
@@ -884,7 +884,7 @@ textarea { min-height: 90px; resize: vertical; }
     btn.disabled = true; btn.textContent = 'Odesílám…'; st.textContent = '';
     if (db && to !== settings.ownerEmail) { try { await db.doc('system/nastaveni').set({ ...settings, ownerEmail: to }); } catch (err) { /* uložení adresy není nutné */ } }
     const sum = buildSummary(true);
-    const body = `ZKUŠEBNÍ E-MAIL – takhle bude vypadat pondělní souhrn.\n\nHlídač BOZP – přehled k ${fmt(todayISO)}\n\n${sum.text}\nOdesláno ručně tlačítkem v aplikaci Hlídač BOZP. Firmám nebylo nic odesláno.`;
+    const body = `ZKUŠEBNÍ E-MAIL – ukázka upozornění.\n\nHlídač BOZP – přehled k ${fmt(todayISO)}\n\n${sum.text}\nOdesláno ručně tlačítkem v aplikaci Hlídač BOZP. Firmám nebylo nic odesláno.`;
     try {
       await mcp.callTool('Gmail', 'send_message', { to: [to], subject: `Hlídač BOZP – zkušební přehled (${fmt(todayISO)})`, body });
       st.textContent = `Odesláno na ${to}. Zkontroluj schránku (případně spam).`;
