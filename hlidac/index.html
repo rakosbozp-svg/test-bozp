@@ -42,6 +42,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 16px/1.45 var(--body); }
 button, input, select, textarea { font: inherit; color: inherit; }
 h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.1; text-wrap: balance; }
@@ -152,6 +153,28 @@ textarea { min-height: 90px; resize: vertical; }
 .firm:first-child { border-top: 0; }
 .firm .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 @media (max-width: 640px) { .firm { grid-template-columns: 1fr auto; } .firm input[type=text] { grid-column: 1 / -1; } }
+.pick { display: flex; flex-direction: column; gap: 6px; }
+.firm-card { background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.firm-card h3 { font-size: 20px; }
+.firm-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.firm-head h3 { flex: 1; }
+.firm-mail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .firm-mail { grid-template-columns: 1fr auto; } .firm-mail input[type=text] { grid-column: 1 / -1; } }
+.firm-mail .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.sub { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px; font-weight: 600; }
+.chip.plain { padding-right: 12px; }
+.chip button { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 50%; }
+.chip button:hover { color: var(--red); }
+.chip small { color: var(--muted); font-weight: 500; }
+.add-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.add-row input, .add-row select { flex: 1 1 160px; width: auto; }
+.firm-list { display: flex; flex-direction: column; gap: 12px; }
+.fix { background: var(--ok-soft); border-radius: 8px; padding: 8px 10px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.fix b { color: var(--ok); }
+.modal { position: fixed; inset: 0; z-index: 55; background: rgba(10,15,20,.55); display: flex; align-items: flex-end; justify-content: center; padding: 16px; overflow-y: auto; }
+.modal .panel { width: min(520px, 100%); margin: auto; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 .row .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 640px) {
   .row { grid-template-columns: minmax(0, 1fr) auto; }
@@ -270,8 +293,9 @@ textarea { min-height: 90px; resize: vertical; }
       <form class="panel" id="termForm" hidden>
         <h3 id="termFormTitle">Nový termín</h3>
         <div class="grid-form">
-          <div class="field"><label for="fName">Osoba / zařízení</label><input type="text" id="fName" required placeholder="Jan Novák"></div>
-          <div class="field"><label for="fCompany">Firma / závod</label><input type="text" id="fCompany" list="companies" required placeholder="Závod Litice"></div>
+          <div class="field"><label for="fFirm">Firma</label><div class="pick"><select id="fFirm"></select><input type="text" id="fFirmNew" placeholder="Název nové firmy" hidden></div></div>
+          <div class="field"><label for="fSite">Závod / provozovna</label><div class="pick"><select id="fSite"></select><input type="text" id="fSiteNew" placeholder="Název nového závodu / provozovny" hidden></div></div>
+          <div class="field"><label for="fPerson">Osoba / zařízení</label><div class="pick"><select id="fPerson"></select><input type="text" id="fPersonNew" placeholder="Jméno osoby nebo zařízení" hidden></div></div>
           <div class="field"><label for="fType">Typ</label><select id="fType"></select></div>
           <div class="field" id="fCustomWrap" hidden><label for="fCustom">Vlastní název</label><input type="text" id="fCustom" placeholder="např. Školení vazačů"></div>
           <div class="field"><label for="fLast">Naposledy provedeno</label><input type="date" id="fLast" required></div>
@@ -287,7 +311,7 @@ textarea { min-height: 90px; resize: vertical; }
 
       <div class="panel" id="bulkPanel" hidden>
         <h3>Vložit z Excelu</h3>
-        <p class="small-note">Zkopíruj v Excelu sloupce <b>Jméno · Firma · Typ · Datum posledního · Interval v měsících</b> a vlož je sem. Interval můžeš vynechat, pokud typ odpovídá některé předvolbě. Datum může být 12.3.2025 nebo 2025-03-12.</p>
+        <p class="small-note">Zkopíruj v Excelu sloupce <b>Jméno · Firma · Typ · Datum posledního · Interval v měsících · Závod (nepovinné)</b> a vlož je sem. Interval můžeš vynechat, pokud typ odpovídá některé předvolbě. Datum může být 12.3.2025 nebo 2025-03-12.</p>
         <textarea id="bulkText" rows="6" placeholder="Jan Novák	Závod Litice	Školení BOZP	12.3.2025	24"></textarea>
         <p class="small-note" id="bulkPreview"></p>
         <div class="form-actions">
@@ -306,8 +330,9 @@ textarea { min-height: 90px; resize: vertical; }
       <div class="section-head"><h2>Nová závada z kontroly</h2><span class="hint">vyfoť, popiš, ulož, další</span></div>
       <div class="panel">
         <div class="grid-form">
-          <div class="field"><label for="kCompany">Firma / závod</label><input type="text" id="kCompany" list="companies" required placeholder="Závod Litice"></div>
-          <div class="field"><label for="kPlace">Místo</label><input type="text" id="kPlace" placeholder="Hala 2, formovna"></div>
+          <div class="field"><label for="kFirm">Firma</label><div class="pick"><select id="kFirm"></select><input type="text" id="kFirmNew" placeholder="Název nové firmy" hidden></div></div>
+          <div class="field"><label for="kSite">Závod / provozovna</label><div class="pick"><select id="kSite"></select><input type="text" id="kSiteNew" placeholder="Název nového závodu / provozovny" hidden></div></div>
+          <div class="field"><label for="kPlace">Místo</label><div class="pick"><select id="kPlace"></select><input type="text" id="kPlaceNew" placeholder="např. Hala 2, formovna" hidden></div></div>
           <div class="field wide">
             <span class="label">Fotky</span>
             <label class="photo-drop" id="photoDrop">
@@ -358,6 +383,15 @@ textarea { min-height: 90px; resize: vertical; }
       <div class="section-head"><h2>Firmy a e-maily</h2></div>
       <div class="banner info"><p>Kontrola běží <b>každé ráno</b>. E-mail přijde tobě a firmě se zapnutým upozorněním: jednou <b>30 dní</b> před termínem, jednou <b>14 dní</b> před termínem a <b>každý den po termínu</b>, dokud ho neobnovíš. Závady po termínu nápravy chodí také denně. Když není co hlásit, nic nepřijde. Ukázková data se neposílají.</p></div>
       <p class="small-note" id="notifyLast"></p>
+      <div class="panel">
+        <h3>Nová firma</h3>
+        <div class="add-row">
+          <input type="text" id="newFirm" placeholder="Název firmy, např. ŽPSV a.s." aria-label="Název nové firmy">
+          <button class="btn primary" data-action="add-firm">Založit firmu</button>
+        </div>
+        <p class="small-note">Pod firmou pak založíš závody nebo provozovny a místa. Ve formulářích je vybereš z nabídky.</p>
+      </div>
+      <div id="firmList" class="firm-list"></div>
       <form class="panel" id="testMailForm">
         <h3>Zkušební e-mail</h3>
         <p class="small-note">Pošle tvým Gmailem na tvou adresu přehled všeho, co je prošlé nebo propadá do 30 dní. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
@@ -367,12 +401,29 @@ textarea { min-height: 90px; resize: vertical; }
         </div>
         <p class="small-note" id="testMailStatus"></p>
       </form>
-      <div id="firmList"></div>
     </div>
   </main>
 </div>
 
-<datalist id="companies"></datalist>
+<div class="modal" id="resolveModal" hidden>
+  <form class="panel" id="resolveForm">
+    <h3>Potvrzení odstranění závady</h3>
+    <p class="small-note" id="resolveWhat"></p>
+    <div class="field"><label for="rText">Jak byla závada odstraněna</label><textarea id="rText" placeholder="Doplněno zábradlí, zkontroloval mistr výroby"></textarea></div>
+    <div class="field">
+      <span class="label">Fotka po odstranění</span>
+      <label class="photo-drop"><input type="file" id="rPhotos" accept="image/*" multiple><span>📷 Vyfotit stav po opravě</span></label>
+      <div class="thumbs" id="rThumbs"></div>
+    </div>
+    <div class="field"><label for="rDate">Datum odstranění</label><input type="date" id="rDate"></div>
+    <p class="small-note">Vyplň popis, nebo přidej aspoň jednu fotku.</p>
+    <div class="form-actions">
+      <button class="btn primary" type="submit" id="rSave">Potvrdit odstranění</button>
+      <button class="btn" type="button" data-action="close-resolve">Zrušit</button>
+    </div>
+    <p class="small-note" id="rStatus"></p>
+  </form>
+</div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt="Fotka závady"></div>
 
@@ -445,15 +496,15 @@ textarea { min-height: 90px; resize: vertical; }
 
   // ---------- data ----------
   let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
-  let terms = [], findings = [], firms = [], notifyInfo = null;
-  const mem = { terminy: new Map(), zavady: new Map(), firmy: new Map() };
+  let terms = [], findings = [], firms = [], sites = [], places = [], people = [], notifyInfo = null;
+  const mem = { terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else findings = arr;
+    if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -508,6 +559,9 @@ textarea { min-height: 90px; resize: vertical; }
       firms = s.docs.map(d => ({ id: d.id, ...d.data() }));
       render();
     }, () => {});
+    db.collection('provozovny').onSnapshot(s => { sites = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.collection('mista').onSnapshot(s => { places = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.collection('osoby').onSnapshot(s => { people = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.doc('system/nastaveni').onSnapshot(s => {
       settings = s.exists ? s.data() : {};
       const el = $('#ownerEmail');
@@ -548,7 +602,56 @@ textarea { min-height: 90px; resize: vertical; }
 
   // ---------- výpočty ----------
   const withDue = t => { const due = addMonths(t.last, t.months); return { ...t, due, days: daysUntil(due) }; };
-  const companiesOf = () => [...new Set([...terms.map(t => t.company), ...findings.map(f => f.company)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs'));
+  const cs = (a, b) => a.localeCompare(b, 'cs');
+  const uniq = arr => [...new Set(arr.filter(Boolean))].sort(cs);
+  const seg = n => (n ? slug(n) : '_');
+  const firmIdOf = n => slug(n);
+  const companiesOf = () => uniq([...firms.map(f => f.name), ...terms.map(t => t.company), ...findings.map(f => f.company)]);
+  const sitesOf = firm => uniq([...sites.filter(x => x.firmId === firmIdOf(firm)).map(x => x.name), ...terms.filter(t => t.company === firm).map(t => t.site), ...findings.filter(f => f.company === firm).map(f => f.site)]);
+  const placesOf = (firm, site) => uniq([...places.filter(x => x.firmId === firmIdOf(firm) && (x.site || '') === (site || '')).map(x => x.name), ...findings.filter(f => f.company === firm && (f.site || '') === (site || '')).map(f => f.place)]);
+  const peopleOf = firm => uniq([...people.filter(x => x.firmId === firmIdOf(firm)).map(x => x.name), ...terms.filter(t => t.company === firm).map(t => t.name)]);
+  const where = x => esc(x.company) + (x.site ? ' · ' + esc(x.site) : '');
+
+  // rolovací výběr s možností napsat novou položku
+  const NEW = '__new';
+  const wantSel = {};
+  function setPick(id, list, opts = {}) {
+    const sel = $('#' + id), inp = $('#' + id + 'New');
+    const cur = opts.value !== undefined ? opts.value : sel.value;
+    const head = opts.none !== undefined ? `<option value="">${esc(opts.none)}</option>` : (list.length ? '<option value="" disabled>— vyber —</option>' : '');
+    sel.innerHTML = head + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('') + `<option value="${NEW}">+ ${esc(opts.newLabel || 'Nová položka…')}</option>`;
+    if (wantSel[id] && list.includes(wantSel[id])) { sel.value = wantSel[id]; delete wantSel[id]; inp.value = ''; }
+    else if (cur === NEW) sel.value = NEW;
+    else if (cur && list.includes(cur)) sel.value = cur;
+    else if (cur && opts.value !== undefined) { sel.value = NEW; inp.value = cur; }
+    else if (opts.none !== undefined) sel.value = '';
+    else sel.value = list.length ? '' : NEW;
+    inp.hidden = sel.value !== NEW;
+  }
+  const getPick = id => ($('#' + id).value === NEW ? $('#' + id + 'New').value.trim() : $('#' + id).value);
+  function rememberNew(id) { if ($('#' + id).value === NEW) wantSel[id] = $('#' + id + 'New').value.trim(); }
+
+  function refreshTermPickers(o = {}) {
+    setPick('fFirm', companiesOf(), { newLabel: 'Nová firma…', value: o.firm });
+    const firm = getPick('fFirm');
+    setPick('fSite', firm ? sitesOf(firm) : [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…', value: o.site });
+    setPick('fPerson', firm ? peopleOf(firm) : [], { newLabel: 'Nová osoba / zařízení…', value: o.person });
+  }
+  function refreshKPickers() {
+    setPick('kFirm', companiesOf(), { newLabel: 'Nová firma…' });
+    const firm = getPick('kFirm');
+    setPick('kSite', firm ? sitesOf(firm) : [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' });
+    setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez místa —', newLabel: 'Nové místo…' });
+  }
+  function pickerBusy(ids) { return ids.some(id => document.activeElement === $('#' + id) || document.activeElement === $('#' + id + 'New')); }
+
+  async function ensureEntities({ firm, site, place, person }) {
+    const fid = firmIdOf(firm), now = new Date().toISOString();
+    if (!firms.some(f => f.id === fid)) await put('firmy', fid, { name: firm, email: '', notify: false, updatedAt: now });
+    if (site) { const sid = fid + '--' + seg(site); if (!sites.some(x => x.id === sid)) await put('provozovny', sid, { firmId: fid, firm, name: site }); }
+    if (place) { const pid = fid + '--' + seg(site) + '--' + seg(place); if (!places.some(x => x.id === pid)) await put('mista', pid, { firmId: fid, firm, site: site || '', name: place }); }
+    if (person) { const oid = fid + '--' + seg(person); if (!people.some(x => x.id === oid)) await put('osoby', oid, { firmId: fid, firm, name: person }); }
+  }
 
   function fillSelect(sel, list, allLabel) {
     const cur = sel.value;
@@ -563,7 +666,7 @@ textarea { min-height: 90px; resize: vertical; }
       <div class="pillcell"><span class="pill ${st.cls}">${st.text}</span></div>
       <div>
         <div class="who">${esc(t.name)}${t.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
-        <div class="what">${esc(t.type)} · ${esc(t.company)}</div>
+        <div class="what">${esc(t.type)} · ${where(t)}</div>
         <div class="when">Termín ${fmt(t.due)} · naposledy ${fmt(t.last)} · po ${t.months} měs.${t.note ? ' · ' + esc(t.note) : ''}</div>
       </div>
       <div class="acts">
@@ -577,13 +680,18 @@ textarea { min-height: 90px; resize: vertical; }
   function findingCard(f) {
     const late = f.status !== 'done' && f.due && daysUntil(f.due) < 0;
     const dueSt = f.status === 'done' ? { cls: 'ok', text: 'Vyřešeno ' + fmt(f.doneAt) } : f.due ? statusOf(daysUntil(f.due)) : { cls: '', text: 'Bez termínu' };
-    const photos = (f.photos || []).map(id => `<button data-action="zoom" data-src="/_blob/${esc(id)}" aria-label="Zvětšit fotku"><img src="/_blob/${esc(id)}" alt="" loading="lazy"></button>`).join('');
+    const thumb = id => `<button data-action="zoom" data-src="/_blob/${esc(id)}" aria-label="Zvětšit fotku"><img src="/_blob/${esc(id)}" alt="" loading="lazy"></button>`;
+    const photos = (f.photos || []).map(thumb).join('');
+    const fixPhotos = (f.fixPhotos || []).map(thumb).join('');
+    const fix = f.status === 'done' && (f.fixText || fixPhotos)
+      ? `<div class="fix"><div><b>Odstraněno ${fmt(f.doneAt)}:</b> ${esc(f.fixText || 'viz fotka')}</div>${fixPhotos ? `<div class="thumbs">${fixPhotos}</div>` : ''}</div>` : '';
     return `<article class="card sev-${esc(f.severity)} ${f.status === 'done' ? 'done' : ''}">
       <div class="meta"><span class="pill ${dueSt.cls}">${dueSt.text}</span><span>${SEV[f.severity] || ''} závažnost</span>${f.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
       <p class="desc">${esc(f.text)}</p>
-      <div class="meta">${esc(f.company)}${f.place ? ' · ' + esc(f.place) : ''}</div>
+      <div class="meta">${where(f)}${f.place ? ' · ' + esc(f.place) : ''}</div>
       <div class="meta">${f.owner ? 'Odpovídá: ' + esc(f.owner) + ' · ' : ''}Náprava do ${fmt(f.due)} · zjištěno ${fmt(f.createdAt)}</div>
       ${photos ? `<div class="thumbs">${photos}</div>` : ''}
+      ${fix}
       <div class="form-actions">
         ${f.status === 'done'
           ? `<button class="btn small" data-action="reopen" data-id="${f.id}">Znovu otevřít</button>`
@@ -608,7 +716,6 @@ textarea { min-height: 90px; resize: vertical; }
 
     // datalist a filtry
     const comps = companiesOf();
-    $('#companies').innerHTML = comps.map(c => `<option value="${esc(c)}">`).join('');
     fillSelect($('#tCompany'), comps, 'Všechny firmy');
     fillSelect($('#zCompany'), comps, 'Všechny firmy');
 
@@ -632,7 +739,7 @@ textarea { min-height: 90px; resize: vertical; }
     const stF = $('#tStatus').value;
     const shown = all.filter(t =>
       (!comp || t.company === comp) &&
-      (!q || [t.name, t.type, t.company, t.note].join(' ').toLowerCase().includes(q)) &&
+      (!q || [t.name, t.type, t.company, t.site, t.note].join(' ').toLowerCase().includes(q)) &&
       (stF === 'all' || (stF === 'late' && t.days < 0) || (stF === '30' && t.days >= 0 && t.days <= 30) || (stF === '90' && t.days >= 0 && t.days <= 90)));
     $('#termList').innerHTML = shown.length
       ? `<div class="list">${shown.map(t => termRow(t, false)).join('')}</div>`
@@ -645,20 +752,49 @@ textarea { min-height: 90px; resize: vertical; }
     $('#findList').innerHTML = fs.length ? `<div class="cards">${fs.map(findingCard).join('')}</div>` : `<div class="empty">Žádné závady v tomto výběru.</div>`;
 
     // firmy
-    const firmNames = [...new Set([...comps, ...firms.map(f => f.name)])].filter(Boolean).sort((a, b) => a.localeCompare(b, 'cs'));
     const fl = $('#firmList');
     if (!fl.contains(document.activeElement)) {
-      fl.innerHTML = firmNames.length ? `<div class="list">${firmNames.map(n => {
+      fl.innerHTML = comps.length ? comps.map(n => {
         const f = firms.find(x => x.name === n) || {};
         const id = slug(n);
-        return `<div class="firm">
-          <div class="who">${esc(n)}</div>
-          <input type="text" id="fe-${id}" inputmode="email" placeholder="kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
-          <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
-          <button class="btn small" data-action="save-firm" data-name="${esc(n)}">Uložit</button>
-        </div>`;
-      }).join('')}</div>` : '<div class="empty">Firmy se tu objeví, jakmile přidáš termín nebo závadu.</div>';
+        const siteDocs = sites.filter(x => x.firmId === id);
+        const siteChips = sitesOf(n).map(sn => {
+          const d = siteDocs.find(x => x.name === sn);
+          return d ? `<span class="chip">${esc(sn)}<button data-action="del-site" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(sn)}">×</button></span>` : `<span class="chip plain">${esc(sn)}</span>`;
+        }).join('');
+        const placeChips = ['', ...sitesOf(n)].flatMap(sn => placesOf(n, sn).map(pn => {
+          const d = places.find(x => x.firmId === id && (x.site || '') === sn && x.name === pn);
+          const label = `${sn ? '<small>' + esc(sn) + ' ›</small> ' : ''}${esc(pn)}`;
+          return d ? `<span class="chip">${label}<button data-action="del-place" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${label}</span>`;
+        })).join('');
+        const personChips = peopleOf(n).map(pn => {
+          const d = people.find(x => x.firmId === id && x.name === pn);
+          return d ? `<span class="chip">${esc(pn)}<button data-action="del-person" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${esc(pn)}</span>`;
+        }).join('');
+        return `<section class="firm-card">
+          <div class="firm-head"><h3>${esc(n)}</h3>${f.id ? `<button class="btn small danger" data-action="del-firm" data-id="${esc(f.id)}">Smazat</button>` : ''}</div>
+          <div class="firm-mail">
+            <input type="text" id="fe-${id}" inputmode="email" placeholder="E-mail pro upozornění: kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
+            <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
+            <button class="btn small" data-action="save-firm" data-name="${esc(n)}">Uložit</button>
+          </div>
+          <div class="sub"><span class="label">Závody / provozovny</span>
+            <div class="chips">${siteChips || '<span class="small-note">Zatím žádné.</span>'}</div>
+            <div class="add-row"><input type="text" id="ns-${id}" placeholder="Nový závod / provozovna" aria-label="Nový závod"><button class="btn small" data-action="add-site" data-name="${esc(n)}">Přidat</button></div>
+          </div>
+          <div class="sub"><span class="label">Místa</span>
+            <div class="chips">${placeChips || '<span class="small-note">Zatím žádná.</span>'}</div>
+            <div class="add-row"><select id="npS-${id}" aria-label="Závod pro nové místo"><option value="">celá firma</option>${sitesOf(n).map(sn => `<option>${esc(sn)}</option>`).join('')}</select><input type="text" id="np-${id}" placeholder="Nové místo, např. Hala 2" aria-label="Nové místo"><button class="btn small" data-action="add-place" data-name="${esc(n)}">Přidat</button></div>
+          </div>
+          <div class="sub"><span class="label">Osoby a zařízení</span>
+            <div class="chips">${personChips || '<span class="small-note">Zatím žádné.</span>'}</div>
+            <div class="add-row"><input type="text" id="no-${id}" placeholder="Jméno osoby nebo zařízení" aria-label="Nová osoba"><button class="btn small" data-action="add-person" data-name="${esc(n)}">Přidat</button></div>
+          </div>
+        </section>`;
+      }).join('') : '<div class="empty">Zatím žádná firma. Založ první nahoře.</div>';
     }
+    if (!$('#termForm').hidden && !pickerBusy(['fFirm', 'fSite', 'fPerson'])) refreshTermPickers();
+    if (!pickerBusy(['kFirm', 'kSite', 'kPlace'])) refreshKPickers();
     $('#notifyLast').textContent = notifyInfo && notifyInfo.lastRun
       ? `Poslední rozeslání: ${notifyInfo.lastRun}${notifyInfo.summary ? ' · ' + notifyInfo.summary : ''}`
       : 'Zatím nebylo nic rozesláno.';
@@ -684,11 +820,15 @@ textarea { min-height: 90px; resize: vertical; }
     updateDuePreview();
   });
   ['#fLast', '#fMonths'].forEach(s => $(s).addEventListener('input', updateDuePreview));
+  $('#fFirm').addEventListener('change', () => { $('#fFirmNew').hidden = $('#fFirm').value !== NEW; refreshTermPickers({ firm: getPick('fFirm'), site: '', person: '' }); if ($('#fFirm').value === NEW) $('#fFirmNew').focus(); });
+  $('#fFirmNew').addEventListener('input', () => { setPick('fSite', [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('fPerson', [], { newLabel: 'Nová osoba / zařízení…' }); });
+  ['fSite', 'fPerson', 'kSite', 'kPlace'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
+  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : sitesOf(getPick('kFirm')), { value: '', none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
+  $('#kSite').addEventListener('change', () => { const firm = getPick('kFirm'); setPick('kPlace', firm && $('#kFirm').value !== NEW && $('#kSite').value !== NEW ? placesOf(firm, getPick('kSite')) : [], { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); });
   function openTermForm(t) {
     editingId = t ? t.id : null;
     $('#termFormTitle').textContent = t ? 'Upravit termín' : 'Nový termín';
-    $('#fName').value = t ? t.name : '';
-    $('#fCompany').value = t ? t.company : ($('#tCompany').value || '');
+    refreshTermPickers(t ? { firm: t.company, site: t.site || '', person: t.name } : { firm: $('#tCompany').value || '', site: '', person: '' });
     const p = t ? presetOf(t.type) : PRESETS[0];
     fType.value = p ? p.type : '__custom';
     $('#fCustomWrap').hidden = !!p;
@@ -699,21 +839,25 @@ textarea { min-height: 90px; resize: vertical; }
     updateDuePreview();
     $('#termForm').hidden = false;
     $('#bulkPanel').hidden = true;
-    $('#fName').focus();
+    $('#fFirm').focus();
   }
   $('#termForm').addEventListener('submit', async e => {
     e.preventDefault();
     const type = fType.value === '__custom' ? $('#fCustom').value.trim() : fType.value;
     if (!type) { toast('Vyplň název typu.'); return; }
+    const firm = getPick('fFirm'), site = getPick('fSite'), person = getPick('fPerson');
+    if (!firm) { toast('Vyber nebo napiš firmu.'); return; }
+    if (!person) { toast('Vyber nebo napiš osobu / zařízení.'); return; }
     const p = presetOf(type);
     const data = {
-      name: $('#fName').value.trim(), company: $('#fCompany').value.trim(), type,
+      name: person, company: firm, site, type,
       kind: p ? p.kind : 'jine', last: $('#fLast').value, months: Number($('#fMonths').value),
       note: $('#fNote').value.trim(), updatedAt: new Date().toISOString(),
     };
     const old = editingId && terms.find(t => t.id === editingId);
     if (old && old.example) data.example = true;
     try {
+      await ensureEntities({ firm, site, person });
       await put('terminy', editingId || newId(), data);
       $('#termForm').hidden = true;
       toast(editingId ? 'Termín upraven.' : 'Termín přidán.');
@@ -729,11 +873,11 @@ textarea { min-height: 90px; resize: vertical; }
     lines.forEach((l, i) => {
       const c = l.split(/\t|;/).map(x => x.trim());
       if (/^jm[eé]no$/i.test(c[0])) return; // hlavička
-      const [name, company, type, date, months] = c;
+      const [name, company, type, date, months, site] = c;
       const last = parseUserDate(date);
       const p = presetOf(type);
       const m = Number(months) || (p && p.months);
-      if (name && company && type && last && m) ok.push({ name, company, type: p ? p.type : type, kind: p ? p.kind : 'jine', last, months: m, note: '' });
+      if (name && company && type && last && m) ok.push({ name, company, site: site || '', type: p ? p.type : type, kind: p ? p.kind : 'jine', last, months: m, note: '' });
       else bad.push(i + 1);
     });
     bulkRows = ok;
@@ -746,7 +890,7 @@ textarea { min-height: 90px; resize: vertical; }
     const btn = $('#bulkBtn'); btn.disabled = true;
     let n = 0;
     for (const r of bulkRows) {
-      try { await put('terminy', newId(), { ...r, updatedAt: new Date().toISOString() }); n++; btn.textContent = `Importuji ${n}/${bulkRows.length}…`; }
+      try { await ensureEntities({ firm: r.company, site: r.site, person: r.name }); await put('terminy', newId(), { ...r, updatedAt: new Date().toISOString() }); n++; btn.textContent = `Importuji ${n}/${bulkRows.length}…`; }
       catch (e) { break; }
     }
     btn.textContent = 'Importovat';
@@ -783,8 +927,11 @@ textarea { min-height: 90px; resize: vertical; }
   });
   $('#findForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const btn = $('#kSave'); btn.disabled = true;
     const status = $('#kStatus');
+    const firm = getPick('kFirm'), site = getPick('kSite'), place = getPick('kPlace');
+    if (!firm) { status.textContent = 'Vyber nebo napiš firmu.'; return; }
+    const btn = $('#kSave'); btn.disabled = true;
+    status.textContent = '';
     const ids = [];
     try {
       if (pending.length && !assets) {
@@ -798,8 +945,10 @@ textarea { min-height: 90px; resize: vertical; }
         }
       }
       btn.textContent = 'Ukládám…';
+      ['kFirm', 'kSite', 'kPlace'].forEach(rememberNew);
+      await ensureEntities({ firm, site, place });
       await put('zavady', newId(), {
-        company: $('#kCompany').value.trim(), place: $('#kPlace').value.trim(), text: $('#kText').value.trim(),
+        company: firm, site, place, text: $('#kText').value.trim(),
         severity: (document.querySelector('input[name=sev]:checked') || {}).value || 'stredni',
         owner: $('#kOwner').value.trim(), due: $('#kDue').value || '', status: 'open',
         photos: ids, createdAt: todayISO, doneAt: '',
@@ -808,7 +957,7 @@ textarea { min-height: 90px; resize: vertical; }
       pending = []; renderPending();
       $('#kText').value = ''; $('#kOwner').value = '';
       $('#kDue').value = addDays(todayISO, 14);
-      status.textContent = 'Uloženo. Firma a místo zůstaly vyplněné pro další závadu.';
+      status.textContent = 'Uloženo. Firma, závod a místo zůstaly vybrané pro další závadu.';
       toast('Závada uložena.');
       $('#kText').focus();
     } catch (err) {
@@ -820,6 +969,51 @@ textarea { min-height: 90px; resize: vertical; }
     } finally {
       btn.disabled = false; btn.textContent = 'Uložit závadu';
     }
+  });
+
+  // ---------- potvrzení odstranění závady ----------
+  let resolving = null, pendingFix = [];
+  function renderFix() {
+    $('#rThumbs').innerHTML = pendingFix.map((p, i) => `<button type="button" class="pending" data-action="drop-fix" data-i="${i}" aria-label="Odebrat fotku"><img src="${p.url}" alt=""><span>×</span></button>`).join('');
+  }
+  function openResolve(f) {
+    resolving = f.id;
+    $('#resolveWhat').textContent = `${f.text} · ${[f.company, f.site, f.place].filter(Boolean).join(' · ')}`;
+    $('#rText').value = ''; $('#rDate').value = todayISO; $('#rStatus').textContent = '';
+    pendingFix.forEach(p => URL.revokeObjectURL(p.url)); pendingFix = []; renderFix();
+    $('#resolveModal').hidden = false; $('#rText').focus();
+  }
+  function closeResolve() { $('#resolveModal').hidden = true; resolving = null; }
+  $('#rPhotos').addEventListener('change', async e => {
+    const files = [...e.target.files]; e.target.value = '';
+    for (const f of files) {
+      try { const blob = await compress(f); if (blob) pendingFix.push({ blob, url: URL.createObjectURL(blob) }); }
+      catch (err) { toast('Fotku se nepodařilo načíst.'); }
+    }
+    renderFix();
+  });
+  $('#resolveForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const st = $('#rStatus'), btn = $('#rSave');
+    const text = $('#rText').value.trim();
+    if (!text && !pendingFix.length) { st.textContent = 'Napiš, jak byla závada odstraněna, nebo přidej fotku po opravě.'; return; }
+    if (!text && pendingFix.length && !assets) { st.textContent = 'Fotky se v tomto zobrazení nedají uložit. Doplň popis odstranění.'; return; }
+    btn.disabled = true; st.textContent = '';
+    const ids = [];
+    try {
+      if (assets) for (let i = 0; i < pendingFix.length; i++) {
+        btn.textContent = `Nahrávám fotku ${i + 1}/${pendingFix.length}…`;
+        ids.push((await assets.upload(pendingFix[i].blob, { type: 'image/jpeg' })).id);
+      }
+      btn.textContent = 'Ukládám…';
+      await patch('zavady', resolving, { status: 'done', doneAt: $('#rDate').value || todayISO, fixText: text, fixPhotos: ids });
+      pendingFix.forEach(p => URL.revokeObjectURL(p.url)); pendingFix = [];
+      closeResolve();
+      toast('Odstranění závady potvrzeno.');
+    } catch (err) {
+      const c = err && err.code;
+      st.textContent = c === 'too_large' ? 'Fotka je příliš velká.' : c === 'quota_or_state' ? 'Úložiště fotek je plné.' : c === 'rate_limited' ? 'Moc rychle za sebou, zkus to za chvíli.' : 'Uložení se nepovedlo. Zkus to znovu.';
+    } finally { btn.disabled = false; btn.textContent = 'Potvrdit odstranění'; }
   });
 
   // ---------- export ----------
@@ -835,14 +1029,14 @@ textarea { min-height: 90px; resize: vertical; }
     catch (e) { toast('Export se nepodařil.'); }
   }
   function exportTerms() {
-    const rows = [['Osoba / zařízení', 'Firma', 'Typ', 'Naposledy', 'Interval (měs.)', 'Příští termín', 'Zbývá dní', 'Poznámka']];
+    const rows = [['Osoba / zařízení', 'Firma', 'Závod / provozovna', 'Typ', 'Naposledy', 'Interval (měs.)', 'Příští termín', 'Zbývá dní', 'Poznámka']];
     terms.filter(t => t.last && t.months).map(withDue).sort((a, b) => a.days - b.days)
-      .forEach(t => rows.push([t.name, t.company, t.type, fmt(t.last), t.months, fmt(t.due), t.days, t.note]));
+      .forEach(t => rows.push([t.name, t.company, t.site, t.type, fmt(t.last), t.months, fmt(t.due), t.days, t.note]));
     offer(`terminy-bozp-${todayISO}.csv`, csv(rows));
   }
   function exportFindings() {
-    const rows = [['Firma', 'Místo', 'Závada', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Vyřešeno', 'Fotek']];
-    findings.forEach(f => rows.push([f.company, f.place, f.text, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'vyřešeno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), (f.photos || []).length]));
+    const rows = [['Firma', 'Závod / provozovna', 'Místo', 'Závada', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Odstraněno', 'Způsob odstranění', 'Fotek závady', 'Fotek po opravě']];
+    findings.forEach(f => rows.push([f.company, f.site, f.place, f.text, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'odstraněno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), f.fixText, (f.photos || []).length, (f.fixPhotos || []).length]));
     offer(`zavady-bozp-${todayISO}.csv`, csv(rows));
   }
   async function copyProtocol() {
@@ -850,7 +1044,7 @@ textarea { min-height: 90px; resize: vertical; }
     const open = findings.filter(f => f.status !== 'done' && (!zc || f.company === zc));
     if (!open.length) { toast('Žádné otevřené závady k zkopírování.'); return; }
     const text = `Zjištěné nedostatky${zc ? ' – ' + zc : ''} (stav k ${fmt(todayISO)})\n\n` + open.map((f, i) =>
-      `${i + 1}. ${f.text}\n   Místo: ${f.place || '–'} | Závažnost: ${SEV[f.severity]} | Odpovídá: ${f.owner || '–'} | Termín nápravy: ${fmt(f.due)}`).join('\n\n');
+      `${i + 1}. ${f.text}\n   ${f.site ? 'Závod: ' + f.site + ' | ' : ''}Místo: ${f.place || '–'} | Závažnost: ${SEV[f.severity]} | Odpovídá: ${f.owner || '–'} | Termín nápravy: ${fmt(f.due)}`).join('\n\n');
     try { await navigator.clipboard.writeText(text); toast('Text zkopírován. Vlož ho do protokolu.'); }
     catch (e) { toast('Schránka není dostupná.'); }
   }
@@ -867,10 +1061,10 @@ textarea { min-height: 90px; resize: vertical; }
       lines.push(c.toUpperCase());
       const late = due.filter(t => t.company === c && t.days < 0);
       const soon = due.filter(t => t.company === c && t.days >= 0);
-      if (late.length) { lines.push('Prošlé termíny:'); late.forEach(t => lines.push(`  - ${t.name}: ${t.type}, termín ${fmt(t.due)} (prošlé o ${-t.days} ${dayWord(t.days)})`)); }
-      if (soon.length) { lines.push('Do 30 dní:'); soon.forEach(t => lines.push(`  - ${t.name}: ${t.type}, termín ${fmt(t.due)} (za ${t.days} ${dayWord(t.days)})`)); }
+      if (late.length) { lines.push('Prošlé termíny:'); late.forEach(t => lines.push(`  - ${t.name}${t.site ? ' (' + t.site + ')' : ''}: ${t.type}, termín ${fmt(t.due)} (prošlé o ${-t.days} ${dayWord(t.days)})`)); }
+      if (soon.length) { lines.push('Do 30 dní:'); soon.forEach(t => lines.push(`  - ${t.name}${t.site ? ' (' + t.site + ')' : ''}: ${t.type}, termín ${fmt(t.due)} (za ${t.days} ${dayWord(t.days)})`)); }
       const lf = lateF.filter(f => f.company === c);
-      if (lf.length) { lines.push('Závady po termínu nápravy:'); lf.forEach(f => lines.push(`  - ${f.text}${f.place ? ' (' + f.place + ')' : ''}, náprava do ${fmt(f.due)}${f.owner ? ', odpovídá ' + f.owner : ''}`)); }
+      if (lf.length) { lines.push('Závady po termínu nápravy:'); lf.forEach(f => lines.push(`  - ${f.text} (${[f.site, f.place].filter(Boolean).join(', ') || 'bez místa'}), náprava do ${fmt(f.due)}${f.owner ? ', odpovídá ' + f.owner : ''}`)); }
       lines.push('');
     });
     return { count: due.length + lateF.length, text: lines.join('\n') };
@@ -938,13 +1132,47 @@ textarea { min-height: 90px; resize: vertical; }
       case 'export-terms': exportTerms(); break;
       case 'export-findings': exportFindings(); break;
       case 'copy-protocol': copyProtocol(); break;
-      case 'resolve': try { await patch('zavady', id, { status: 'done', doneAt: todayISO }); toast('Označeno jako vyřešené.'); } catch (err) { /* */ } break;
+      case 'resolve': { const f = findings.find(x => x.id === id); if (f) openResolve(f); break; }
+      case 'close-resolve': closeResolve(); break;
+      case 'drop-fix': { const i = Number(b.dataset.i); URL.revokeObjectURL(pendingFix[i].url); pendingFix.splice(i, 1); renderFix(); break; }
+      case 'add-firm': {
+        const name = $('#newFirm').value.trim();
+        if (!name) { toast('Napiš název firmy.'); break; }
+        if (companiesOf().some(c => c.toLowerCase() === name.toLowerCase())) { toast('Tahle firma už existuje.'); break; }
+        try { await ensureEntities({ firm: name }); $('#newFirm').value = ''; toast('Firma založena.'); } catch (err) { /* */ }
+        break;
+      }
+      case 'add-site': case 'add-place': case 'add-person': {
+        const firm = b.dataset.name, fid = slug(firm), a = b.dataset.action;
+        const inp = $('#' + (a === 'add-site' ? 'ns-' : a === 'add-place' ? 'np-' : 'no-') + fid);
+        const val = inp.value.trim();
+        if (!val) { toast('Napiš název.'); break; }
+        try {
+          if (a === 'add-site') await ensureEntities({ firm, site: val });
+          else if (a === 'add-place') await ensureEntities({ firm, site: $('#npS-' + fid).value, place: val });
+          else await ensureEntities({ firm, person: val });
+          inp.value = ''; b.blur(); toast('Přidáno.'); render();
+        } catch (err) { /* */ }
+        break;
+      }
+      case 'del-site': try { await del('provozovny', id); } catch (err) { /* */ } break;
+      case 'del-place': try { await del('mista', id); } catch (err) { /* */ } break;
+      case 'del-person': try { await del('osoby', id); } catch (err) { /* */ } break;
+      case 'del-firm': confirmTwice(b, async () => {
+        try {
+          for (const x of sites.filter(x => x.firmId === id)) await del('provozovny', x.id);
+          for (const x of places.filter(x => x.firmId === id)) await del('mista', x.id);
+          for (const x of people.filter(x => x.firmId === id)) await del('osoby', x.id);
+          await del('firmy', id);
+          toast('Firma smazána. Její termíny a závady zůstaly.');
+        } catch (err) { /* */ }
+      }); break;
       case 'reopen': try { await patch('zavady', id, { status: 'open', doneAt: '' }); } catch (err) { /* */ } break;
       case 'del-find': confirmTwice(b, async () => {
         const f = findings.find(x => x.id === id);
         try {
           await del('zavady', id);
-          if (assets && f && f.photos) for (const pid of f.photos) { try { await assets.delete(pid); } catch (err) { /* */ } }
+          if (assets && f) for (const pid of [...(f.photos || []), ...(f.fixPhotos || [])]) { try { await assets.delete(pid); } catch (err) { /* */ } }
           toast('Závada smazána.');
         } catch (err) { /* */ }
       }); break;
@@ -962,7 +1190,7 @@ textarea { min-height: 90px; resize: vertical; }
     }
   });
   $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#lightbox').hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); } });
 
   setTab(tab);
   render();
