@@ -115,6 +115,7 @@ h1, h2, h3 { font-family: var(--display); font-stretch: 112%; font-weight: 700; 
   min-width: 19px; height: 19px; line-height: 19px; text-align: center; padding: 0 5px; border-radius: 3px;
 }
 @media (max-width: 680px) {
+  .who-chip { width: 100%; }
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; border-radius: 0; border-width: 1px 0 0;
     padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px); gap: 0;
@@ -170,7 +171,7 @@ h1, h2, h3 { font-family: var(--display); font-stretch: 112%; font-weight: 700; 
 .field > label:not(.photo-drop), .label {
   font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
 }
-input[type=text], input[type=date], input[type=number], input[type=search], select, textarea {
+input[type=text], input[type=password], input[type=email], input[type=date], input[type=number], input[type=search], select, textarea {
   width: 100%; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r); padding: 10px 12px; min-height: 44px;
   transition: border-color .15s, box-shadow .15s;
 }
@@ -375,9 +376,85 @@ textarea { min-height: 96px; resize: vertical; }
 .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
 .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
 [data-view] { animation: fadein .25s ease both; }
+/* ——— přihlášení ——— */
+body.locked .app { display: none; }
+.auth { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+.auth-card { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; position: relative; }
+.auth-card::before { content: ""; display: block; height: 5px; background: repeating-linear-gradient(112deg, var(--brand) 0 7px, transparent 7px 13px); }
+.auth-brand { display: flex; align-items: center; gap: 14px; padding: 22px 24px 6px; }
+.auth-brand h1 { font-size: 19px; text-transform: uppercase; font-stretch: 118%; font-weight: 800; letter-spacing: .02em; }
+.auth-brand h1 em { font-style: normal; color: var(--brand); }
+.auth-brand .brand-logo { height: 26px; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 16px 24px 0; border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; }
+.auth-tab { border: 0; background: var(--surface); padding: 10px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.auth-tab + .auth-tab { border-left: 1px solid var(--line-strong); }
+.auth-tab[aria-selected="true"] { background: var(--graphite); color: #fff; }
+.auth-pane { display: flex; flex-direction: column; gap: 14px; padding: 20px 24px 8px; }
+.auth-pane h2 { font-size: 16px; text-transform: uppercase; letter-spacing: .02em; }
+.auth-msg { margin: 0 24px 4px; min-height: 22px; font-size: 14px; font-weight: 600; }
+.auth-msg.err { color: var(--red); } .auth-msg.ok { color: var(--ok); }
+.auth-foot { padding: 0 24px 22px; }
+.link { border: 0; background: none; padding: 0; color: var(--brand); font-weight: 600; cursor: pointer; text-align: left; font-size: 14px; }
+.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.link-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.who-chip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.who-chip .name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.who-chip .role { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--brand); border-radius: 3px; padding: 2px 6px; }
+.user-row .who small { font-family: var(--mono); font-weight: 500; color: var(--muted); font-size: 12px; margin-left: 6px; }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
+
+<div class="auth" id="auth">
+  <div class="auth-card">
+    <div class="auth-brand"><img class="brand-logo" src="data:image/png;base64,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" alt="ŽPSV"><span class="brand-sep" aria-hidden="true"></span><h1>Hlídač <em>BOZP</em></h1></div>
+    <div class="auth-tabs" id="authTabs" role="tablist">
+      <button type="button" class="auth-tab" data-auth="login" aria-selected="true">Přihlášení</button>
+      <button type="button" class="auth-tab" data-auth="register" aria-selected="false">Registrace</button>
+    </div>
+    <div class="auth-pane" data-pane="loading"><p class="small-note">Načítám…</p></div>
+    <form class="auth-pane" data-pane="login" id="fLogin" hidden>
+      <div class="field"><label for="lOsc">Osobní číslo</label><input type="text" id="lOsc" autocomplete="username" placeholder="např. 10234 · správce: admin" required></div>
+      <div class="field"><label for="lPass">Heslo</label><input type="password" id="lPass" autocomplete="current-password" required></div>
+      <button class="btn primary big" type="submit">Přihlásit</button>
+      <div class="link-row"><button type="button" class="link" data-auth="forgot">Zapomenuté heslo</button></div>
+    </form>
+    <form class="auth-pane" data-pane="register" id="fReg" hidden>
+      <div class="field"><label for="rName">Jméno a příjmení</label><input type="text" id="rName" autocomplete="name" required></div>
+      <div class="field"><label for="rOsc">Osobní číslo</label><input type="text" id="rOsc" autocomplete="username" required></div>
+      <div class="field"><label for="rMail">E-mail (pro obnovu hesla)</label><input type="email" id="rMail" autocomplete="email" required></div>
+      <div class="field"><label for="rPass">Heslo (min. 8 znaků)</label><input type="password" id="rPass" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="rPass2">Heslo znovu</label><input type="password" id="rPass2" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn primary big" type="submit">Odeslat registraci</button>
+      <p class="small-note">Účet začne fungovat, až ho schválí správce.</p>
+    </form>
+    <form class="auth-pane" data-pane="forgot" id="fForgot" hidden>
+      <h2>Obnova hesla</h2>
+      <div class="field"><label for="fgOsc">Osobní číslo (správce: admin)</label><input type="text" id="fgOsc" autocomplete="username" required></div>
+      <button class="btn primary big" type="submit">Poslat kód na e-mail</button>
+      <div class="link-row"><button type="button" class="link" data-auth="code">Už mám kód</button><button type="button" class="link" data-auth="login">Zpět na přihlášení</button></div>
+    </form>
+    <form class="auth-pane" data-pane="code" id="fCode" hidden>
+      <h2>Nové heslo</h2>
+      <div class="field"><label for="cOsc">Osobní číslo (správce: admin)</label><input type="text" id="cOsc" autocomplete="username" required></div>
+      <div class="field"><label for="cCode">Kód z e-mailu</label><input type="text" id="cCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+      <div class="field"><label for="cPass">Nové heslo (min. 8 znaků)</label><input type="password" id="cPass" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="cPass2">Nové heslo znovu</label><input type="password" id="cPass2" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn primary big" type="submit">Nastavit nové heslo</button>
+      <div class="link-row"><button type="button" class="link" data-auth="login">Zpět na přihlášení</button></div>
+    </form>
+    <form class="auth-pane" data-pane="setup" id="fSetup" hidden>
+      <h2>První spuštění</h2>
+      <p class="small-note">Nastav heslo správce. Přihlašovací jméno správce je <b>admin</b>.</p>
+      <div class="field"><label for="sMail">E-mail správce (pro obnovu hesla)</label><input type="email" id="sMail" autocomplete="email" required></div>
+      <div class="field"><label for="sPass">Heslo (min. 8 znaků)</label><input type="password" id="sPass" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="sPass2">Heslo znovu</label><input type="password" id="sPass2" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn primary big" type="submit">Uložit a přihlásit</button>
+    </form>
+    <p class="auth-msg" id="authMsg" role="status" aria-live="polite"></p>
+    <p class="small-note auth-foot">ŽPSV · Hlídač BOZP</p>
+  </div>
+</div>
 
 <div class="app">
   <header class="top">
@@ -387,6 +464,11 @@ textarea { min-height: 96px; resize: vertical; }
       <div><h1>Hlídač <em>BOZP</em></h1><small id="today"></small></div>
     </div>
     <div class="sync" id="sync"><i></i><span>Připojuji…</span></div>
+    <div class="who-chip" id="whoChip" hidden>
+      <span class="name"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg><span id="whoName"></span><span class="role" id="whoRole" hidden>správce</span></span>
+      <button class="btn small" data-action="my-account">Můj účet</button>
+      <button class="btn small" data-action="logout">Odhlásit</button>
+    </div>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -395,6 +477,7 @@ textarea { min-height: 96px; resize: vertical; }
     <button class="tab" role="tab" data-tab="kontrola" id="tab-kontrola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.8-2.6h6.4L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.3"/></svg><span>Kontrola</span><span class="count" id="cnt-kontrola" hidden></span></button>
     <button class="tab" role="tab" data-tab="zavady" id="tab-zavady"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 16.8v.2"/></svg><span>Závady</span><span class="count" id="cnt-zavady" hidden></span></button>
     <button class="tab" role="tab" data-tab="firmy" id="tab-firmy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V6.5l8-3v17M12 9.5h8v11M2.5 20.5h19M7.5 9.5v.01M7.5 13v.01M7.5 16.5v.01M15.5 13v.01M15.5 16.5v.01"/></svg><span>Firmy</span><span class="count" id="cnt-firmy" hidden></span></button>
+    <button class="tab" role="tab" data-tab="uzivatele" id="tab-uzivatele" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6.1M17.5 14.2a6 6 0 0 1 3.7 5.3"/></svg><span>Uživatelé</span><span class="count" id="cnt-uzivatele" hidden></span></button>
   </nav>
 
   <div id="notice"></div>
@@ -529,6 +612,22 @@ textarea { min-height: 96px; resize: vertical; }
     </div>
   </main>
 
+  <!-- UŽIVATELÉ (jen správce) -->
+  <main id="view-uzivatele" data-view hidden>
+    <div class="section">
+      <div class="section-head"><h2>Čekající registrace</h2><span class="hint">schval nebo zamítni</span></div>
+      <div id="uPending"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Žádosti o obnovu hesla</h2></div>
+      <div id="uResets"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Uživatelé</h2></div>
+      <div id="uList"></div>
+    </div>
+  </main>
+
   <!-- FIRMY -->
   <main id="view-firmy" data-view hidden>
     <div class="section">
@@ -585,6 +684,21 @@ textarea { min-height: 96px; resize: vertical; }
       <button class="btn primary" type="submit" id="renameSave">Přejmenovat</button>
       <button class="btn" type="button" data-action="close-rename">Zrušit</button>
     </div>
+  </form>
+</div>
+<div class="modal" id="accModal" hidden>
+  <form class="panel" id="accForm">
+    <h3>Můj účet</h3>
+    <p class="small-note" id="accWho"></p>
+    <div class="field"><label for="aMail">E-mail pro obnovu hesla</label><input type="email" id="aMail" autocomplete="email"></div>
+    <div class="field"><label for="aCur">Současné heslo</label><input type="password" id="aCur" autocomplete="current-password" required></div>
+    <div class="field"><label for="aNew">Nové heslo (nevyplňuj, pokud ho neměníš)</label><input type="password" id="aNew" autocomplete="new-password" minlength="8"></div>
+    <div class="field"><label for="aNew2">Nové heslo znovu</label><input type="password" id="aNew2" autocomplete="new-password" minlength="8"></div>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Uložit</button>
+      <button class="btn" type="button" data-action="close-acc">Zavřít</button>
+    </div>
+    <p class="small-note" id="accStatus"></p>
   </form>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -663,15 +777,16 @@ textarea { min-height: 96px; resize: vertical; }
 
   // ---------- data ----------
   let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
+  let accounts = [], me = null, accountsLoaded = false, isOwner = null;
   let terms = [], findings = [], firms = [], sites = [], places = [], people = [], notifyInfo = null;
-  const mem = { terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map() };
+  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else findings = arr;
+    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -706,7 +821,7 @@ textarea { min-height: 96px; resize: vertical; }
 
   async function connect() {
     const use = window.claude && window.claude.use;
-    if (!use) { setSync('off', 'Jen v tomto okně'); showNotice(); render(); return; }
+    if (!use) { setSync('off', 'Jen v tomto okně'); accountsLoaded = true; gate(); showNotice(); render(); return; }
     const [dbNs, asNs, dlNs, user, mcpNs] = await Promise.all([
       use('db').catch(() => null), use('assets').catch(() => null),
       use('downloads').catch(() => null), use('user').catch(() => null), use('mcp').catch(() => null),
@@ -715,8 +830,14 @@ textarea { min-height: 96px; resize: vertical; }
     if (!mcp) { $('#testMailBtn').disabled = true; $('#testMailStatus').textContent = 'Odesílání e-mailu funguje jen v aplikaci otevřené přes claude.ai.'; }
     if (user) {
       try { const c = await user.can('data.write'); if (c === false) readOnly = true; } catch (e) { /* neznámé */ }
+      try { isOwner = await user.isOwner(); } catch (e) { isOwner = null; }
     }
-    if (!db) { setSync('off', 'Jen v tomto okně'); showNotice(); render(); return; }
+    if (!db) { setSync('off', 'Jen v tomto okně'); accountsLoaded = true; gate(); showNotice(); render(); return; }
+    db.collection('ucty').onSnapshot(s => {
+      accounts = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      accountsLoaded = true;
+      gate(); render();
+    }, () => { accountsLoaded = true; gate(); });
     setSync('on', 'Ukládá se online');
     db.collection('terminy').onSnapshot(s => {
       terms = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -756,7 +877,7 @@ textarea { min-height: 96px; resize: vertical; }
   }
 
   // ---------- navigace ----------
-  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady', 'firmy'];
+  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady', 'firmy', 'uzivatele'];
   let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'prehled';
   function setTab(t) {
     tab = t;
@@ -981,6 +1102,7 @@ textarea { min-height: 96px; resize: vertical; }
       ? `Poslední rozeslání: ${notifyInfo.lastRun}${notifyInfo.summary ? ' · ' + notifyInfo.summary : ''}`
       : 'Zatím nebylo nic rozesláno.';
 
+    renderUsers();
     showNotice();
   }
   // ---------- animovaná čísla ----------
@@ -1459,7 +1581,7 @@ textarea { min-height: 96px; resize: vertical; }
     const sum = buildSummary(true);
     const body = `ZKUŠEBNÍ E-MAIL – ukázka upozornění.\n\nHlídač BOZP – přehled k ${fmt(todayISO)}\n\n${sum.text}\nOdesláno ručně tlačítkem v aplikaci Hlídač BOZP. Firmám nebylo nic odesláno.`;
     try {
-      await mcp.callTool('Gmail', 'send_message', { to: [to], subject: `Hlídač BOZP – zkušební přehled (${fmt(todayISO)})`, body });
+      await mcp.callTool('Gmail', 'send_message', { to: [to], subject: `Hlídač BOZP – zkušební přehled (${fmt(todayISO)})`, body, htmlBody: mailHtml('Zkušební přehled', `<p style="margin:0 0 12px">Ukázka upozornění k ${fmt(todayISO)}. Firmám nebylo nic odesláno.</p><pre style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;white-space:pre-wrap">${esc(sum.text)}</pre>`) });
       st.textContent = `Odesláno na ${to}. Zkontroluj schránku (případně spam).`;
       toast('Zkušební e-mail odeslán.');
     } catch (err) {
@@ -1478,6 +1600,241 @@ textarea { min-height: 96px; resize: vertical; }
     }
   });
 
+
+  // ---------- e-maily ve firemním vzhledu ----------
+  function mailHtml(title, inner) {
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eeede9"><tr><td align="center" style="padding:24px 12px">`
+      + `<table role="presentation" width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:600px;border:1px solid #dcd9d3;font-family:Arial,Helvetica,sans-serif;color:#1f1e1d">`
+      + `<tr><td style="padding:18px 24px 14px"><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;color:#3d3c3b;letter-spacing:-1px">žpsv</span><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;font-style:italic;color:#ae0f0a;letter-spacing:-4px">&nbsp;///</span>`
+      + `<span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#3d3c3b;letter-spacing:1px;padding-left:14px">HLÍDAČ <span style="color:#ae0f0a">BOZP</span></span></td></tr>`
+      + `<tr><td bgcolor="#ae0f0a" height="4" style="font-size:0;line-height:0">&nbsp;</td></tr>`
+      + `<tr><td style="padding:22px 24px;font-size:15px;line-height:1.5"><h1 style="margin:0 0 14px;font-size:18px;text-transform:uppercase;color:#3d3c3b">${esc(title)}</h1>${inner}</td></tr>`
+      + `<tr><td style="padding:14px 24px;border-top:1px solid #dcd9d3;font-size:12px;color:#6b6864">Hlídač BOZP · ŽPSV · automatická zpráva</td></tr></table></td></tr></table>`;
+  }
+  async function sendMail(to, subject, title, inner, text) {
+    if (!mcp) throw { code: 'no_mcp' };
+    return mcp.callTool('Gmail', 'send_message', { to: [to], subject, body: text, htmlBody: mailHtml(title, inner) });
+  }
+
+  // ---------- účty a přihlášení ----------
+  const SESS = 'hlidac_sess_v1';
+  const b64 = u8 => btoa(String.fromCharCode(...u8));
+  const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const randB64 = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return b64(a); };
+  async function hashPw(pw, salt) {
+    const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(salt), iterations: 150000 }, k, 256);
+    return b64(new Uint8Array(bits));
+  }
+  const accId = osc => (osc.trim().toLowerCase() === 'admin' ? 'admin' : 'u-' + slug(osc.trim()));
+  const accOf = osc => accounts.find(a => a.id === accId(osc));
+  const isMail = x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x);
+  const nowIso = () => new Date().toISOString();
+
+  let pane = 'loading';
+  function showPane(p, msg = '', kind = '') {
+    pane = p;
+    document.querySelectorAll('.auth-pane').forEach(el => (el.hidden = el.dataset.pane !== p));
+    $('#authTabs').hidden = !['login', 'register'].includes(p);
+    document.querySelectorAll('.auth-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.auth === p)));
+    authMsg(msg, kind);
+    const first = document.querySelector(`.auth-pane[data-pane="${p}"] input`);
+    if (first && p !== 'loading') setTimeout(() => first.focus(), 30);
+  }
+  function authMsg(t, kind = '') { const m = $('#authMsg'); m.textContent = t; m.className = 'auth-msg ' + kind; }
+
+  function saveSession(acc) {
+    try { localStorage.setItem(SESS, JSON.stringify({ id: acc.id, sig: acc.hash.slice(0, 16), exp: Date.now() + 12 * 3600e3 })); } catch (e) { /* bez úložiště */ }
+  }
+  function tryRestore() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SESS) || 'null');
+      if (!s || s.exp < Date.now()) return;
+      const a = accounts.find(x => x.id === s.id);
+      if (a && a.status === 'active' && a.hash && a.hash.slice(0, 16) === s.sig) me = a;
+    } catch (e) { /* bez úložiště */ }
+  }
+  function logout(msg = '') {
+    me = null;
+    try { localStorage.removeItem(SESS); } catch (e) { /* */ }
+    gate();
+    showPane('login', msg, msg ? 'err' : '');
+  }
+  function gate() {
+    if (!accountsLoaded) { document.body.classList.add('locked'); $('#auth').hidden = false; showPane('loading'); return; }
+    if (me) {
+      const cur = accounts.find(a => a.id === me.id);
+      if (!cur || cur.status !== 'active' || cur.hash !== me.hash) { me = null; try { localStorage.removeItem(SESS); } catch (e) { /* */ } }
+      else me = cur;
+    }
+    if (!me) tryRestore();
+    const locked = !me;
+    document.body.classList.toggle('locked', locked);
+    $('#auth').hidden = !locked;
+    if (locked) {
+      const hasAdmin = accounts.some(a => a.id === 'admin');
+      if (!hasAdmin) {
+        if (pane !== 'setup') showPane('setup', isOwner === false ? 'Aplikaci musí nejdřív nastavit její vlastník.' : '', isOwner === false ? 'err' : '');
+      } else if (pane === 'loading' || pane === 'setup') showPane('login');
+    }
+    const admin = !!(me && me.role === 'admin');
+    $('#whoChip').hidden = !me;
+    if (me) { $('#whoName').textContent = me.name; $('#whoRole').hidden = !admin; }
+    $('#tab-uzivatele').hidden = !admin;
+    if (!admin && tab === 'uzivatele') setTab('prehled');
+  }
+
+  // throttle
+  let fails = 0, lockUntil = 0;
+  function throttled() {
+    if (Date.now() < lockUntil) { authMsg(`Příliš mnoho pokusů. Zkus to za ${Math.ceil((lockUntil - Date.now()) / 1000)} s.`, 'err'); return true; }
+    return false;
+  }
+  function failed(msg) { fails++; if (fails >= 5) { lockUntil = Date.now() + 30000; fails = 0; } authMsg(msg, 'err'); }
+  async function busy(form, fn) {
+    const btn = form.querySelector('button[type=submit]'); const t = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Pracuji…';
+    try { await fn(); } finally { btn.disabled = false; btn.textContent = t; }
+  }
+
+  document.querySelectorAll('[data-auth]').forEach(b => b.addEventListener('click', () => showPane(b.dataset.auth)));
+
+  $('#fSetup').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
+    if (isOwner === false) { authMsg('Aplikaci musí nejdřív nastavit její vlastník.', 'err'); return; }
+    if (accounts.some(a => a.id === 'admin')) { showPane('login', 'Správce už je nastavený. Přihlas se.'); return; }
+    const mail = $('#sMail').value.trim(), p1 = $('#sPass').value, p2 = $('#sPass2').value;
+    if (!isMail(mail)) { authMsg('Zadej platný e-mail.', 'err'); return; }
+    if (p1.length < 8) { authMsg('Heslo musí mít aspoň 8 znaků.', 'err'); return; }
+    if (p1 !== p2) { authMsg('Hesla se neshodují.', 'err'); return; }
+    const salt = randB64(16), hash = await hashPw(p1, salt);
+    const acc = { name: 'admin', osc: 'admin', email: mail, salt, hash, role: 'admin', status: 'active', createdAt: nowIso(), approvedAt: nowIso() };
+    try { await put('ucty', 'admin', acc); } catch (err) { authMsg('Uložení se nepovedlo.', 'err'); return; }
+    me = { id: 'admin', ...acc }; saveSession(me); gate(); render(); toast('Správce nastaven. Vítej!');
+  }); });
+
+  $('#fLogin').addEventListener('submit', e => { e.preventDefault(); if (throttled()) return; busy(e.target, async () => {
+    const osc = $('#lOsc').value.trim(), pw = $('#lPass').value;
+    const a = accOf(osc);
+    if (!a || !a.hash || (await hashPw(pw, a.salt)) !== a.hash) { failed('Nesprávné osobní číslo nebo heslo.'); return; }
+    if (a.status === 'pending') { authMsg('Registrace čeká na schválení správcem.', 'err'); return; }
+    if (a.status === 'blocked') { authMsg('Účet je zablokovaný. Obrať se na správce.', 'err'); return; }
+    fails = 0; me = a; saveSession(a); $('#lPass').value = ''; gate(); render(); toast(`Přihlášen: ${a.name}`);
+  }); });
+
+  $('#fReg').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
+    const name = $('#rName').value.trim(), osc = $('#rOsc').value.trim(), mail = $('#rMail').value.trim(), p1 = $('#rPass').value, p2 = $('#rPass2').value;
+    if (!name || !osc) { authMsg('Vyplň jméno a osobní číslo.', 'err'); return; }
+    if (osc.toLowerCase() === 'admin' || !/^[A-Za-z0-9._-]{1,30}$/.test(osc)) { authMsg('Osobní číslo smí obsahovat jen písmena, číslice, tečku, pomlčku a podtržítko.', 'err'); return; }
+    if (!isMail(mail)) { authMsg('Zadej platný e-mail.', 'err'); return; }
+    if (p1.length < 8) { authMsg('Heslo musí mít aspoň 8 znaků.', 'err'); return; }
+    if (p1 !== p2) { authMsg('Hesla se neshodují.', 'err'); return; }
+    if (accOf(osc)) { authMsg('Toto osobní číslo už je registrované.', 'err'); return; }
+    const salt = randB64(16), hash = await hashPw(p1, salt);
+    try { await put('ucty', accId(osc), { name, osc, email: mail, salt, hash, role: 'user', status: 'pending', createdAt: nowIso() }); }
+    catch (err) { authMsg('Registraci se nepodařilo uložit.', 'err'); return; }
+    e.target.reset();
+    showPane('login', 'Registrace odeslána. Až ji správce schválí, můžeš se přihlásit.', 'ok');
+  }); });
+
+  async function issueCode(a) {
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+    const salt = randB64(16), h = await hashPw(code, salt);
+    await sendMail(a.email, 'Hlídač BOZP – kód pro obnovu hesla', 'Obnova hesla',
+      `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0 0 12px">tvůj kód pro nastavení nového hesla:</p><p style="margin:0 0 16px;font-size:30px;font-weight:bold;letter-spacing:6px;color:#ae0f0a">${code}</p><p style="margin:0;color:#6b6864;font-size:13px">Kód platí 24 hodin. Zadej ho v aplikaci v části „Zapomenuté heslo → Už mám kód“. Pokud jsi o obnovu nežádal(a), e-mail ignoruj.</p>`,
+      `Kód pro obnovu hesla: ${code}\nPlatí 24 hodin. Zadej ho v aplikaci Hlídač BOZP (Zapomenuté heslo → Už mám kód).`);
+    await patch('ucty', a.id, { resetSalt: salt, resetHash: h, resetExp: Date.now() + 24 * 3600e3, resetReq: false, resetTries: 0, resetSentAt: nowIso() });
+  }
+
+  $('#fForgot').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
+    const osc = $('#fgOsc').value.trim(), a = accOf(osc);
+    const generic = 'Pokud účet existuje a má e-mail, kód dorazí na zadanou adresu.';
+    $('#cOsc').value = osc;
+    if (!a || !a.email) { showPane('code', generic, 'ok'); return; }
+    try { await issueCode(a); showPane('code', `Kód jsme poslali na e-mail účtu (${a.email.replace(/^(.).*(@.*)$/, '$1…$2')}).`, 'ok'); }
+    catch (err) {
+      try { await patch('ucty', a.id, { resetReq: true, resetReqAt: nowIso() }); } catch (e2) { /* */ }
+      showPane('code', 'Žádost jsme předali správci. Kód ti přijde e-mailem, jakmile ji vyřídí.', 'ok');
+    }
+  }); });
+
+  $('#fCode').addEventListener('submit', e => { e.preventDefault(); if (throttled()) return; busy(e.target, async () => {
+    const a = accOf($('#cOsc').value), code = $('#cCode').value.trim(), p1 = $('#cPass').value, p2 = $('#cPass2').value;
+    if (p1.length < 8) { authMsg('Heslo musí mít aspoň 8 znaků.', 'err'); return; }
+    if (p1 !== p2) { authMsg('Hesla se neshodují.', 'err'); return; }
+    if (!a || !a.resetHash || !(a.resetExp > Date.now()) || (a.resetTries || 0) >= 5) { failed('Kód je neplatný nebo vypršel. Požádej o nový.'); return; }
+    if ((await hashPw(code, a.resetSalt)) !== a.resetHash) {
+      try { await patch('ucty', a.id, { resetTries: (a.resetTries || 0) + 1 }); } catch (e2) { /* */ }
+      failed('Kód nesouhlasí.'); return;
+    }
+    const salt = randB64(16), hash = await hashPw(p1, salt);
+    await patch('ucty', a.id, { salt, hash, resetHash: '', resetSalt: '', resetExp: 0, resetTries: 0, resetReq: false });
+    e.target.reset();
+    showPane('login', 'Heslo změněno. Přihlas se novým heslem.', 'ok');
+  }); });
+
+  // můj účet
+  function openAccount() {
+    if (!me) return;
+    $('#accWho').textContent = `${me.name} · osobní číslo ${me.osc}`;
+    $('#aMail').value = me.email || ''; $('#aCur').value = ''; $('#aNew').value = ''; $('#aNew2').value = ''; $('#accStatus').textContent = '';
+    $('#accModal').hidden = false; $('#aMail').focus();
+  }
+  $('#accForm').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
+    const st = $('#accStatus'), mail = $('#aMail').value.trim(), cur = $('#aCur').value, n1 = $('#aNew').value, n2 = $('#aNew2').value;
+    if ((await hashPw(cur, me.salt)) !== me.hash) { st.textContent = 'Současné heslo nesouhlasí.'; return; }
+    if (mail && !isMail(mail)) { st.textContent = 'Zadej platný e-mail.'; return; }
+    const upd = { email: mail };
+    if (n1 || n2) {
+      if (n1.length < 8) { st.textContent = 'Nové heslo musí mít aspoň 8 znaků.'; return; }
+      if (n1 !== n2) { st.textContent = 'Nová hesla se neshodují.'; return; }
+      upd.salt = randB64(16); upd.hash = await hashPw(n1, upd.salt);
+    }
+    await patch('ucty', me.id, upd);
+    me = { ...me, ...upd }; saveSession(me);
+    $('#accModal').hidden = true; toast('Účet uložen.');
+  }); });
+
+  // správa uživatelů (správce)
+  function renderUsers() {
+    const admin = !!(me && me.role === 'admin');
+    const pend = accounts.filter(a => a.status === 'pending');
+    const resets = accounts.filter(a => a.resetReq);
+    const c = $('#cnt-uzivatele'); c.textContent = pend.length + resets.length; c.hidden = !admin || !(pend.length + resets.length);
+    if (!admin) return;
+    const row = (a, acts) => `<div class="row user-row">
+      <div class="pillcell"><span class="pill ${a.status === 'active' ? 'ok' : a.status === 'blocked' ? 'red' : 'amber'}">${a.role === 'admin' ? 'správce' : a.status === 'active' ? 'aktivní' : a.status === 'blocked' ? 'zablokovaný' : 'čeká'}</span></div>
+      <div><div class="who">${esc(a.name)}<small>${esc(a.osc)}</small></div><div class="what">${esc(a.email || 'bez e-mailu')}</div>
+      <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}</div></div>
+      <div class="acts">${acts}</div></div>`;
+    $('#uPending').innerHTML = pend.length ? `<div class="list">${pend.map(a => row(a,
+      `<button class="btn small primary" data-action="u-approve" data-id="${a.id}">${ic('check')}Schválit</button><button class="btn small danger" data-action="u-reject" data-id="${a.id}">${ic('trash')}Zamítnout</button>`)).join('')}</div>` : '<div class="empty">Žádná registrace nečeká.</div>';
+    $('#uResets').innerHTML = resets.length ? `<div class="list">${resets.map(a => row(a,
+      `<button class="btn small primary" data-action="u-code" data-id="${a.id}">${ic('mail')}Odeslat kód</button>`)).join('')}</div>` : '<div class="empty">Žádné žádosti.</div>';
+    const others = accounts.filter(a => a.status !== 'pending').sort((x, y) => (x.role === 'admin' ? -1 : y.role === 'admin' ? 1 : x.name.localeCompare(y.name, 'cs')));
+    $('#uList').innerHTML = others.length ? `<div class="list">${others.map(a => row(a, a.role === 'admin' ? '' :
+      `${a.status === 'blocked' ? `<button class="btn small" data-action="u-unblock" data-id="${a.id}">${ic('undo')}Odblokovat</button>` : `<button class="btn small" data-action="u-block" data-id="${a.id}">Zablokovat</button>`}
+       ${a.email ? `<button class="btn small" data-action="u-code" data-id="${a.id}">${ic('mail')}Kód pro nové heslo</button>` : ''}
+       <button class="btn small danger" data-action="u-delete" data-id="${a.id}">${ic('trash')}Smazat</button>`)).join('')}</div>` : '<div class="empty">Zatím žádní uživatelé.</div>';
+  }
+  async function adminAction(action, id, btn) {
+    const a = accounts.find(x => x.id === id); if (!a || !me || me.role !== 'admin') return;
+    if (action === 'u-approve') {
+      await patch('ucty', id, { status: 'active', approvedAt: nowIso(), approvedBy: me.name });
+      toast(`${a.name} schválen(a).`);
+      if (a.email) sendMail(a.email, 'Hlídač BOZP – účet schválen', 'Účet schválen', `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0">tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlásíš se osobním číslem <b>${esc(a.osc)}</b> a svým heslem.</p>`, `Tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlas se osobním číslem ${a.osc}.`).catch(() => {});
+    } else if (action === 'u-reject' || action === 'u-delete') {
+      confirmTwice(btn, async () => { await del('ucty', id); toast('Účet odstraněn.'); }, action === 'u-reject' ? 'Opravdu zamítnout?' : 'Opravdu smazat?');
+    } else if (action === 'u-block') { await patch('ucty', id, { status: 'blocked' }); toast('Účet zablokován.'); }
+    else if (action === 'u-unblock') { await patch('ucty', id, { status: 'active' }); toast('Účet odblokován.'); }
+    else if (action === 'u-code') {
+      if (!a.email) { toast('Účet nemá e-mail.'); return; }
+      btn.disabled = true;
+      try { await issueCode(a); toast(`Kód odeslán na ${a.email}.`); }
+      catch (err) { toast(err && err.code === 'server_not_connected' ? 'Gmail není připojený.' : 'Kód se nepodařilo odeslat.'); }
+      finally { btn.disabled = false; }
+    }
+  }
+
   // ---------- akce ----------
   const armed = new Map();
   function confirmTwice(btn, fn, question = 'Opravdu smazat?') {
@@ -1493,6 +1850,12 @@ textarea { min-height: 96px; resize: vertical; }
     const id = b.dataset.id;
     switch (b.dataset.action) {
       case 'new-term': openTermForm(null); break;
+      case 'logout': logout(); break;
+      case 'my-account': openAccount(); break;
+      case 'close-acc': $('#accModal').hidden = true; break;
+      case 'u-approve': case 'u-reject': case 'u-delete': case 'u-block': case 'u-unblock': case 'u-code':
+        try { await adminAction(b.dataset.action, id, b); } catch (err) { /* hláška už zobrazena */ }
+        break;
       case 'save-firm': {
         const name = b.dataset.name, id = slug(name);
         const emails = $('#fe-' + id).value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
@@ -1590,9 +1953,10 @@ textarea { min-height: 96px; resize: vertical; }
     }
   });
   $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); if (!$('#renameModal').hidden) closeRename(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); if (!$('#renameModal').hidden) closeRename(); $('#accModal').hidden = true; } });
 
   setTab(tab);
+  gate();
   render();
   connect();
 })();
