@@ -772,7 +772,7 @@ textarea { min-height: 90px; resize: vertical; }
           return d ? `<span class="chip">${esc(pn)}<button data-action="del-person" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${esc(pn)}</span>`;
         }).join('');
         return `<section class="firm-card">
-          <div class="firm-head"><h3>${esc(n)}</h3>${f.id ? `<button class="btn small danger" data-action="del-firm" data-id="${esc(f.id)}">Smazat</button>` : ''}</div>
+          <div class="firm-head"><h3>${esc(n)}</h3><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">Smazat firmu</button></div>
           <div class="firm-mail">
             <input type="text" id="fe-${id}" inputmode="email" placeholder="E-mail pro upozornění: kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
             <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
@@ -1101,11 +1101,12 @@ textarea { min-height: 90px; resize: vertical; }
 
   // ---------- akce ----------
   const armed = new Map();
-  function confirmTwice(btn, fn) {
+  function confirmTwice(btn, fn, question = 'Opravdu smazat?') {
     if (armed.get(btn.dataset.id)) { armed.delete(btn.dataset.id); fn(); return; }
     armed.set(btn.dataset.id, true);
-    btn.classList.add('armed'); btn.textContent = 'Opravdu smazat?';
-    setTimeout(() => { armed.delete(btn.dataset.id); if (btn.isConnected) { btn.classList.remove('armed'); btn.textContent = 'Smazat'; } }, 3500);
+    const orig = btn.textContent;
+    btn.classList.add('armed'); btn.textContent = question;
+    setTimeout(() => { armed.delete(btn.dataset.id); if (btn.isConnected) { btn.classList.remove('armed'); btn.textContent = orig; } }, 5000);
   }
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-action]');
@@ -1158,15 +1159,31 @@ textarea { min-height: 90px; resize: vertical; }
       case 'del-site': try { await del('provozovny', id); } catch (err) { /* */ } break;
       case 'del-place': try { await del('mista', id); } catch (err) { /* */ } break;
       case 'del-person': try { await del('osoby', id); } catch (err) { /* */ } break;
-      case 'del-firm': confirmTwice(b, async () => {
-        try {
-          for (const x of sites.filter(x => x.firmId === id)) await del('provozovny', x.id);
-          for (const x of places.filter(x => x.firmId === id)) await del('mista', x.id);
-          for (const x of people.filter(x => x.firmId === id)) await del('osoby', x.id);
-          await del('firmy', id);
-          toast('Firma smazána. Její termíny a závady zůstaly.');
-        } catch (err) { /* */ }
-      }); break;
+      case 'del-firm': {
+        const name = b.dataset.name, fid = slug(name);
+        const tIds = terms.filter(t => t.company === name), fIds = findings.filter(f => f.company === name);
+        const parts = [];
+        if (tIds.length) parts.push(`${tIds.length} ${tIds.length === 1 ? 'termín' : tIds.length < 5 ? 'termíny' : 'termínů'}`);
+        if (fIds.length) parts.push(`${fIds.length} ${fIds.length === 1 ? 'závadu' : fIds.length < 5 ? 'závady' : 'závad'}`);
+        const q = parts.length ? `Smazat i ${parts.join(' a ')}? Klikni znovu` : 'Opravdu smazat? Klikni znovu';
+        confirmTwice(b, async () => {
+          b.disabled = true; b.textContent = 'Mažu…';
+          try {
+            for (const t of tIds) await del('terminy', t.id);
+            for (const f of fIds) {
+              await del('zavady', f.id);
+              if (assets) for (const pid of [...(f.photos || []), ...(f.fixPhotos || [])]) { try { await assets.delete(pid); } catch (err) { /* */ } }
+            }
+            for (const x of sites.filter(x => x.firmId === fid)) await del('provozovny', x.id);
+            for (const x of places.filter(x => x.firmId === fid)) await del('mista', x.id);
+            for (const x of people.filter(x => x.firmId === fid)) await del('osoby', x.id);
+            if (firms.some(f => f.id === fid)) await del('firmy', fid);
+            toast(`Firma ${name} smazána.`);
+            render();
+          } catch (err) { b.disabled = false; b.textContent = 'Smazat firmu'; }
+        }, q);
+        break;
+      }
       case 'reopen': try { await patch('zavady', id, { status: 'open', doneAt: '' }); } catch (err) { /* */ } break;
       case 'del-find': confirmTwice(b, async () => {
         const f = findings.find(x => x.id === id);
