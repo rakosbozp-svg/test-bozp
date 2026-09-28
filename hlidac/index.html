@@ -153,6 +153,8 @@ textarea { min-height: 90px; resize: vertical; }
 .firm:first-child { border-top: 0; }
 .firm .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 @media (max-width: 640px) { .firm { grid-template-columns: 1fr auto; } .firm input[type=text] { grid-column: 1 / -1; } }
+.chip-name { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.chip-name:hover { text-decoration: underline; }
 .pick { display: flex; flex-direction: column; gap: 6px; }
 .firm-card { background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
 .firm-card h3 { font-size: 20px; }
@@ -327,7 +329,7 @@ textarea { min-height: 90px; resize: vertical; }
   <!-- KONTROLA -->
   <main id="view-kontrola" data-view hidden>
     <form class="section" id="findForm">
-      <div class="section-head"><h2>Nová závada z kontroly</h2><span class="hint">vyfoť, popiš, ulož, další</span></div>
+      <div class="section-head"><h2 id="kTitle">Nová závada z kontroly</h2><span class="hint" id="kHint">vyfoť, popiš, ulož, další</span></div>
       <div class="panel">
         <div class="grid-form">
           <div class="field"><label for="kFirm">Firma</label><div class="pick"><select id="kFirm"></select><input type="text" id="kFirmNew" placeholder="Název nové firmy" hidden></div></div>
@@ -350,10 +352,11 @@ textarea { min-height: 90px; resize: vertical; }
               <label><input type="radio" name="sev" value="nizka"><span>Nízká</span></label>
             </div>
           </div>
-          <div class="field"><label for="kOwner">Odpovídá</label><input type="text" id="kOwner" placeholder="mistr výroby"></div>
+          <div class="field"><label for="kOwner">Odpovídá</label><div class="pick"><select id="kOwner"></select><input type="text" id="kOwnerNew" placeholder="např. mistr výroby" hidden></div></div>
           <div class="field"><label for="kDue">Termín nápravy</label><input type="date" id="kDue"></div>
         </div>
         <button class="btn primary big" type="submit" id="kSave">Uložit závadu</button>
+        <button class="btn big" type="button" id="kCancel" data-action="cancel-find-edit" hidden>Zrušit úpravu</button>
         <p class="small-note" id="kStatus"></p>
       </div>
     </form>
@@ -422,6 +425,17 @@ textarea { min-height: 90px; resize: vertical; }
       <button class="btn" type="button" data-action="close-resolve">Zrušit</button>
     </div>
     <p class="small-note" id="rStatus"></p>
+  </form>
+</div>
+<div class="modal" id="renameModal" hidden>
+  <form class="panel" id="renameForm">
+    <h3 id="renameTitle">Přejmenovat</h3>
+    <div class="field"><label for="renameInput">Nový název</label><input type="text" id="renameInput" autocomplete="off"></div>
+    <p class="small-note" id="renameNote"></p>
+    <div class="form-actions">
+      <button class="btn primary" type="submit" id="renameSave">Přejmenovat</button>
+      <button class="btn" type="button" data-action="close-rename">Zrušit</button>
+    </div>
   </form>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -609,6 +623,7 @@ textarea { min-height: 90px; resize: vertical; }
   const companiesOf = () => uniq([...firms.map(f => f.name), ...terms.map(t => t.company), ...findings.map(f => f.company)]);
   const sitesOf = firm => uniq([...sites.filter(x => x.firmId === firmIdOf(firm)).map(x => x.name), ...terms.filter(t => t.company === firm).map(t => t.site), ...findings.filter(f => f.company === firm).map(f => f.site)]);
   const placesOf = (firm, site) => uniq([...places.filter(x => x.firmId === firmIdOf(firm) && (x.site || '') === (site || '')).map(x => x.name), ...findings.filter(f => f.company === firm && (f.site || '') === (site || '')).map(f => f.place)]);
+  const ownersOf = firm => uniq(findings.filter(f => f.company === firm).map(f => f.owner));
   const peopleOf = firm => uniq([...people.filter(x => x.firmId === firmIdOf(firm)).map(x => x.name), ...terms.filter(t => t.company === firm).map(t => t.name)]);
   const where = x => esc(x.company) + (x.site ? ' · ' + esc(x.site) : '');
 
@@ -642,6 +657,7 @@ textarea { min-height: 90px; resize: vertical; }
     const firm = getPick('kFirm');
     setPick('kSite', firm ? sitesOf(firm) : [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' });
     setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez místa —', newLabel: 'Nové místo…' });
+    setPick('kOwner', firm ? ownersOf(firm) : [], { none: '— nevyplněno —', newLabel: 'Nová osoba…' });
   }
   function pickerBusy(ids) { return ids.some(id => document.activeElement === $('#' + id) || document.activeElement === $('#' + id + 'New')); }
 
@@ -696,6 +712,7 @@ textarea { min-height: 90px; resize: vertical; }
         ${f.status === 'done'
           ? `<button class="btn small" data-action="reopen" data-id="${f.id}">Znovu otevřít</button>`
           : `<button class="btn small primary" data-action="resolve" data-id="${f.id}">Vyřešeno</button>`}
+        <button class="btn small" data-action="edit-find" data-id="${f.id}">Upravit</button>
         <button class="btn small danger" data-action="del-find" data-id="${f.id}">Smazat</button>
       </div>
     </article>`;
@@ -760,19 +777,21 @@ textarea { min-height: 90px; resize: vertical; }
         const siteDocs = sites.filter(x => x.firmId === id);
         const siteChips = sitesOf(n).map(sn => {
           const d = siteDocs.find(x => x.name === sn);
-          return d ? `<span class="chip">${esc(sn)}<button data-action="del-site" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(sn)}">×</button></span>` : `<span class="chip plain">${esc(sn)}</span>`;
+          const nm = `<button type="button" class="chip-name" data-action="rename" data-kind="site" data-firm="${esc(n)}" data-old="${esc(sn)}" title="Přejmenovat">${esc(sn)}</button>`;
+          return d ? `<span class="chip">${nm}<button data-action="del-site" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(sn)}">×</button></span>` : `<span class="chip plain">${nm}</span>`;
         }).join('');
         const placeChips = ['', ...sitesOf(n)].flatMap(sn => placesOf(n, sn).map(pn => {
           const d = places.find(x => x.firmId === id && (x.site || '') === sn && x.name === pn);
-          const label = `${sn ? '<small>' + esc(sn) + ' ›</small> ' : ''}${esc(pn)}`;
+          const label = `${sn ? '<small>' + esc(sn) + ' ›</small> ' : ''}<button type="button" class="chip-name" data-action="rename" data-kind="place" data-firm="${esc(n)}" data-site="${esc(sn)}" data-old="${esc(pn)}" title="Přejmenovat">${esc(pn)}</button>`;
           return d ? `<span class="chip">${label}<button data-action="del-place" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${label}</span>`;
         })).join('');
         const personChips = peopleOf(n).map(pn => {
           const d = people.find(x => x.firmId === id && x.name === pn);
-          return d ? `<span class="chip">${esc(pn)}<button data-action="del-person" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${esc(pn)}</span>`;
+          const nm = `<button type="button" class="chip-name" data-action="rename" data-kind="person" data-firm="${esc(n)}" data-old="${esc(pn)}" title="Přejmenovat">${esc(pn)}</button>`;
+          return d ? `<span class="chip">${nm}<button data-action="del-person" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${nm}</span>`;
         }).join('');
         return `<section class="firm-card">
-          <div class="firm-head"><h3>${esc(n)}</h3><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">Smazat firmu</button></div>
+          <div class="firm-head"><h3>${esc(n)}</h3><button class="btn small" data-action="rename" data-kind="firm" data-firm="${esc(n)}" data-old="${esc(n)}">Přejmenovat</button><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">Smazat firmu</button></div>
           <div class="firm-mail">
             <input type="text" id="fe-${id}" inputmode="email" placeholder="E-mail pro upozornění: kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
             <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
@@ -794,7 +813,7 @@ textarea { min-height: 90px; resize: vertical; }
       }).join('') : '<div class="empty">Zatím žádná firma. Založ první nahoře.</div>';
     }
     if (!$('#termForm').hidden && !pickerBusy(['fFirm', 'fSite', 'fPerson'])) refreshTermPickers();
-    if (!pickerBusy(['kFirm', 'kSite', 'kPlace'])) refreshKPickers();
+    if (!pickerBusy(['kFirm', 'kSite', 'kPlace', 'kOwner'])) refreshKPickers();
     $('#notifyLast').textContent = notifyInfo && notifyInfo.lastRun
       ? `Poslední rozeslání: ${notifyInfo.lastRun}${notifyInfo.summary ? ' · ' + notifyInfo.summary : ''}`
       : 'Zatím nebylo nic rozesláno.';
@@ -822,8 +841,8 @@ textarea { min-height: 90px; resize: vertical; }
   ['#fLast', '#fMonths'].forEach(s => $(s).addEventListener('input', updateDuePreview));
   $('#fFirm').addEventListener('change', () => { $('#fFirmNew').hidden = $('#fFirm').value !== NEW; refreshTermPickers({ firm: getPick('fFirm'), site: '', person: '' }); if ($('#fFirm').value === NEW) $('#fFirmNew').focus(); });
   $('#fFirmNew').addEventListener('input', () => { setPick('fSite', [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('fPerson', [], { newLabel: 'Nová osoba / zařízení…' }); });
-  ['fSite', 'fPerson', 'kSite', 'kPlace'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
-  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : sitesOf(getPick('kFirm')), { value: '', none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
+  ['fSite', 'fPerson', 'kSite', 'kPlace', 'kOwner'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
+  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : sitesOf(getPick('kFirm')), { value: '', none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); setPick('kOwner', $('#kFirm').value === NEW ? [] : ownersOf(getPick('kFirm')), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
   $('#kSite').addEventListener('change', () => { const firm = getPick('kFirm'); setPick('kPlace', firm && $('#kFirm').value !== NEW && $('#kSite').value !== NEW ? placesOf(firm, getPick('kSite')) : [], { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); });
   function openTermForm(t) {
     editingId = t ? t.id : null;
@@ -928,7 +947,7 @@ textarea { min-height: 90px; resize: vertical; }
   $('#findForm').addEventListener('submit', async e => {
     e.preventDefault();
     const status = $('#kStatus');
-    const firm = getPick('kFirm'), site = getPick('kSite'), place = getPick('kPlace');
+    const firm = getPick('kFirm'), site = getPick('kSite'), place = getPick('kPlace'), owner = getPick('kOwner');
     if (!firm) { status.textContent = 'Vyber nebo napiš firmu.'; return; }
     const btn = $('#kSave'); btn.disabled = true;
     status.textContent = '';
@@ -947,15 +966,25 @@ textarea { min-height: 90px; resize: vertical; }
       btn.textContent = 'Ukládám…';
       ['kFirm', 'kSite', 'kPlace'].forEach(rememberNew);
       await ensureEntities({ firm, site, place });
-      await put('zavady', newId(), {
+      const fields = {
         company: firm, site, place, text: $('#kText').value.trim(),
         severity: (document.querySelector('input[name=sev]:checked') || {}).value || 'stredni',
-        owner: $('#kOwner').value.trim(), due: $('#kDue').value || '', status: 'open',
-        photos: ids, createdAt: todayISO, doneAt: '',
-      });
+        owner, due: $('#kDue').value || '',
+      };
+      if (editingFind) {
+        const old = findings.find(x => x.id === editingFind) || {};
+        await patch('zavady', editingFind, { ...fields, photos: [...(old.photos || []), ...ids] });
+        pending.forEach(p => URL.revokeObjectURL(p.url));
+        pending = []; renderPending();
+        exitFindEdit();
+        toast('Závada upravena.');
+        setTab('zavady');
+        return;
+      }
+      await put('zavady', newId(), { ...fields, status: 'open', photos: ids, createdAt: todayISO, doneAt: '' });
       pending.forEach(p => URL.revokeObjectURL(p.url));
       pending = []; renderPending();
-      $('#kText').value = ''; $('#kOwner').value = '';
+      $('#kText').value = ''; setPick('kOwner', ownersOf(firm), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' });
       $('#kDue').value = addDays(todayISO, 14);
       status.textContent = 'Uloženo. Firma, závod a místo zůstaly vybrané pro další závadu.';
       toast('Závada uložena.');
@@ -967,8 +996,91 @@ textarea { min-height: 90px; resize: vertical; }
       else if (code === 'rate_limited') status.textContent = 'Moc rychle za sebou. Počkej chvilku a ulož znovu.';
       else if (!status.textContent) status.textContent = 'Uložení se nepovedlo. Zkus to znovu.';
     } finally {
-      btn.disabled = false; btn.textContent = 'Uložit závadu';
+      btn.disabled = false; btn.textContent = editingFind ? 'Uložit změny' : 'Uložit závadu';
     }
+  });
+
+  // úprava existující závady
+  let editingFind = null;
+  function openFindEdit(f) {
+    editingFind = f.id;
+    setTab('kontrola');
+    setPick('kFirm', companiesOf(), { newLabel: 'Nová firma…', value: f.company });
+    setPick('kSite', sitesOf(f.company), { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…', value: f.site || '' });
+    setPick('kPlace', placesOf(f.company, f.site || ''), { none: '— bez místa —', newLabel: 'Nové místo…', value: f.place || '' });
+    setPick('kOwner', ownersOf(f.company), { none: '— nevyplněno —', newLabel: 'Nová osoba…', value: f.owner || '' });
+    $('#kText').value = f.text || '';
+    const r = document.querySelector(`input[name=sev][value="${f.severity || 'stredni'}"]`); if (r) r.checked = true;
+    $('#kDue').value = f.due || '';
+    $('#kTitle').textContent = 'Úprava závady';
+    $('#kHint').textContent = `uložené fotky: ${(f.photos || []).length}, nové se přidají`;
+    $('#kSave').textContent = 'Uložit změny';
+    $('#kCancel').hidden = false;
+    $('#kStatus').textContent = '';
+  }
+  function exitFindEdit() {
+    editingFind = null;
+    $('#kTitle').textContent = 'Nová závada z kontroly';
+    $('#kHint').textContent = 'vyfoť, popiš, ulož, další';
+    $('#kSave').textContent = 'Uložit závadu';
+    $('#kCancel').hidden = true;
+    $('#kText').value = ''; $('#kDue').value = addDays(todayISO, 14); $('#kStatus').textContent = '';
+    refreshKPickers();
+  }
+
+  // přejmenování firmy, závodu, místa, osoby (propisuje se do záznamů)
+  let renameCtx = null;
+  const KIND_LABEL = { firm: 'firmu', site: 'závod / provozovnu', place: 'místo', person: 'osobu / zařízení' };
+  function openRename(ctx) {
+    renameCtx = ctx;
+    $('#renameTitle').textContent = `Přejmenovat ${KIND_LABEL[ctx.kind]}`;
+    $('#renameInput').value = ctx.old;
+    $('#renameNote').textContent = 'Nový název se propíše do všech termínů a závad.';
+    $('#renameModal').hidden = false; $('#renameInput').select();
+  }
+  function closeRename() { $('#renameModal').hidden = true; renameCtx = null; }
+  const strip = ({ id, ...rest }) => rest;
+  async function doRename({ kind, firm, old, site }, nv) {
+    const fid = slug(firm), now = new Date().toISOString();
+    if (kind === 'firm') {
+      const nfid = slug(nv), f = firms.find(x => x.id === fid) || {};
+      if (nfid !== fid && companiesOf().some(c => slug(c) === nfid)) throw new Error('Firma s tímto názvem už existuje.');
+      await put('firmy', nfid, { name: nv, email: f.email || '', notify: !!f.notify, updatedAt: now });
+      for (const x of sites.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.name); await put('provozovny', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('provozovny', x.id); }
+      for (const x of places.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.site) + '--' + seg(x.name); await put('mista', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('mista', x.id); }
+      for (const x of people.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.name); await put('osoby', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('osoby', x.id); }
+      for (const t of terms.filter(t => t.company === firm)) await patch('terminy', t.id, { company: nv });
+      for (const z of findings.filter(z => z.company === firm)) await patch('zavady', z.id, { company: nv });
+      if (nfid !== fid && firms.some(x => x.id === fid)) await del('firmy', fid);
+    } else if (kind === 'site') {
+      const oid = fid + '--' + seg(old), nid = fid + '--' + seg(nv);
+      await put('provozovny', nid, { firmId: fid, firm, name: nv });
+      if (oid !== nid && sites.some(x => x.id === oid)) await del('provozovny', oid);
+      for (const x of places.filter(x => x.firmId === fid && (x.site || '') === old)) { const pid = fid + '--' + seg(nv) + '--' + seg(x.name); await put('mista', pid, { ...strip(x), site: nv }); if (pid !== x.id) await del('mista', x.id); }
+      for (const t of terms.filter(t => t.company === firm && t.site === old)) await patch('terminy', t.id, { site: nv });
+      for (const z of findings.filter(z => z.company === firm && z.site === old)) await patch('zavady', z.id, { site: nv });
+    } else if (kind === 'place') {
+      const oid = fid + '--' + seg(site) + '--' + seg(old), nid = fid + '--' + seg(site) + '--' + seg(nv);
+      await put('mista', nid, { firmId: fid, firm, site: site || '', name: nv });
+      if (oid !== nid && places.some(x => x.id === oid)) await del('mista', oid);
+      for (const z of findings.filter(z => z.company === firm && (z.site || '') === (site || '') && z.place === old)) await patch('zavady', z.id, { place: nv });
+    } else if (kind === 'person') {
+      const oid = fid + '--' + seg(old), nid = fid + '--' + seg(nv);
+      await put('osoby', nid, { firmId: fid, firm, name: nv });
+      if (oid !== nid && people.some(x => x.id === oid)) await del('osoby', oid);
+      for (const t of terms.filter(t => t.company === firm && t.name === old)) await patch('terminy', t.id, { name: nv });
+    }
+  }
+  $('#renameForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const nv = $('#renameInput').value.trim(), btn = $('#renameSave');
+    if (!renameCtx) return;
+    if (!nv) { $('#renameNote').textContent = 'Název nesmí být prázdný.'; return; }
+    if (nv === renameCtx.old) { closeRename(); return; }
+    btn.disabled = true; btn.textContent = 'Přejmenovávám…';
+    try { await doRename(renameCtx, nv); closeRename(); toast('Přejmenováno.'); render(); }
+    catch (err) { $('#renameNote').textContent = (err && err.message && !err.code) ? err.message : 'Přejmenování se nepovedlo. Zkus to znovu.'; }
+    finally { btn.disabled = false; btn.textContent = 'Přejmenovat'; }
   });
 
   // ---------- potvrzení odstranění závady ----------
@@ -979,7 +1091,7 @@ textarea { min-height: 90px; resize: vertical; }
   function openResolve(f) {
     resolving = f.id;
     $('#resolveWhat').textContent = `${f.text} · ${[f.company, f.site, f.place].filter(Boolean).join(' · ')}`;
-    $('#rText').value = ''; $('#rDate').value = todayISO; $('#rStatus').textContent = '';
+    $('#rText').value = ''; $('#rDate').value = todayISO; $('#rDate').max = todayISO; $('#rStatus').textContent = '';
     pendingFix.forEach(p => URL.revokeObjectURL(p.url)); pendingFix = []; renderFix();
     $('#resolveModal').hidden = false; $('#rText').focus();
   }
@@ -997,6 +1109,7 @@ textarea { min-height: 90px; resize: vertical; }
     const st = $('#rStatus'), btn = $('#rSave');
     const text = $('#rText').value.trim();
     if (!text && !pendingFix.length) { st.textContent = 'Napiš, jak byla závada odstraněna, nebo přidej fotku po opravě.'; return; }
+    if ($('#rDate').value && $('#rDate').value > todayISO) { st.textContent = 'Datum odstranění nemůže být v budoucnu.'; return; }
     if (!text && pendingFix.length && !assets) { st.textContent = 'Fotky se v tomto zobrazení nedají uložit. Doplň popis odstranění.'; return; }
     btn.disabled = true; st.textContent = '';
     const ids = [];
@@ -1135,6 +1248,10 @@ textarea { min-height: 90px; resize: vertical; }
       case 'copy-protocol': copyProtocol(); break;
       case 'resolve': { const f = findings.find(x => x.id === id); if (f) openResolve(f); break; }
       case 'close-resolve': closeResolve(); break;
+      case 'edit-find': { const f = findings.find(x => x.id === id); if (f) openFindEdit(f); break; }
+      case 'cancel-find-edit': exitFindEdit(); setTab('zavady'); break;
+      case 'rename': openRename({ kind: b.dataset.kind, firm: b.dataset.firm, old: b.dataset.old, site: b.dataset.site || '' }); break;
+      case 'close-rename': closeRename(); break;
       case 'drop-fix': { const i = Number(b.dataset.i); URL.revokeObjectURL(pendingFix[i].url); pendingFix.splice(i, 1); renderFix(); break; }
       case 'add-firm': {
         const name = $('#newFirm').value.trim();
@@ -1207,7 +1324,7 @@ textarea { min-height: 90px; resize: vertical; }
     }
   });
   $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); if (!$('#renameModal').hidden) closeRename(); } });
 
   setTab(tab);
   render();
