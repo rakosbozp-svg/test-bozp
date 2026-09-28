@@ -1,293 +1,390 @@
 <title>Hlídač BOZP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
+/* ŽPSV – Hlídač BOZP · barvy z oficiálního loga: grafit #3D3C3B, červená #AE0F0A */
 :root {
-  --bg: #f1f3ef;
+  --bg: #eeede9;
+  --grid: rgba(61, 60, 59, .045);
   --surface: #ffffff;
-  --surface-2: #eceff0;
-  --ink: #0e1a1f;
-  --muted: #5b6a70;
-  --line: #dde3df;
-  --hi: #d4f04a;
-  --hi-deep: #9ab81f;
-  --hi-ink: #0e1a1f;
-  --head: #0e1a1f;
-  --head-ink: #f3f7f2;
-  --accent: #0e1a1f;
-  --accent-ink: #ffffff;
-  --accent-soft: #eef7cf;
-  --red: #d2402b;
-  --red-soft: #fde6e1;
-  --amber: #b06d09;
-  --amber-soft: #fcefd2;
-  --ok: #1d8653;
-  --ok-soft: #dff3e8;
-  --shadow: 0 1px 2px rgba(14,26,31,.05), 0 8px 24px -8px rgba(14,26,31,.12);
-  --radius: 16px;
-  --display: "Unbounded", "Segoe UI", system-ui, sans-serif;
-  --body: "Onest", "Segoe UI", system-ui, sans-serif;
+  --surface-2: #f6f5f2;
+  --ink: #1f1e1d;
+  --graphite: #3d3c3b;
+  --muted: #6b6864;
+  --line: #dcd9d3;
+  --line-strong: #bfbbb3;
+  --brand: #ae0f0a;
+  --brand-hover: #8f0c08;
+  --brand-ink: #ffffff;
+  --brand-soft: #f7e3e2;
+  --red: #ae0f0a;
+  --red-soft: #f7e3e2;
+  --amber: #a86b00;
+  --amber-bar: #d99a1c;
+  --amber-soft: #f8eed8;
+  --ok: #2b7355;
+  --ok-soft: #e1efe8;
+  --mid: #8c8883;
+  --shadow: 0 1px 0 rgba(31, 30, 29, .04), 0 10px 30px -18px rgba(31, 30, 29, .35);
+  --r: 6px;
+  --display: "Archivo", "Arial Narrow", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0b1317; --surface: #131e23; --surface-2: #1b282e; --ink: #e9efe9; --muted: #95a4a8; --line: #25343a;
-    --head: #131e23; --head-ink: #f3f7f2; --accent: #d4f04a; --accent-ink: #0e1a1f; --accent-soft: #26301a;
-    --red: #ff7a64; --red-soft: #3a1c17; --amber: #f2b646; --amber-soft: #33270f; --ok: #5fd394; --ok-soft: #14301f;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -8px rgba(0,0,0,.5);
+    --bg: #171615; --grid: rgba(255, 255, 255, .03); --surface: #22211f; --surface-2: #2a2927; --ink: #eeece8; --graphite: #d9d6d0;
+    --muted: #a39f98; --line: #37352f; --line-strong: #4c4943; --brand: #e0342b; --brand-hover: #f0463d; --brand-soft: #3a1a18;
+    --red: #ff6b60; --red-soft: #3a1a18; --amber: #f0b44a; --amber-bar: #e0a331; --amber-soft: #352a14; --ok: #62c795; --ok-soft: #173024; --mid: #77736d;
+    --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 12px 30px -16px rgba(0, 0, 0, .7);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b1317; --surface: #131e23; --surface-2: #1b282e; --ink: #e9efe9; --muted: #95a4a8; --line: #25343a;
-  --head: #131e23; --head-ink: #f3f7f2; --accent: #d4f04a; --accent-ink: #0e1a1f; --accent-soft: #26301a;
-  --red: #ff7a64; --red-soft: #3a1c17; --amber: #f2b646; --amber-soft: #33270f; --ok: #5fd394; --ok-soft: #14301f;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -8px rgba(0,0,0,.5);
+  --bg: #171615; --grid: rgba(255, 255, 255, .03); --surface: #22211f; --surface-2: #2a2927; --ink: #eeece8; --graphite: #d9d6d0;
+  --muted: #a39f98; --line: #37352f; --line-strong: #4c4943; --brand: #e0342b; --brand-hover: #f0463d; --brand-soft: #3a1a18;
+  --red: #ff6b60; --red-soft: #3a1a18; --amber: #f0b44a; --amber-bar: #e0a331; --amber-soft: #352a14; --ok: #62c795; --ok-soft: #173024; --mid: #77736d;
+  --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 12px 30px -16px rgba(0, 0, 0, .7);
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+body {
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--ink); font: 15.5px/1.55 var(--body); -webkit-font-smoothing: antialiased;
+}
 button, input, select, textarea { font: inherit; color: inherit; }
-h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
-:focus-visible { outline: 3px solid var(--hi-deep); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 112%; font-weight: 700; margin: 0; line-height: 1.12; letter-spacing: -.01em; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.ic { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: -3px; }
 
-.app { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 110px; }
+.app { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 116px; }
 
-/* hlavička */
+/* ——— hlavička ——— */
 .top {
-  position: relative; overflow: hidden;
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: var(--head); color: var(--head-ink);
-  border-radius: 22px; padding: 16px 18px; margin-bottom: 14px;
-  box-shadow: var(--shadow);
+  position: relative; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px 20px 20px; margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden;
 }
 .top::after {
-  content: ""; position: absolute; right: -60px; top: -80px; width: 260px; height: 260px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(212,240,74,.28), rgba(212,240,74,0) 70%); pointer-events: none;
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: repeating-linear-gradient(112deg, var(--brand) 0 7px, transparent 7px 13px);
+  opacity: .9;
 }
-.brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-.logo { width: 46px; height: 46px; flex: none; display: block; }
-.brand h1 { font-size: 22px; display: flex; align-items: center; gap: 8px; }
-.brand h1 .badge {
-  font-family: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .14em;
-  background: var(--hi); color: var(--hi-ink); border-radius: 6px; padding: 3px 7px 2px;
-}
-.brand small { display: block; color: rgba(243,247,242,.62); font-size: 13px; font-family: var(--body); font-weight: 500; margin-top: 2px; }
+.brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.brand-logo { height: 30px; width: auto; display: block; }
+.brand-sep { width: 1px; align-self: stretch; background: var(--line); }
+.brand h1 { font-size: 21px; text-transform: uppercase; letter-spacing: .02em; font-stretch: 118%; font-weight: 800; }
+.brand h1 em { font-style: normal; color: var(--brand); }
+.brand small { display: block; margin-top: 3px; font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
 .sync {
-  margin-left: auto; position: relative; z-index: 1; font-size: 12px; font-weight: 600; color: rgba(243,247,242,.8);
-  display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.08); border-radius: 999px; padding: 6px 12px;
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px;
 }
-.sync i { width: 8px; height: 8px; border-radius: 50%; background: #8a979b; display: inline-block; }
-.sync.on i { background: var(--hi); box-shadow: 0 0 0 4px rgba(212,240,74,.18); }
-.sync.off i { background: #f2b646; }
+.sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--mid); }
+.sync.on i { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); animation: pulse 2.4s ease-in-out infinite; }
+.sync.off i { background: var(--amber-bar); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand-logo { background: #fff; padding: 5px 8px; border-radius: 4px; height: 34px; } }
+:root[data-theme="dark"] .brand-logo { background: #fff; padding: 5px 8px; border-radius: 4px; height: 34px; }
 
-/* navigace */
+/* ——— navigace ——— */
 .tabs {
-  display: flex; gap: 4px; padding: 5px; margin-bottom: 20px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow);
-  width: fit-content; max-width: 100%;
+  position: relative; display: flex; gap: 2px; margin-bottom: 22px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px; box-shadow: var(--shadow);
 }
 .tab {
-  position: relative; display: inline-flex; align-items: center; gap: 8px;
-  border: 0; background: none; padding: 9px 16px; cursor: pointer; border-radius: 999px;
-  font-weight: 600; font-size: 15px; color: var(--muted); transition: background .15s, color .15s;
+  position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; background: none; cursor: pointer; padding: 11px 10px; border-radius: 4px;
+  font-weight: 600; font-size: 14.5px; color: var(--muted); transition: color .15s, background .15s;
 }
-.tab svg { width: 18px; height: 18px; flex: none; }
-.tab:hover { color: var(--ink); }
-.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
-.tab[aria-selected="true"] svg { color: var(--hi); }
+.tab svg { width: 19px; height: 19px; flex: none; }
+.tab:hover { color: var(--ink); background: var(--surface-2); }
+.tab[aria-selected="true"] { color: var(--brand-ink); background: var(--graphite); }
+.tab[aria-selected="true"] svg { color: #ffb3ae; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tab[aria-selected="true"] { color: #1f1e1d; } :root:not([data-theme="light"]) .tab[aria-selected="true"] svg { color: var(--brand); } }
+:root[data-theme="dark"] .tab[aria-selected="true"] { color: #1f1e1d; }
+:root[data-theme="dark"] .tab[aria-selected="true"] svg { color: var(--brand); }
 .tab .count {
-  font-size: 11px; font-weight: 700; background: var(--red); color: #fff; border-radius: 999px;
-  min-width: 18px; height: 18px; line-height: 18px; text-align: center; padding: 0 5px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--brand); color: #fff;
+  min-width: 19px; height: 19px; line-height: 19px; text-align: center; padding: 0 5px; border-radius: 3px;
 }
-@media (max-width: 640px) {
-  .top { padding: 14px; border-radius: 20px; }
-  .sync { margin-left: 0; }
+@media (max-width: 680px) {
   .tabs {
-    position: fixed; left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); z-index: 20; margin: 0;
-    width: auto; justify-content: space-between; border-radius: 22px; padding: 6px;
-    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; border-radius: 0; border-width: 1px 0 0;
+    padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px); gap: 0;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
-  .tab { flex: 1; flex-direction: column; gap: 3px; padding: 7px 2px 6px; font-size: 11px; border-radius: 16px; }
-  .tab svg { width: 22px; height: 22px; }
-  .tab .count { position: absolute; top: 2px; right: calc(50% - 22px); }
+  .tab { flex-direction: column; gap: 4px; padding: 8px 2px 6px; font-size: 11px; background: none !important; color: var(--muted) !important; }
+  .tab svg { width: 23px; height: 23px; }
+  .tab[aria-selected="true"] { color: var(--ink) !important; }
+  .tab[aria-selected="true"] svg { color: var(--brand) !important; }
+  .tab[aria-selected="true"]::before { content: ""; position: absolute; top: -7px; left: 28%; right: 28%; height: 3px; background: var(--brand); border-radius: 0 0 3px 3px; }
+  .tab .count { position: absolute; top: 2px; left: calc(50% + 6px); }
+  .top { padding: 14px 14px 18px; gap: 12px; }
+  .brand { gap: 12px; }
+  .brand-logo { height: 24px; }
+  .brand h1 { font-size: 17px; }
+  .sync { margin-left: 0; }
 }
 
-/* obecné */
+/* ——— obecné prvky ——— */
 .banner {
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-  background: var(--amber-soft); color: var(--ink); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; font-size: 15px;
+  background: var(--amber-soft); border-left: 3px solid var(--amber-bar); border-radius: var(--r); padding: 12px 16px; margin-bottom: 18px; font-size: 14.5px;
 }
-.banner.info { background: var(--accent-soft); }
+.banner.info { background: var(--surface); border-left-color: var(--graphite); border: 1px solid var(--line); border-left: 3px solid var(--graphite); }
 .banner p { margin: 0; flex: 1 1 240px; }
-.section { display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px; }
-.section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.section-head h2 { font-size: 20px; }
-.section-head .hint { color: var(--muted); font-size: 14px; }
+.section { display: flex; flex-direction: column; gap: 14px; margin-bottom: 34px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--line-strong); }
+.section-head h2 { font-size: 19px; text-transform: uppercase; letter-spacing: .015em; }
+.section-head .hint { font-family: var(--mono); font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-  border-radius: 12px; padding: 9px 15px; cursor: pointer; font-weight: 600; font-size: 15px; white-space: nowrap;
-  transition: transform .1s, background .15s, border-color .15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  border-radius: var(--r); padding: 9px 15px; cursor: pointer; font-weight: 600; font-size: 14.5px; white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s, transform .08s;
 }
-.btn:hover { border-color: var(--muted); }
+.btn .ic { width: 16px; height: 16px; }
+.btn:hover { border-color: var(--graphite); background: var(--surface-2); }
 .btn:active { transform: translateY(1px); }
-.btn.primary { background: var(--hi); border-color: var(--hi); color: var(--hi-ink); }
-.btn.primary:hover { background: #c9e73a; border-color: #c9e73a; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
 .btn.danger { color: var(--red); }
+.btn.danger:hover { border-color: var(--red); background: var(--red-soft); }
 .btn.danger.armed { background: var(--red); border-color: var(--red); color: #fff; }
-.btn.small { padding: 6px 11px; font-size: 13px; border-radius: 10px; }
-.btn.big { padding: 15px 18px; font-size: 17px; width: 100%; border-radius: 14px; }
+.btn.small { padding: 6px 10px; font-size: 13px; gap: 5px; }
+.btn.small .ic { width: 14px; height: 14px; }
+.btn.big { padding: 15px 18px; font-size: 16px; width: 100%; text-transform: uppercase; letter-spacing: .04em; font-family: var(--display); font-stretch: 112%; font-weight: 700; }
 .btn:disabled { opacity: .5; cursor: default; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.toolbar .grow { flex: 1 1 200px; }
+.toolbar .grow { flex: 1 1 220px; }
+.toolbar select { width: auto; flex: 0 1 230px; }
+@media (max-width: 680px) { .toolbar select { flex: 1 1 140px; } }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field > label:not(.photo-drop), .label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.field > label:not(.photo-drop), .label {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
 input[type=text], input[type=date], input[type=number], input[type=search], select, textarea {
-  width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; min-height: 44px;
-  transition: border-color .15s, box-shadow .15s, background .15s;
+  width: 100%; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r); padding: 10px 12px; min-height: 44px;
+  transition: border-color .15s, box-shadow .15s;
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--hi-deep); background: var(--surface); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hi) 35%, transparent); }
+input:hover, select:hover, textarea:hover { border-color: var(--mid); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--graphite); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent); }
 textarea { min-height: 96px; resize: vertical; }
-.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .grid-form .wide { grid-column: 1 / -1; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
-.panel h3 { font-size: 17px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); }
+.panel h3 { font-size: 16px; text-transform: uppercase; letter-spacing: .02em; }
 .form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.empty { color: var(--muted); padding: 22px; text-align: center; border: 1.5px dashed var(--line); border-radius: var(--radius); }
+.empty { color: var(--muted); padding: 26px; text-align: center; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px dashed var(--line-strong); border-radius: var(--r); }
+.small-note { font-size: 13px; color: var(--muted); margin: 0; }
+.muted { color: var(--muted); }
 
-/* přehledová čísla */
-.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+/* ——— přehled: stav ——— */
+.status-grid { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 14px; }
+@media (max-width: 820px) { .status-grid { grid-template-columns: 1fr; } }
+.ring-card { flex-direction: row; align-items: center; justify-content: center; gap: 22px; }
+.ring { width: 150px; height: 150px; flex: none; }
+.ring .track { stroke: var(--surface-2); }
+.ring text { fill: var(--ink); font-family: var(--display); font-stretch: 112%; }
+.ring .sub { fill: var(--muted); font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; }
+.ring circle.seg { transition: stroke-dasharray .7s cubic-bezier(.2,.8,.2,1), stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1); }
+.legend { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.legend div { display: flex; align-items: center; gap: 8px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.legend b { font-family: var(--mono); font-weight: 600; margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
+@media (max-width: 400px) { .ring-card { flex-direction: column; align-items: stretch; } .ring { align-self: center; } }
+
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .tile {
-  position: relative; overflow: hidden;
-  background: var(--surface); border-radius: var(--radius); padding: 16px 16px 14px; box-shadow: var(--shadow);
-  display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line); text-align: left; cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
+  position: relative; overflow: hidden; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 16px 14px;
+  display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow);
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), border-color .15s;
 }
-.tile:hover { transform: translateY(-2px); }
-.tile::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
-.tile b { font-family: var(--display); font-weight: 600; font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
-.tile span { color: var(--muted); font-size: 13px; font-weight: 600; }
-.tile.red { background: var(--red-soft); border-color: transparent; } .tile.red b { color: var(--red); } .tile.red::before { background: var(--red); }
-.tile.amber { background: var(--amber-soft); border-color: transparent; } .tile.amber b { color: var(--amber); } .tile.amber::before { background: var(--amber); }
-.tile.ok b { color: var(--ok); } .tile.ok::before { background: var(--ok); }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--line-strong); }
+.tile:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+.tile .tile-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
+.tile .tile-top .ic { width: 20px; height: 20px; }
+.tile .tile-top .arrow { opacity: 0; transform: translateX(-4px); transition: opacity .15s, transform .15s; }
+.tile:hover .tile-top .arrow { opacity: 1; transform: none; }
+.tile b { font-family: var(--display); font-stretch: 118%; font-weight: 800; font-size: 44px; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.tile span.lbl { font-family: var(--mono); font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.tile.red::before { background: var(--red); } .tile.red b, .tile.red .tile-top { color: var(--red); }
+.tile.amber::before { background: var(--amber-bar); } .tile.amber b, .tile.amber .tile-top { color: var(--amber); }
+.tile.ok::before { background: var(--ok); } .tile.ok b { color: var(--ok); }
 
-/* řádky seznamu */
-.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+/* ——— časová osa ——— */
+.timeline { padding: 18px 20px 14px; }
+.tl-track { position: relative; margin: 20px 0 0; }
+.tl-tick.first { transform: none; } .tl-tick.first::before { left: 0; }
+.tl-tick.last { transform: translateX(-100%); } .tl-tick.last::before { left: auto; right: 0; }
+.tl-zone { position: absolute; top: 0; bottom: 26px; }
+.tl-zone.past { background: repeating-linear-gradient(112deg, color-mix(in srgb, var(--red) 12%, transparent) 0 6px, transparent 6px 12px); }
+.tl-zone.soon { background: color-mix(in srgb, var(--amber-bar) 12%, transparent); }
+.tl-axis { position: absolute; left: 0; right: 0; bottom: 26px; height: 1px; background: var(--line-strong); }
+.tl-tick { position: absolute; bottom: 0; transform: translateX(-50%); font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.tl-tick::before { content: ""; position: absolute; left: 50%; bottom: 18px; width: 1px; height: 7px; background: var(--line-strong); }
+.tl-today { position: absolute; top: -4px; bottom: 26px; width: 2px; background: var(--brand); transform: translateX(-1px); }
+.tl-today::after { content: "DNES"; position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--brand); }
+.tl-dot {
+  position: absolute; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid var(--surface);
+  background: var(--mid); cursor: pointer; padding: 0; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 15%, transparent);
+  transition: transform .15s;
+}
+.tl-dot.sq { border-radius: 2px; transform: rotate(45deg); }
+.tl-dot.red { background: var(--red); } .tl-dot.amber { background: var(--amber-bar); } .tl-dot.ok { background: var(--ok); }
+.tl-dot:hover, .tl-dot:focus-visible { transform: scale(1.35); z-index: 3; }
+.tl-dot.sq:hover, .tl-dot.sq:focus-visible { transform: rotate(45deg) scale(1.35); }
+.tl-tip {
+  position: absolute; z-index: 5; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 4px;
+  padding: 7px 10px; font-size: 12.5px; line-height: 1.35; max-width: 240px; box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  transform: translate(-50%, calc(-100% - 12px));
+}
+.tl-tip b { display: block; font-weight: 600; }
+.tl-tip span { font-family: var(--mono); font-size: 11px; opacity: .8; }
+.tl-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+.tl-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tl-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--mid); }
+.tl-legend i.sq { border-radius: 1px; transform: rotate(45deg); width: 9px; height: 9px; }
+
+/* ——— seznamy ——— */
+.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
 .row {
-  display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 4px 16px; align-items: center;
-  padding: 14px 16px; border-top: 1px solid var(--line);
+  position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 4px 18px; align-items: center;
+  padding: 14px 18px; border-top: 1px solid var(--line); transition: background .15s;
 }
 .row:first-child { border-top: 0; }
-.row .who { font-weight: 700; }
-.row .what { color: var(--muted); font-size: 14px; }
-.row .when { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.row:hover { background: var(--surface-2); }
+.row .who { font-weight: 600; font-size: 15.5px; }
+.row .what { color: var(--muted); font-size: 13.5px; }
+.row .when { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .row .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-@media (max-width: 640px) {
-  .row { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 680px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; padding: 14px; }
   .row .pillcell { grid-column: 1 / -1; }
   .row .acts { grid-column: 1 / -1; justify-content: flex-start; }
 }
 .pill {
-  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
-  font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--muted);
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 3px; padding: 4px 8px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; white-space: nowrap;
+  font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line);
 }
 .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.pill.red { background: var(--red-soft); color: var(--red); }
-.pill.amber { background: var(--amber-soft); color: var(--amber); }
-.pill.ok { background: var(--ok-soft); color: var(--ok); }
-.tag { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+.pill.red { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.pill.amber { background: var(--amber-soft); color: var(--amber); border-color: transparent; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.tag { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
 
-/* firmy */
+/* ——— firmy ——— */
 .chip-name { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
 .chip-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .pick { display: flex; flex-direction: column; gap: 6px; }
-.firm-list { display: flex; flex-direction: column; gap: 14px; }
-.firm-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
-.firm-card h3 { font-size: 18px; }
-.firm-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.firm-head h3 { flex: 1; min-width: 160px; }
+.firm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); gap: 14px; }
+.firm-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+.firm-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px; background: var(--graphite); color: #fff; position: relative; }
+.firm-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: repeating-linear-gradient(112deg, var(--brand) 0 6px, transparent 6px 11px); pointer-events: none; }
+.firm-head h3 { flex: 1; min-width: 150px; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+.firm-head .btn { background: transparent; color: #fff; border-color: rgba(255,255,255,.3); position: relative; z-index: 1; }
+.firm-head .btn:hover { background: rgba(255,255,255,.1); border-color: #fff; }
+.firm-head .btn.danger { color: #ffb3ae; }
+.firm-head .btn.danger.armed { background: var(--brand); border-color: var(--brand); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .firm-head { background: #33312e; } }
+:root[data-theme="dark"] .firm-head { background: #33312e; }
+.firm-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 .firm-mail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
-@media (max-width: 640px) { .firm-mail { grid-template-columns: 1fr auto; } .firm-mail input[type=text] { grid-column: 1 / -1; } }
-.firm-mail .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
-.firm-mail .check input { width: 18px; height: 18px; accent-color: var(--hi-deep); }
+@media (max-width: 680px) { .firm-mail { grid-template-columns: 1fr auto; } .firm-mail input[type=text] { grid-column: 1 / -1; } }
+.firm-mail .check { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.firm-mail .check input { width: 18px; height: 18px; accent-color: var(--brand); }
 .sub { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.sub .label { display: flex; align-items: center; gap: 6px; }
+.sub .label .ic { width: 14px; height: 14px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 14px; font-weight: 600; }
-.chip.plain { padding-right: 12px; }
-.chip button:not(.chip-name) { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 50%; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 4px 4px 10px; font-size: 13.5px; font-weight: 500; }
+.chip.plain { padding-right: 10px; }
+.chip button:not(.chip-name) { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 15px; line-height: 1; padding: 3px 6px; border-radius: 3px; }
 .chip button:not(.chip-name):hover { color: var(--red); background: var(--red-soft); }
-.chip small { color: var(--muted); font-weight: 500; }
+.chip small { color: var(--muted); font-family: var(--mono); font-size: 11px; }
 .add-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.add-row input, .add-row select { flex: 1 1 160px; width: auto; }
+.add-row input, .add-row select { flex: 1 1 150px; width: auto; min-height: 38px; padding: 7px 10px; }
 
-/* závady */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+/* ——— závady ——— */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 14px; }
 .card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 16px 16px 14px 22px; position: relative; display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow);
+  padding: 16px 16px 14px 20px; position: relative; display: flex; flex-direction: column; gap: 9px; overflow: hidden;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1);
 }
-.card::before { content: ""; position: absolute; left: 8px; top: 14px; bottom: 14px; width: 4px; border-radius: 4px; background: var(--line); }
+.card:hover { transform: translateY(-2px); }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--line-strong); }
 .card.sev-vysoka::before { background: var(--red); }
-.card.sev-stredni::before { background: var(--amber); }
+.card.sev-stredni::before { background: var(--amber-bar); }
 .card.sev-nizka::before { background: var(--ok); }
-.card.done { opacity: .78; }
-.card .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+.card.done { opacity: .82; }
+.btn.icon-only { padding: 6px 8px; }
+.card .form-actions { margin-top: 2px; }
+.card .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--muted); }
 .card p { margin: 0; }
-.card .desc { font-weight: 600; font-size: 16px; }
-.fix { background: var(--ok-soft); border-radius: 12px; padding: 10px 12px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.card .desc { font-weight: 600; font-size: 16px; line-height: 1.35; }
+.fix { background: var(--ok-soft); border-left: 3px solid var(--ok); border-radius: 4px; padding: 10px 12px; font-size: 13.5px; display: flex; flex-direction: column; gap: 6px; }
 .fix b { color: var(--ok); }
 .thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
-.thumbs button { border: 0; padding: 0; background: var(--surface-2); border-radius: 10px; overflow: hidden; width: 76px; height: 76px; cursor: zoom-in; }
+.thumbs button { border: 1px solid var(--line); padding: 0; background: var(--surface-2); border-radius: 4px; overflow: hidden; width: 78px; height: 78px; cursor: zoom-in; transition: transform .15s; }
+.thumbs button:hover { transform: scale(1.04); }
 .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumbs .pending { position: relative; }
-.thumbs .pending span { position: absolute; right: 3px; top: 3px; background: rgba(0,0,0,.6); color: #fff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; font-size: 14px; text-align: center; }
+.thumbs .pending span { position: absolute; right: 3px; top: 3px; background: rgba(0,0,0,.65); color: #fff; border-radius: 3px; width: 22px; height: 22px; line-height: 22px; font-size: 14px; text-align: center; }
 
-.seg { display: flex; gap: 6px; background: var(--surface-2); border-radius: 14px; padding: 5px; }
-.seg label { flex: 1; text-align: center; padding: 10px 6px; cursor: pointer; font-weight: 700; font-size: 14px; border-radius: 10px; color: var(--muted); transition: background .15s, color .15s; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; }
+.seg label { text-align: center; padding: 11px 6px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); border-left: 1px solid var(--line-strong); transition: background .15s, color .15s; }
+.seg label:first-child { border-left: 0; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:hover { background: var(--surface-2); color: var(--ink); }
 .seg label:has(input:checked) { background: var(--ok); color: #fff; }
 .seg label.v:has(input:checked) { background: var(--red); color: #fff; }
-.seg label.s:has(input:checked) { background: var(--amber); color: #fff; }
-.seg label:focus-within { outline: 3px solid var(--hi-deep); outline-offset: 1px; }
+.seg label.s:has(input:checked) { background: var(--amber-bar); color: #1f1e1d; }
+.seg label:focus-within { outline: 2px solid var(--brand); outline-offset: -2px; }
 
 .photo-drop {
-  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 72px;
-  border: 1.5px dashed var(--hi-deep); border-radius: 14px; cursor: pointer; font-weight: 700; color: var(--ink);
-  background: var(--accent-soft);
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 80px;
+  border: 1.5px dashed var(--line-strong); border-radius: var(--r); cursor: pointer; font-weight: 600; font-size: 14.5px; color: var(--ink);
+  background: repeating-linear-gradient(112deg, var(--surface-2) 0 10px, var(--surface) 10px 20px);
+  transition: border-color .15s;
 }
+.photo-drop:hover { border-color: var(--brand); }
+.photo-drop svg { color: var(--brand); }
 .photo-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
-.modal { position: fixed; inset: 0; z-index: 55; background: rgba(8,14,17,.6); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; padding: 16px; overflow-y: auto; }
-.modal .panel { width: min(520px, 100%); margin: auto; box-shadow: 0 30px 60px rgba(0,0,0,.35); border-radius: 22px; }
+/* ——— vrstvy ——— */
+.modal { position: fixed; inset: 0; z-index: 55; background: rgba(20,19,18,.55); backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; padding: 16px; overflow-y: auto; }
+.modal .panel { width: min(540px, 100%); margin: auto; box-shadow: 0 30px 60px rgba(0,0,0,.35); border-top: 4px solid var(--brand); animation: rise .22s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
 .toast {
-  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); transform: translateX(-50%);
-  background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 14px; font-weight: 600; z-index: 50; max-width: calc(100% - 32px);
-  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); transform: translateX(-50%);
+  background: var(--graphite); color: #fff; padding: 11px 18px 11px 14px; border-radius: var(--r); font-weight: 600; z-index: 50; max-width: calc(100% - 32px);
+  border-left: 4px solid var(--brand); box-shadow: 0 14px 30px rgba(0,0,0,.25); animation: rise .2s ease both;
 }
-.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
-.lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
-.muted { color: var(--muted); }
-.small-note { font-size: 13px; color: var(--muted); margin: 0; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast { background: #eeece8; color: #1f1e1d; } }
+:root[data-theme="dark"] .toast { background: #eeece8; color: #1f1e1d; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
+[data-view] { animation: fadein .25s ease both; }
+@keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 
 <div class="app">
   <header class="top">
     <div class="brand">
-      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
-        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3f76a"/><stop offset="1" stop-color="#a7d62c"/></linearGradient></defs>
-        <rect width="48" height="48" rx="14" fill="url(#lg)"/>
-        <path d="M9 31a15 15 0 0 1 30 0z" fill="#0e1a1f"/>
-        <rect x="5.5" y="30.5" width="37" height="5.5" rx="2.75" fill="#0e1a1f"/>
-        <rect x="22.5" y="13" width="3" height="4" rx="1.5" fill="#e3f76a" opacity=".55"/>
-        <path d="M24 30.5V21.5M24 30.5l6.2-4.2" stroke="#e3f76a" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="24" cy="30.5" r="2.4" fill="#e3f76a"/>
-      </svg>
-      <div><h1>Hlídač <span class="badge">BOZP</span></h1><small id="today"></small></div>
+      <img class="brand-logo" src="data:image/png;base64,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" alt="ŽPSV">
+      <span class="brand-sep" aria-hidden="true"></span>
+      <div><h1>Hlídač <em>BOZP</em></h1><small id="today"></small></div>
     </div>
     <div class="sync" id="sync"><i></i><span>Připojuji…</span></div>
   </header>
@@ -305,7 +402,15 @@ textarea { min-height: 96px; resize: vertical; }
   <!-- PŘEHLED -->
   <main id="view-prehled" data-view hidden>
     <div class="section">
-      <div class="tiles" id="tiles"></div>
+      <div class="section-head"><h2>Stav termínů</h2><span class="hint" id="statusHint"></span></div>
+      <div class="status-grid">
+        <div class="panel ring-card" id="ringCard"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Časová osa</h2><span class="hint">14 dní zpět · 90 dní dopředu</span></div>
+      <div class="panel timeline" id="timeline"></div>
     </div>
     <div class="section">
       <div class="section-head"><h2>Co řešit</h2><span class="hint">prošlé a do 30 dní</span></div>
@@ -331,9 +436,9 @@ textarea { min-height: 96px; resize: vertical; }
         </select>
       </div>
       <div class="toolbar">
-        <button class="btn primary" data-action="new-term">+ Přidat termín</button>
-        <button class="btn" data-action="toggle-bulk">Vložit z Excelu</button>
-        <button class="btn" data-action="export-terms">Export CSV</button>
+        <button class="btn primary" data-action="new-term"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Přidat termín</button>
+        <button class="btn" data-action="toggle-bulk"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 10h17M3.5 15h17M9.5 4.5v15"/></svg>Vložit z Excelu</button>
+        <button class="btn" data-action="export-terms"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Export CSV</button>
       </div>
 
       <form class="panel" id="termForm" hidden>
@@ -416,8 +521,8 @@ textarea { min-height: 96px; resize: vertical; }
           <option value="done">Vyřešené</option>
           <option value="all">Vše</option>
         </select>
-        <button class="btn" data-action="copy-protocol">Kopírovat text do protokolu</button>
-        <button class="btn" data-action="export-findings">Export CSV</button>
+        <button class="btn" data-action="copy-protocol"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="1"/><path d="M15.5 8.5v-3a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"/></svg>Text do protokolu</button>
+        <button class="btn" data-action="export-findings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Export CSV</button>
       </div>
       <p class="small-note">Tip: napiš Claudovi „udělej protokol z kontroly v závodě …“ a data si odtud přečte.</p>
       <div id="findList"></div>
@@ -434,7 +539,7 @@ textarea { min-height: 96px; resize: vertical; }
         <h3>Nová firma</h3>
         <div class="add-row">
           <input type="text" id="newFirm" placeholder="Název firmy, např. ŽPSV a.s." aria-label="Název nové firmy">
-          <button class="btn primary" data-action="add-firm">Založit firmu</button>
+          <button class="btn primary" data-action="add-firm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Založit firmu</button>
         </div>
         <p class="small-note">Pod firmou pak založíš závody nebo provozovny a místa. Ve formulářích je vybereš z nabídky.</p>
       </div>
@@ -504,6 +609,10 @@ textarea { min-height: 96px; resize: vertical; }
   ];
   const presetOf = t => PRESETS.find(p => p.type.toLowerCase() === String(t).toLowerCase().trim());
   const SEV = { vysoka: 'Vysoká', stredni: 'Střední', nizka: 'Nízká' };
+
+  // ---------- ikony ----------
+  const ICONS = {"plus": "<path d=\"M12 5v14M5 12h14\"/>", "refresh": "<path d=\"M19.5 12.5a7.5 7.5 0 1 1-2.2-6.3M19.5 4.5v4.8h-4.8\"/>", "edit": "<path d=\"M4 20h4.2L19 9.2 14.8 5 4 15.8z\"/><path d=\"m13 6.8 4.2 4.2\"/>", "trash": "<path d=\"M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.5h9.2L17.5 7M10.5 11v5M13.5 11v5\"/>", "check": "<path d=\"m5 12.5 4.5 4.5L19 7.5\"/>", "undo": "<path d=\"M9 14 4.5 9.5 9 5\"/><path d=\"M4.5 9.5H15a5 5 0 0 1 0 10h-3\"/>", "download": "<path d=\"M12 4v11M7 10.5l5 5 5-5M5 20h14\"/>", "table": "<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"1\"/><path d=\"M3.5 10h17M3.5 15h17M9.5 4.5v15\"/>", "copy": "<rect x=\"8.5\" y=\"8.5\" width=\"11\" height=\"11\" rx=\"1\"/><path d=\"M15.5 8.5v-3a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3\"/>", "building": "<path d=\"M4 20.5V6.5l8-3v17M12 9.5h8v11M2.5 20.5h19M7.5 9.5v.01M7.5 13v.01M7.5 16.5v.01M15.5 13v.01M15.5 16.5v.01\"/>", "factory": "<path d=\"M3 20.5V10l5 3v-3l5 3V5.5h7.5v15zM2 20.5h20M16.5 9v.01M16.5 12.5v.01\"/>", "pin": "<path d=\"M12 21s-6.5-5.8-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z\"/><circle cx=\"12\" cy=\"9.8\" r=\"2.3\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"3.6\"/><path d=\"M4.8 20a7.2 7.2 0 0 1 14.4 0\"/>", "alert": "<path d=\"M12 3.8 2.8 19.5h18.4z\"/><path d=\"M12 10v4.2M12 16.8v.2\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>", "calendar": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>", "wrench": "<path d=\"M14.6 6.1a4.2 4.2 0 0 0-5.3 5.4L4 16.8V20h3.2l5.3-5.3a4.2 4.2 0 0 0 5.4-5.3l-2.6 2.6-2.4-.6-.6-2.4z\"/>", "arrow": "<path d=\"M5 12h14M13 6l6 6-6 6\"/>", "mail": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"1.5\"/><path d=\"m3.5 6.5 8.5 6.5 8.5-6.5\"/>"};
+  const ic = k => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
 
   // ---------- pomocné ----------
   const $ = s => document.querySelector(s);
@@ -730,9 +839,9 @@ textarea { min-height: 96px; resize: vertical; }
         <div class="when">Termín ${fmt(t.due)} · naposledy ${fmt(t.last)} · po ${t.months} měs.${t.note ? ' · ' + esc(t.note) : ''}</div>
       </div>
       <div class="acts">
-        <button class="btn small" data-action="renew" data-id="${t.id}">Obnoveno dnes</button>
-        ${compact ? '' : `<button class="btn small" data-action="edit-term" data-id="${t.id}">Upravit</button>
-        <button class="btn small danger" data-action="del-term" data-id="${t.id}">Smazat</button>`}
+        <button class="btn small" data-action="renew" data-id="${t.id}">${ic('refresh')}Obnoveno dnes</button>
+        ${compact ? '' : `<button class="btn small" data-action="edit-term" data-id="${t.id}">${ic('edit')}Upravit</button>
+        <button class="btn small danger" data-action="del-term" data-id="${t.id}">${ic('trash')}Smazat</button>`}
       </div>
     </div>`;
   }
@@ -754,10 +863,10 @@ textarea { min-height: 96px; resize: vertical; }
       ${fix}
       <div class="form-actions">
         ${f.status === 'done'
-          ? `<button class="btn small" data-action="reopen" data-id="${f.id}">Znovu otevřít</button>`
-          : `<button class="btn small primary" data-action="resolve" data-id="${f.id}">Vyřešeno</button>`}
-        <button class="btn small" data-action="edit-find" data-id="${f.id}">Upravit</button>
-        <button class="btn small danger" data-action="del-find" data-id="${f.id}">Smazat</button>
+          ? `<button class="btn small" data-action="reopen" data-id="${f.id}">${ic('undo')}Znovu otevřít</button>`
+          : `<button class="btn small primary" data-action="resolve" data-id="${f.id}">${ic('check')}Vyřešeno</button>`}
+        <button class="btn small" data-action="edit-find" data-id="${f.id}">${ic('edit')}Upravit</button>
+        <button class="btn small danger icon-only" data-action="del-find" data-id="${f.id}" aria-label="Smazat závadu" title="Smazat">${ic('trash')}</button>
       </div>
     </article>`;
   }
@@ -782,11 +891,18 @@ textarea { min-height: 96px; resize: vertical; }
     fillSelect($('#zCompany'), comps, 'Všechny firmy');
 
     // přehled
-    $('#tiles').innerHTML = `
-      <button class="tile ${late.length ? 'red' : 'ok'}" data-action="goto-status" data-status="late"><b>${late.length}</b><span>Prošlé termíny</span></button>
-      <button class="tile ${d30.length ? 'amber' : 'ok'}" data-action="goto-status" data-status="30"><b>${d30.length}</b><span>Do 30 dní</span></button>
-      <button class="tile" data-action="goto-status" data-status="90"><b>${d90.length}</b><span>Za 31–90 dní</span></button>
-      <button class="tile ${lateF.length ? 'red' : openF.length ? 'amber' : 'ok'}" data-action="goto-findings"><b>${openF.length}</b><span>Otevřené závady${lateF.length ? `, ${lateF.length} po termínu` : ''}</span></button>`;
+    const later = all.filter(t => t.days > 90);
+    $('#statusHint').textContent = `stav k ${fmt(todayISO)}`;
+    const tile = (key, cls, icon, n, label, action, extra = '') =>
+      `<button class="tile ${cls}" data-action="${action}" ${extra}><span class="tile-top">${ic(icon)}<span class="arrow">${ic('arrow')}</span></span><b data-k="${key}">${prevCount[key] ?? 0}</b><span class="lbl">${label}</span></button>`;
+    $('#tiles').innerHTML =
+      tile('late', late.length ? 'red' : 'ok', 'alert', late.length, 'Prošlé termíny', 'goto-status', 'data-status="late"') +
+      tile('d30', d30.length ? 'amber' : 'ok', 'clock', d30.length, 'Do 30 dní', 'goto-status', 'data-status="30"') +
+      tile('d90', '', 'calendar', d90.length, 'Za 31–90 dní', 'goto-status', 'data-status="90"') +
+      tile('open', lateF.length ? 'red' : openF.length ? 'amber' : 'ok', 'wrench', openF.length, lateF.length ? `Otevřené závady · ${lateF.length} po termínu` : 'Otevřené závady', 'goto-findings');
+    countUp({ late: late.length, d30: d30.length, d90: d90.length, open: openF.length });
+    renderRing(late.length, d30.length, d90.length, later.length);
+    renderTimeline(all, openF);
     const urgent = [...late, ...d30];
     $('#urgent').innerHTML = urgent.length
       ? `<div class="list">${urgent.slice(0, 12).map(t => termRow(t, true)).join('')}</div>${urgent.length > 12 ? `<p class="small-note">+ dalších ${urgent.length - 12} v záložce Termíny</p>` : ''}`
@@ -836,23 +952,25 @@ textarea { min-height: 96px; resize: vertical; }
           return d ? `<span class="chip">${nm}<button data-action="del-person" data-id="${esc(d.id)}" aria-label="Odebrat ${esc(pn)}">×</button></span>` : `<span class="chip plain">${nm}</span>`;
         }).join('');
         return `<section class="firm-card">
-          <div class="firm-head"><h3>${esc(n)}</h3><button class="btn small" data-action="rename" data-kind="firm" data-firm="${esc(n)}" data-old="${esc(n)}">Přejmenovat</button><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">Smazat firmu</button></div>
+          <div class="firm-head"><h3>${ic('building')}${esc(n)}</h3><button class="btn small" data-action="rename" data-kind="firm" data-firm="${esc(n)}" data-old="${esc(n)}">${ic('edit')}Přejmenovat</button><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">${ic('trash')}Smazat</button></div>
+          <div class="firm-body">
           <div class="firm-mail">
             <input type="text" id="fe-${id}" inputmode="email" placeholder="E-mail pro upozornění: kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
             <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
-            <button class="btn small" data-action="save-firm" data-name="${esc(n)}">Uložit</button>
+            <button class="btn small" data-action="save-firm" data-name="${esc(n)}">${ic('check')}Uložit</button>
           </div>
-          <div class="sub"><span class="label">Závody / provozovny</span>
+          <div class="sub"><span class="label">${ic('factory')}Závody / provozovny</span>
             <div class="chips">${siteChips || '<span class="small-note">Zatím žádné.</span>'}</div>
-            <div class="add-row"><input type="text" id="ns-${id}" placeholder="Nový závod / provozovna" aria-label="Nový závod"><button class="btn small" data-action="add-site" data-name="${esc(n)}">Přidat</button></div>
+            <div class="add-row"><input type="text" id="ns-${id}" placeholder="Nový závod / provozovna" aria-label="Nový závod"><button class="btn small" data-action="add-site" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
           </div>
-          <div class="sub"><span class="label">Místa</span>
+          <div class="sub"><span class="label">${ic('pin')}Místa</span>
             <div class="chips">${placeChips || '<span class="small-note">Zatím žádná.</span>'}</div>
-            <div class="add-row"><select id="npS-${id}" aria-label="Závod pro nové místo"><option value="">celá firma</option>${sitesOf(n).map(sn => `<option>${esc(sn)}</option>`).join('')}</select><input type="text" id="np-${id}" placeholder="Nové místo, např. Hala 2" aria-label="Nové místo"><button class="btn small" data-action="add-place" data-name="${esc(n)}">Přidat</button></div>
+            <div class="add-row"><select id="npS-${id}" aria-label="Závod pro nové místo"><option value="">celá firma</option>${sitesOf(n).map(sn => `<option>${esc(sn)}</option>`).join('')}</select><input type="text" id="np-${id}" placeholder="Nové místo, např. Hala 2" aria-label="Nové místo"><button class="btn small" data-action="add-place" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
           </div>
-          <div class="sub"><span class="label">Osoby a zařízení</span>
+          <div class="sub"><span class="label">${ic('user')}Osoby a zařízení</span>
             <div class="chips">${personChips || '<span class="small-note">Zatím žádné.</span>'}</div>
-            <div class="add-row"><input type="text" id="no-${id}" placeholder="Jméno osoby nebo zařízení" aria-label="Nová osoba"><button class="btn small" data-action="add-person" data-name="${esc(n)}">Přidat</button></div>
+            <div class="add-row"><input type="text" id="no-${id}" placeholder="Jméno osoby nebo zařízení" aria-label="Nová osoba"><button class="btn small" data-action="add-person" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
+          </div>
           </div>
         </section>`;
       }).join('') : '<div class="empty">Zatím žádná firma. Založ první nahoře.</div>';
@@ -865,6 +983,109 @@ textarea { min-height: 96px; resize: vertical; }
 
     showNotice();
   }
+  // ---------- animovaná čísla ----------
+  const prevCount = {};
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function countUp(vals) {
+    for (const k in vals) {
+      const el = document.querySelector(`#tiles b[data-k="${k}"]`);
+      const from = prevCount[k] ?? 0, to = vals[k];
+      prevCount[k] = to;
+      if (!el) continue;
+      if (reduceMotion || from === to) { el.textContent = to; continue; }
+      const t0 = performance.now(), dur = 650;
+      const step = now => {
+        const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(from + (to - from) * e);
+        if (p < 1 && el.isConnected) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+  }
+
+  // ---------- prstencový graf ----------
+  function renderRing(late, soon, mid, ok) {
+    const total = late + soon + mid + ok, R = 52, C = 2 * Math.PI * R;
+    const segs = [[late, 'var(--red)', 'Po termínu'], [soon, 'var(--amber-bar)', 'Do 30 dní'], [mid, 'var(--mid)', '31–90 dní'], [ok, 'var(--ok)', 'Nad 90 dní']];
+    let off = 0;
+    const arcs = total ? segs.map(([n, col]) => {
+      if (!n) return '';
+      const len = n / total * C, gap = n < total ? 2 : 0;
+      const c = `<circle class="seg" cx="70" cy="70" r="${R}" fill="none" stroke="${col}" stroke-width="14" stroke-dasharray="${Math.max(0.5, len - gap).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"/>`;
+      off += len; return c;
+    }).join('') : '';
+    const okPct = total ? Math.round((mid + ok) / total * 100) : 0;
+    $('#ringCard').innerHTML = `
+      <svg class="ring" viewBox="0 0 140 140" role="img" aria-label="${total} sledovaných termínů, ${late} po termínu, ${soon} do 30 dní">
+        <circle class="track" cx="70" cy="70" r="${R}" fill="none" stroke-width="14"/>
+        ${arcs}
+        <text x="70" y="72" text-anchor="middle" font-size="34" font-weight="800">${total}</text>
+        <text class="sub" x="70" y="90" text-anchor="middle">TERMÍNŮ</text>
+      </svg>
+      <div class="legend">
+        ${segs.map(([n, col, l]) => `<div><i style="background:${col}"></i>${l}<b>${n}</b></div>`).join('')}
+        <div class="small-note" style="margin-top:4px">${total ? `${okPct} % termínů má víc než 30 dní rezervu` : 'Zatím žádné termíny'}</div>
+      </div>`;
+  }
+
+  // ---------- časová osa ----------
+  let tlItems = [];
+  const fmtShort = iso => { const { m, d } = parseISO(iso); return `${d}. ${m}.`; };
+  function renderTimeline(allTerms, openF) {
+    const MIN = -14, MAX = 90, span = MAX - MIN;
+    const xOf = d => (Math.min(MAX, Math.max(MIN, d)) - MIN) / span * 100;
+    const items = [
+      ...allTerms.filter(t => t.days <= MAX).map(t => ({ kind: 't', id: t.id, days: t.days, cls: statusOf(t.days).cls, title: t.name, sub: `${t.type} · ${fmt(t.due)}`, where: [t.company, t.site].filter(Boolean).join(' · ') })),
+      ...openF.filter(f => f.due && daysUntil(f.due) <= MAX).map(f => { const d = daysUntil(f.due); return { kind: 'f', id: f.id, days: d, cls: d < 0 ? 'red' : d <= 30 ? 'amber' : '', title: f.text, sub: `Náprava do ${fmt(f.due)}`, where: [f.company, f.site, f.place].filter(Boolean).join(' · ') }; }),
+    ].map(i => ({ ...i, x: xOf(i.days) })).sort((a, b) => a.x - b.x);
+    const lanes = [];
+    items.forEach(i => {
+      let l = lanes.findIndex(end => end < i.x - 2.4);
+      if (l === -1) { l = lanes.length < 6 ? lanes.length : lanes.length - 1; if (l === lanes.length) lanes.push(-99); }
+      lanes[l] = i.x; i.lane = l;
+    });
+    tlItems = items;
+    const nL = Math.max(1, lanes.length), h = 16 + nL * 22 + 34;
+    const el = $('#timeline');
+    const ticks = window.innerWidth < 700 ? [-14, 0, 30, 60, 90] : [-14, 0, 15, 30, 45, 60, 75, 90];
+    el.innerHTML = `
+      <div class="tl-track" style="height:${h}px">
+        <div class="tl-zone past" style="left:0;width:${xOf(0)}%"></div>
+        <div class="tl-zone soon" style="left:${xOf(0)}%;width:${xOf(30) - xOf(0)}%"></div>
+        <div class="tl-axis"></div>
+        ${ticks.map((d, k) => `<span class="tl-tick${k === 0 ? ' first' : k === ticks.length - 1 ? ' last' : ''}" style="left:${xOf(d)}%">${fmtShort(addDays(todayISO, d))}</span>`).join('')}
+        <div class="tl-today" style="left:${xOf(0)}%"></div>
+        ${items.map((i, n) => `<button class="tl-dot ${i.cls} ${i.kind === 'f' ? 'sq' : ''}" data-tl="${n}" style="left:${i.x}%;top:${12 + i.lane * 22}px" aria-label="${esc(i.title)}, ${esc(i.sub)}"></button>`).join('')}
+        <div class="tl-tip" id="tlTip" hidden></div>
+      </div>
+      <div class="tl-legend">
+        <span><i></i>Termín</span><span><i class="sq"></i>Závada k nápravě</span>
+        <span><i style="background:var(--red)"></i>Po termínu</span><span><i style="background:var(--amber-bar)"></i>Do 30 dní</span><span><i style="background:var(--ok)"></i>V pořádku</span>
+        ${items.length ? '' : '<span>V tomto období nic nepropadá.</span>'}
+      </div>`;
+  }
+  function showTip(dot) {
+    const i = tlItems[+dot.dataset.tl], tip = $('#tlTip');
+    if (!i || !tip) return;
+    const when = i.days < 0 ? `po termínu ${-i.days} ${dayWord(i.days)}` : i.days === 0 ? 'dnes' : `za ${i.days} ${dayWord(i.days)}`;
+    tip.innerHTML = `<b>${esc(i.title)}</b>${esc(i.sub)}<br><span>${esc(i.where)} · ${when}</span>`;
+    tip.style.left = `clamp(120px, ${dot.style.left}, calc(100% - 120px))`;
+    tip.style.top = dot.style.top;
+    tip.hidden = false;
+  }
+  const tlBox = $('#timeline');
+  let rsz = 0; window.addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(render, 200); });
+  tlBox.addEventListener('mouseover', e => { const d = e.target.closest('.tl-dot'); if (d) showTip(d); });
+  tlBox.addEventListener('focusin', e => { const d = e.target.closest('.tl-dot'); if (d) showTip(d); });
+  tlBox.addEventListener('mouseout', e => { if (e.target.closest('.tl-dot')) { const t = $('#tlTip'); if (t) t.hidden = true; } });
+  tlBox.addEventListener('focusout', () => { const t = $('#tlTip'); if (t) t.hidden = true; });
+  tlBox.addEventListener('click', e => {
+    const d = e.target.closest('.tl-dot'); if (!d) return;
+    const i = tlItems[+d.dataset.tl]; if (!i) return;
+    if (i.kind === 't') { const t = terms.find(x => x.id === i.id); setTab('terminy'); if (t) openTermForm(t); }
+    else { $('#zStatus').value = 'open'; setTab('zavady'); render(); }
+  });
+
   function slug(n) { return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'firma'; }
   ['#tSearch', '#tCompany', '#tStatus', '#zCompany', '#zStatus'].forEach(s => $(s).addEventListener('input', render));
 
@@ -1262,9 +1483,9 @@ textarea { min-height: 96px; resize: vertical; }
   function confirmTwice(btn, fn, question = 'Opravdu smazat?') {
     if (armed.get(btn.dataset.id)) { armed.delete(btn.dataset.id); fn(); return; }
     armed.set(btn.dataset.id, true);
-    const orig = btn.textContent;
+    const orig = btn.innerHTML;
     btn.classList.add('armed'); btn.textContent = question;
-    setTimeout(() => { armed.delete(btn.dataset.id); if (btn.isConnected) { btn.classList.remove('armed'); btn.textContent = orig; } }, 5000);
+    setTimeout(() => { armed.delete(btn.dataset.id); if (btn.isConnected) { btn.classList.remove('armed'); btn.innerHTML = orig; } }, 5000);
   }
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-action]');
