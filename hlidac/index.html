@@ -1576,7 +1576,12 @@ body.locked .app { display: none; }
       catch (e) { break; }
     }
     btn.textContent = 'Importovat';
-    toast(`Importováno ${n} termínů.`);
+    // aby importované termíny nezůstaly schované za filtrem závodu, firmy nebo stavu
+    const hidden = bulkRows.slice(0, n).some(r => !inScope({ company: r.company, site: r.site }));
+    if (hidden && scope) { scope = ''; try { localStorage.setItem('hlidac_scope_' + (me ? me.id : ''), ''); } catch (e) { /* */ } }
+    $('#tCompany').value = ''; $('#tStatus').value = 'all'; $('#tSearch').value = '';
+    render();
+    toast(`Importováno ${n} ${plural(n, 'termín', 'termíny', 'termínů')}.${hidden ? ' Filtr závodu jsem přepnul na Všechny závody.' : ''}`);
     if (n === bulkRows.length) { $('#bulkText').value = ''; bulkRows = []; $('#bulkPreview').textContent = ''; $('#bulkPanel').hidden = true; }
     else btn.disabled = false;
   }
