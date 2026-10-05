@@ -2804,7 +2804,7 @@ body.locked .app { display: none; }
     if (!isAdmin()) return;
     $('#vaPanel').hidden = false; $('#vaBtn').hidden = true;
     $('#vaSpeak').checked = vaSpeak;
-    if (!SR) $('#vaMic').hidden = true;
+    if (!SR) { $('#vaMic').hidden = true; $('#vaNote').innerHTML = vaDictHint(); }
     vaRender();
     setTimeout(() => $('#vaInput').focus(), 50);
   }
@@ -2866,6 +2866,13 @@ Dotaz správce: ${q}`;
       speechSynthesis.speak(u);
     } catch (e) { /* bez hlasu */ }
   }
+  function vaDictHint() {
+    const ua = navigator.userAgent;
+    const how = /Android|iPhone|iPad/i.test(ua) ? 'klepni do políčka a na klávesnici zvol <b>mikrofon</b>'
+      : /Mac/i.test(ua) ? 'klepni do políčka a dvakrát stiskni <b>Fn</b> (Globe)'
+      : /Windows/i.test(ua) ? 'klepni do políčka a stiskni <b>Win + H</b>' : 'použij diktování svého systému';
+    return `Mikrofon tu aplikace nemůže použít přímo. Diktuj: ${how}, pak Enter. Odpověď ti asistent přečte nahlas.`;
+  }
   function vaStopListen() { if (vaRec) { try { vaRec.stop(); } catch (e) { /* */ } } vaListening = false; $('#vaMic').classList.remove('on'); }
   function vaListen() {
     if (!SR) return;
@@ -2876,7 +2883,7 @@ Dotaz správce: ${q}`;
     vaRec.onresult = ev => { let t = ''; for (const r of ev.results) { t += r[0].transcript; if (r.isFinal) finalText = t; } $('#vaInput').value = t; };
     vaRec.onerror = ev => {
       vaStopListen();
-      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('#vaMic').hidden = true; $('#vaNote').textContent = 'Mikrofon v tomto okně nejde použít. Piš, nebo použij diktování na klávesnici telefonu.'; }
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'audio-capture') { $('#vaMic').hidden = true; $('#vaNote').innerHTML = vaDictHint(); }
       else if (ev.error !== 'no-speech' && ev.error !== 'aborted') $('#vaNote').textContent = 'Rozpoznání řeči selhalo (' + ev.error + ').';
     };
     vaRec.onend = () => { const was = vaListening; vaStopListen(); const t = (finalText || $('#vaInput').value).trim(); if (was && t) vaAsk(t); };
