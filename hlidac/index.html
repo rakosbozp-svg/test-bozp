@@ -556,6 +556,26 @@ body.locked .app { display: none; }
 @media (max-width: 360px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
 body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
 @media (max-width: 680px) { body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); } }
+
+/* ——— školení ——— */
+.sk-launch { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center; border-left: 3px solid var(--brand); }
+.sk-launch-text { display: flex; flex-direction: column; gap: 4px; }
+.sk-launch-text > b { font-family: var(--display); font-stretch: 112%; font-size: 20px; }
+.sk-launch .btn.big { width: auto; text-decoration: none; }
+.sk-launch #sNoUrl, .sk-url { grid-column: 1 / -1; }
+.sk-url { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+.tiles.three { grid-template-columns: repeat(3, 1fr); }
+.tile[aria-pressed="true"] { border-color: var(--graphite); box-shadow: 0 0 0 2px var(--graphite) inset; }
+a.btn { text-decoration: none; }
+.wk-foot { grid-template-columns: 1fr 1.2fr 1.6fr; }
+@media (max-width: 680px) {
+  .sk-launch { grid-template-columns: 1fr; }
+  .sk-launch .btn.big { width: 100%; }
+  .tiles.three { grid-template-columns: repeat(3, 1fr); }
+  .tabs .tab { font-size: 10px; padding-inline: 0; }
+  .tabs .tab svg { width: 21px; height: 21px; }
+  .wk-foot .btn { padding: 8px 6px; font-size: 13.5px; }
+}
 </style>
 
 <div class="auth" id="auth">
@@ -627,6 +647,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="prehled" id="tab-prehled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg><span>Přehled</span><span class="count" id="cnt-prehled" hidden></span></button>
     <button class="tab" role="tab" data-tab="terminy" id="tab-terminy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v3l2 1.2"/></svg><span>Termíny</span><span class="count" id="cnt-terminy" hidden></span></button>
+    <button class="tab" role="tab" data-tab="skoleni" id="tab-skoleni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9 12 4.5 21.5 9 12 13.5z"/><path d="M6.5 11v5c1.6 1.5 3.4 2.3 5.5 2.3s3.9-.8 5.5-2.3v-5M21.5 9v5.5"/></svg><span>Školení</span><span class="count" id="cnt-skoleni" hidden></span></button>
     <button class="tab" role="tab" data-tab="kontrola" id="tab-kontrola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.8-2.6h6.4L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.3"/></svg><span>Kontrola</span><span class="count" id="cnt-kontrola" hidden></span></button>
     <button class="tab" role="tab" data-tab="zavady" id="tab-zavady"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 16.8v.2"/></svg><span>Závady</span><span class="count" id="cnt-zavady" hidden></span></button>
     <button class="tab" role="tab" data-tab="firmy" id="tab-firmy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V6.5l8-3v17M12 9.5h8v11M2.5 20.5h19M7.5 9.5v.01M7.5 13v.01M7.5 16.5v.01M15.5 13v.01M15.5 16.5v.01"/></svg><span>Firmy</span><span class="count" id="cnt-firmy" hidden></span></button>
@@ -732,6 +753,11 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
         <div id="wHidden"></div>
       </div>
 
+      <div class="section" id="wDraftSec" hidden>
+        <div class="section-head"><h2>Rozpracované kontroly</h2><span class="hint">uložené na později</span></div>
+        <div id="wDrafts"></div>
+      </div>
+
       <form class="section" id="wStart">
         <div class="section-head"><h2>Nová kontrola</h2><span class="hint">1. druh · 2. pracoviště · 3. začít</span></div>
         <div class="type-cards" id="wTypes"></div>
@@ -766,7 +792,8 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
           <p class="small-note" id="wStatus"></p>
         </div>
         <div class="wk-foot">
-          <button class="btn" type="button" data-action="w-cancel" title="Odpovědi zůstanou uložené, příště v kontrole pokračuješ">Rozpracovat</button>
+          <button class="btn" type="button" data-action="w-cancel" data-id="w-cancel">Zrušit</button>
+          <button class="btn" type="button" data-action="w-later" title="Kontrolu dokončíš později, i z jiného zařízení">Uložit na později</button>
           <button class="btn primary" type="submit" id="wSave">Uložit kontrolu</button>
         </div>
       </form>
@@ -826,6 +853,32 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   </main>
 
   <!-- ZÁVADY -->
+  <!-- ŠKOLENÍ -->
+  <main id="view-skoleni" data-view hidden>
+    <div class="section">
+      <div class="section-head"><h2>Školení</h2><span class="hint" id="sHint"></span></div>
+      <div class="panel sk-launch">
+        <div class="sk-launch-text">
+          <span class="label">Aplikace školení</span>
+          <b>Školení 2D – THP</b>
+          <p class="small-note">Školení a test dělá zaměstnanec v samostatné aplikaci. Když ho úspěšně dokončí, klikni tady u jeho termínu na <b>Obnoveno dnes</b>.</p>
+        </div>
+        <a class="btn primary big" id="sOpen" target="_blank" rel="noopener" hidden>Přepnout do školení ↗</a>
+        <p class="small-note" id="sNoUrl" hidden>Odkaz na aplikaci školení zatím není nastavený.</p>
+        <div class="sk-url" id="sUrlRow" hidden>
+          <label class="label" for="sUrl">Odkaz na aplikaci školení (jen správce)</label>
+          <div class="toolbar"><input type="text" id="sUrl" class="grow" inputmode="url" placeholder="https://nazev.lovable.app" autocomplete="off"><button class="btn" type="button" data-action="s-url-save">Uložit odkaz</button></div>
+        </div>
+      </div>
+      <div class="tiles three" id="sTiles"></div>
+      <div class="toolbar">
+        <input type="search" id="sSearch" class="grow" placeholder="Hledat jméno nebo druh školení" aria-label="Hledat ve školení">
+        <select id="sType" aria-label="Druh školení"></select>
+      </div>
+      <div id="sList"></div>
+    </div>
+  </main>
+
   <main id="view-zavady" data-view hidden>
     <div class="section">
       <div class="toolbar">
@@ -1060,15 +1113,15 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
   let accounts = [], me = null, accountsLoaded = false, isOwner = null;
   let terms = [], findings = [], firms = [], sites = [], places = [], people = [], notifyInfo = null;
-  let checks = [], protocols = [], qDoc = null, rots = [];
-  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map(), kontroly: new Map(), protokoly: new Map(), rotace: new Map() };
+  let checks = [], protocols = [], qDoc = null, rots = [], drafts = [];
+  const mem = { rozpracovane: new Map(), ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map(), kontroly: new Map(), protokoly: new Map(), rotace: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else if (col === 'kontroly') checks = arr; else if (col === 'protokoly') protocols = arr; else if (col === 'rotace') rots = arr; else findings = arr;
+    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else if (col === 'kontroly') checks = arr; else if (col === 'protokoly') protocols = arr; else if (col === 'rotace') rots = arr; else if (col === 'rozpracovane') drafts = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -1136,10 +1189,12 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
       settings = s.exists ? s.data() : {};
       const el = $('#ownerEmail');
       if (document.activeElement !== el && settings.ownerEmail && !el.value) el.value = settings.ownerEmail;
+      renderTraining();
     }, () => {});
     db.collection('kontroly').onSnapshot(s => { checks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.collection('protokoly').onSnapshot(s => { protocols = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.collection('rotace').onSnapshot(s => { rots = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.collection('rozpracovane').onSnapshot(s => { drafts = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.doc('system/kontrolni-otazky').onSnapshot(s => { qDoc = s.exists ? s.data() : null; render(); }, () => {});
     db.doc('system/notifikace').onSnapshot(s => {
       notifyInfo = s.exists ? s.data() : null;
@@ -1164,7 +1219,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   }
 
   // ---------- navigace ----------
-  const TABS = ['prehled', 'terminy', 'kontrola', 'zavady', 'firmy', 'uzivatele'];
+  const TABS = ['prehled', 'terminy', 'skoleni', 'kontrola', 'zavady', 'firmy', 'uzivatele'];
   let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'prehled';
   function setTab(t) {
     tab = t;
@@ -1444,6 +1499,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
       : 'Zatím nebylo nic rozesláno.';
 
     renderProtoList();
+    renderTraining();
     renderWeekly();
     renderUsers();
     showNotice();
@@ -2383,6 +2439,16 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   function renderWeekly() {
     if (!me) return;
     renderStart(false);
+    const myDrafts = drafts.filter(d => (d.userId === me.id || isAdmin()) && inScope(d) && allowed(d)).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+    $('#wDraftSec').hidden = !myDrafts.length || !$('#wForm').hidden;
+    $('#wDrafts').innerHTML = myDrafts.length ? `<div class="list">${myDrafts.map(d => { const n = Object.keys(d.answers || {}).length, tot = (d.ids || []).length;
+      return `<div class="row">
+        <div class="pillcell"><span class="pill amber">${n} z ${tot}</span></div>
+        <div><div class="who">${esc(pairLabel(d.company, d.site))}${d.place ? ' › ' + esc(d.place) : ''}</div>
+        <div class="what">${d.type === 'zq' ? 'Kontrola ZQ-10-02' : 'Kontrola vedoucího'} · ${esc(d.by || '–')}</div>
+        <div class="when">uloženo ${fmt(String(d.savedAt || '').slice(0, 10))} · datum kontroly ${fmt(d.date)}</div></div>
+        <div class="acts">${d.userId === me.id ? `<button class="btn small primary" data-action="w-resume" data-id="${esc(d.id)}">Pokračovat</button>` : ''}<button class="btn small danger" data-action="w-draft-del" data-id="${esc(d.id)}">${ic('trash')}Smazat</button></div>
+      </div>`; }).join('')}</div>` : '';
     const ws = weekStart(todayISO), we = addDays(ws, 6), dow = daysUntil(ws) * -1, WS0 = weekStart(W_START);
     $('#wWeekHint').textContent = `týden ${weekNo(todayISO)} · ${fmt(ws).replace(/ \d{4}$/, '')} – ${fmt(we)}`;
     const pairs = weeklyPairs(), on = pairs.filter(tracked), off = pairs.filter(p => !tracked(p));
@@ -2433,9 +2499,79 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
     </div>`).join('')}</div>` : '<div class="empty">Zatím žádná týdenní kontrola.</div>';
   }
 
+  // ---------- školení (přehled termínů školení + přepnutí do aplikace školení) ----------
+  const isTraining = t => { const pr = presetOf(t.type); return pr ? pr.kind === 'skoleni' : /školen|instrukt|přezkouš|výšk|vzv/i.test(String(t.type)); };
+  let sFilter = '';
+  const trainUrl = () => { const u = String(settings.skoleniUrl || '').trim(); return /^https:\/\/[^\s"'<>]+$/.test(u) ? u : ''; };
+  function renderTraining() {
+    if (!me) return;
+    const url = trainUrl(), admin = isAdmin();
+    $('#sOpen').hidden = !url; if (url) $('#sOpen').href = url;
+    $('#sNoUrl').hidden = !!url;
+    $('#sNoUrl').textContent = admin ? 'Odkaz na aplikaci školení zatím není nastavený. Vlož ho níže.' : 'Odkaz na aplikaci školení zatím není nastavený. Požádej správce.';
+    $('#sUrlRow').hidden = !admin;
+    if (admin && document.activeElement !== $('#sUrl') && !$('#sUrl').value) $('#sUrl').value = settings.skoleniUrl || '';
+    const all = terms.filter(t => t.last && t.months && inScope(t) && isTraining(t)).map(withDue).sort((a, b) => a.days - b.days);
+    const late = all.filter(t => t.days < 0), soon = all.filter(t => t.days >= 0 && t.days <= 30), ok = all.filter(t => t.days > 30);
+    const c = $('#cnt-skoleni'); c.textContent = late.length; c.hidden = !late.length;
+    $('#sHint').textContent = `${all.length} ${plural(all.length, 'termín', 'termíny', 'termínů')} · stav k ${fmt(todayISO)}`;
+    const tl = (f, cls, icon, n, lbl) => `<button type="button" class="tile ${cls}" data-action="s-filter" data-f="${f}" aria-pressed="${sFilter === f}"><div class="tile-top">${ic(icon)}</div><b>${n}</b><span class="lbl">${lbl}</span></button>`;
+    $('#sTiles').innerHTML = tl('late', 'red', 'alert', late.length, 'Po termínu') + tl('soon', 'amber', 'clock', soon.length, 'Do 30 dní') + tl('ok', 'ok', 'check', ok.length, 'Platné');
+    const types = uniq(all.map(t => t.type)).sort(cs), tsel = $('#sType'), tv = tsel.value;
+    tsel.innerHTML = '<option value="">Všechny druhy</option>' + types.map(t => `<option>${esc(t)}</option>`).join('');
+    tsel.value = types.includes(tv) ? tv : ''; tsel.hidden = types.length < 2;
+    const q = $('#sSearch').value.trim().toLowerCase();
+    const list = all.filter(t => (!sFilter || (sFilter === 'late' ? t.days < 0 : sFilter === 'soon' ? t.days >= 0 && t.days <= 30 : t.days > 30))
+      && (!tsel.value || t.type === tsel.value) && (!q || (t.name + ' ' + t.type).toLowerCase().includes(q)));
+    $('#sList').innerHTML = list.length ? `<div class="list">${list.map(t => {
+      const st = t.days > 30 ? { cls: 'ok', text: 'platné' } : statusOf(t.days);
+      return `<div class="row">
+        <div class="pillcell"><span class="pill ${st.cls}">${st.text}</span></div>
+        <div><div class="who">${esc(t.name)}</div><div class="what">${esc(t.type)} · ${where(t)}</div>
+        <div class="when">do ${fmt(t.due)} · naposledy ${fmt(t.last)} · po ${t.months} měs.</div></div>
+        <div class="acts">${t.days <= 30 && url ? `<a class="btn small primary" href="${esc(url)}" target="_blank" rel="noopener">Spustit školení ↗</a>` : ''}<button class="btn small" data-action="renew" data-id="${t.id}">${ic('refresh')}Obnoveno dnes</button></div>
+      </div>`; }).join('')}</div>`
+      : `<div class="empty">${all.length ? 'Filtru nic neodpovídá.' : 'Zatím žádné termíny školení. Přidej je v záložce Termíny (druh „Školení …“).'}</div>`;
+  }
+  $('#sSearch').addEventListener('input', renderTraining);
+  $('#sType').addEventListener('change', renderTraining);
+  async function saveTrainUrl() {
+    if (!isAdmin()) return;
+    let u = $('#sUrl').value.trim();
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+    if (u && !/^https:\/\/[^\s"'<>]+$/.test(u)) { toast('Odkaz musí začínat https:// a nesmí obsahovat mezery.'); return; }
+    $('#sUrl').value = u;
+    settings = { ...settings, skoleniUrl: u };
+    try { if (db) await db.doc('system/nastaveni').set(settings); toast(u ? 'Odkaz na školení uložen.' : 'Odkaz na školení odstraněn.'); } catch (err) { toast('Odkaz se nepodařilo uložit.'); }
+    renderTraining();
+  }
+
   // vyplňování kontroly
   let wq = null; // { pk, rot, groups, answers, fail, photos }
   const wDraftKey = () => 'hlidac_wdraft_' + (me ? me.id : '');
+  let wDraftId = null, wResume = null;
+  async function saveLater(btn) {
+    if (!wq || !me) return;
+    const p = wPair(); if (!p) return;
+    if (!allowed(p)) { toast('K tomuto závodu nemáš přístup.'); return; }
+    const label = btn.textContent; btn.disabled = true;
+    try {
+      const photos = {};
+      for (const [qid, list] of Object.entries(wq.photos)) {
+        for (const x of list) if (!x.id && assets) { btn.textContent = 'Nahrávám fotky…'; x.id = (await assets.upload(x.blob, { type: 'image/jpeg' })).id; }
+        const ids = list.filter(x => x.id).map(x => x.id); if (ids.length) photos[qid] = ids;
+      }
+      const id = `${me.id}--${wq.type}--${wq.pk}`;
+      await put('rozpracovane', id, { userId: me.id, by: $('#wBy').value.trim(), company: p.company, site: p.site, key: p.key, place: $('#wPlace').value, type: wq.type, pk: wq.pk,
+        ids: wq.groups.flatMap(g => g.items).map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value, date: $('#wDate').value || todayISO, photos, savedAt: nowIso() });
+      if (wDraftId && wDraftId !== id) { try { await del('rozpracovane', wDraftId); } catch (err) { /* */ } }
+      try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ }
+      toast('Kontrola uložena na později. Najdeš ji v Týdenní kontrole pod „Rozpracované kontroly“.');
+      closeWeekly();
+    } catch (err) {
+      toast('Uložení na později se nepovedlo. Zkus to znovu.');
+    } finally { btn.disabled = false; btn.textContent = label; }
+  }
   function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ pk: wq.pk + '|' + wq.type, ids: wq.groups.flatMap(g => g.items).map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value })); } catch (e) { /* */ } }
   // výběr druhu kontroly a pracoviště → „Začít kontrolu“
   let wsType = null;
@@ -2496,7 +2632,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
     $('#wDate').value = todayISO; $('#wDate').max = todayISO;
     $('#wBy').value = me ? me.name : '';
     $('#wNote').value = ''; $('#wStatus').textContent = '';
-    $('#wStart').hidden = true; $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
+    $('#wStart').hidden = true; $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wDraftSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
     prepareQuestions(true);
     window.scrollTo(0, 0);
   }
@@ -2510,11 +2646,21 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   function prepareQuestions(restore) {
     const p = wPair(); if (!p) return;
     const place = $('#wPlace').value, pk = placeKey(p.company, p.site, place), zq = wType === 'zq', rot = zq ? rotationFor(pk) : null;
-    if (wq) Object.values(wq.photos).flat().forEach(x => URL.revokeObjectURL(x.url));
+    if (wq) Object.values(wq.photos).flat().forEach(x => { if (x.blob) URL.revokeObjectURL(x.url); });
     const groups = [];
     (zq ? rot.sel : VED_Q).forEach(q => { let g = groups.find(x => x.title === q.g); if (!g) { g = { title: q.g, items: [] }; groups.push(g); } g.items.push(q); });
     wq = { pk, rot, groups, type: wType, answers: {}, fail: {}, photos: {} };
-    if (restore) {
+    wDraftId = null;
+    const resume = wResume || (restore && me ? drafts.find(d => d.userId === me.id && d.pk === pk && d.type === wType) : null); wResume = null;
+    if (restore && resume && resume.pk === pk && resume.type === wType) {
+      const qids = new Set(groups.flatMap(g => g.items).map(q => q.id));
+      Object.entries(resume.answers || {}).forEach(([k, v]) => { if (qids.has(k)) wq.answers[k] = v; });
+      wq.fail = { ...(resume.fail || {}) };
+      Object.entries(resume.photos || {}).forEach(([k, ids]) => { if (qids.has(k)) wq.photos[k] = ids.map(i => ({ id: i, url: '/_blob/' + encodeURIComponent(i) })); });
+      $('#wNote').value = resume.note || ''; if (resume.date) $('#wDate').value = resume.date; if (resume.by) $('#wBy').value = resume.by;
+      wDraftId = resume.id;
+      $('#wStatus').textContent = `Pokračuješ v kontrole uložené ${fmt(String(resume.savedAt || '').slice(0, 10))}.`;
+    } else if (restore) {
       try {
         const d = JSON.parse(localStorage.getItem(wDraftKey()) || 'null');
         if (d && d.pk === pk + '|' + wType && (d.ids || []).join() === groups.flatMap(g => g.items).map(q => q.id).join() && Object.keys(d.answers || {}).length) {
@@ -2534,8 +2680,8 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
   $('#wPlace').addEventListener('change', () => prepareQuestions(true));
   $('#wDate').addEventListener('change', () => { const p = wPair(); if (p) $('#wFormHint').textContent = `${$('#wForm').dataset.kind || 'Týdenní kontrola'} · tý ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgrOf(p.company, p.site, $('#wPlace').value) || 'nezadán'}`; });
   function closeWeekly() {
-    if (wq) Object.values(wq.photos).flat().forEach(p => URL.revokeObjectURL(p.url));
-    wq = null;
+    if (wq) Object.values(wq.photos).flat().forEach(p => { if (p.blob) URL.revokeObjectURL(p.url); });
+    wq = null; wDraftId = null;
     $('#wForm').hidden = true; $('#wStart').hidden = false; $('#wBoardSec').hidden = false; $('#wHistSec').hidden = false;
     renderWeekly(); window.scrollTo(0, 0);
   }
@@ -2611,7 +2757,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
         let fid = '';
         if (a === 'nok') {
           const ids = [], ph = wq.photos[q.id] || [];
-          if (assets) for (let i = 0; i < ph.length; i++) { btn.textContent = `Nahrávám fotku k bodu ${q.no}…`; ids.push((await assets.upload(ph[i].blob, { type: 'image/jpeg' })).id); }
+          if (assets) for (let i = 0; i < ph.length; i++) { btn.textContent = `Nahrávám fotku k bodu ${q.no}…`; ids.push(ph[i].id || (await assets.upload(ph[i].blob, { type: 'image/jpeg' })).id); }
           fid = newId();
           btn.textContent = 'Ukládám závady…';
           await put('zavady', fid, {
@@ -2630,6 +2776,11 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
       await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, type: wq.type, ...(rot ? { step: rot.step, cycle: rot.cycle } : {}), createdAt: nowIso() });
       if (rot) await put('rotace', pk, { asked: [...rot.asked, ...rot.sel.map(q => q.id)], round: rot.round + 1, cycle: rot.cycle, sig: rot.sig, updatedAt: nowIso() });
       try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ }
+      if (wDraftId) {
+        const keep = new Set(all.filter(q => wq.answers[q.id] === 'nok').map(q => q.id));
+        if (assets) for (const [qid, list] of Object.entries(wq.photos)) if (!keep.has(qid)) for (const x of list) if (x.id) { try { await assets.delete(x.id); } catch (err) { /* */ } }
+        try { await del('rozpracovane', wDraftId); } catch (err) { /* */ }
+      }
       toast(fIds.length ? `Kontrola uložena, ${fIds.length}× závada v záložce Závady.` : 'Kontrola uložena. Bez závad.');
       closeWeekly();
     } catch (err) {
@@ -3199,7 +3350,18 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
         try { await put('provozovny', id, { ...strip(d), address: inp.value.trim() }); b.blur(); toast('Sídlo závodu uloženo.'); render(); } catch (err) { /* */ }
         break;
       }
-      case 'w-cancel': closeWeekly(); break;
+      case 'w-cancel': {
+        const any = wq && Object.keys(wq.answers).length;
+        const discard = () => { try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ } closeWeekly(); toast(wDraftId0 ? 'Změny zahozeny. Dříve uložená rozpracovaná kontrola zůstala.' : 'Kontrola zrušena.'); };
+        const wDraftId0 = wDraftId;
+        if (any) confirmTwice(b, discard, 'Opravdu zahodit?'); else closeWeekly();
+        break;
+      }
+      case 'w-later': saveLater(b); break;
+      case 'w-resume': { const d = drafts.find(x => x.id === id); if (d) { wResume = d; startWeekly(d.key, d.place || '', d.type); } break; }
+      case 'w-draft-del': confirmTwice(b, async () => { const d = drafts.find(x => x.id === id); try { await del('rozpracovane', id); if (assets && d) for (const pid of Object.values(d.photos || {}).flat()) { try { await assets.delete(pid); } catch (err) { /* */ } } toast('Rozpracovaná kontrola smazána.'); } catch (err) { /* */ } }); break;
+      case 's-filter': sFilter = sFilter === b.dataset.f ? '' : b.dataset.f; renderTraining(); break;
+      case 's-url-save': saveTrainUrl(); break;
       case 'w-track': {
         const d = sites.find(x => x.id === id);
         if (d) { try { await put('provozovny', id, { ...strip(d), weekly: b.dataset.on === '1' }); toast(b.dataset.on === '1' ? 'Závod se znovu sleduje.' : 'Závod už se v týdenních kontrolách nesleduje.'); } catch (err) { /* */ } }
@@ -3221,7 +3383,7 @@ body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom,
         renderQuestions(); saveDraft();
         break;
       }
-      case 'w-drop': { const arr = wq && wq.photos[b.dataset.q]; if (arr) { URL.revokeObjectURL(arr[+b.dataset.i].url); arr.splice(+b.dataset.i, 1); const item = wq.groups.flatMap(g => g.items).find(x => x.id === b.dataset.q); $('#row-' + b.dataset.q).outerHTML = qRow(item); } break; }
+      case 'w-drop': { const arr = wq && wq.photos[b.dataset.q]; if (arr) { if (arr[+b.dataset.i].blob) URL.revokeObjectURL(arr[+b.dataset.i].url); arr.splice(+b.dataset.i, 1); const item = wq.groups.flatMap(g => g.items).find(x => x.id === b.dataset.q); $('#row-' + b.dataset.q).outerHTML = qRow(item); } break; }
       case 'w-detail': { const k = checks.find(x => x.id === id); if (k) showCheck(k); break; }
       case 'close-wd': $('#wDetailModal').hidden = true; break;
       case 'w-proto': $('#wDetailModal').hidden = true; if (isAdmin()) openProto({ checkId: id }); break;
