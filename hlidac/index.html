@@ -415,7 +415,7 @@ body.locked .app { display: none; }
 .switch .ic { width: 18px; height: 18px; }
 
 /* ——— týdenní kontrola ——— */
-.wk-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.wk-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 14px; }
 .wk-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
 .wk-card::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--line-strong); }
 .wk-card.ok::before { background: var(--ok); } .wk-card.red::before { background: var(--red); } .wk-card.amber::before { background: var(--amber-bar); }
@@ -470,6 +470,15 @@ body.locked .app { display: none; }
 .site-chips span { font-size: 11.5px; font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--muted); }
 .site-chips span.warn { color: var(--amber); border-color: var(--amber-bar); background: var(--amber-soft); }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.wk-unit { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.wk-unit-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wk-unit-head b { display: inline-flex; align-items: center; gap: 6px; font-size: 14.5px; }
+.wk-unit-head .ic { width: 15px; height: 15px; color: var(--brand); }
+.ro { min-height: 44px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: var(--r); background: var(--surface-2); font-size: 14.5px; }
+.check-line { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.check-line input { width: 18px; height: 18px; accent-color: var(--brand); }
+.ans button span { white-space: nowrap; }
+@media (max-width: 680px) { .ans button { padding: 9px 4px; font-size: 12.5px; } }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
@@ -643,7 +652,7 @@ body.locked .app { display: none; }
     <div id="weeklyView" hidden>
       <div class="section" id="wBoardSec">
         <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
-        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b>. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b>. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
         <div class="wk-board" id="wBoard"></div>
         <div id="wHidden"></div>
       </div>
@@ -653,15 +662,16 @@ body.locked .app { display: none; }
         <div class="panel">
           <div class="grid-form">
             <div class="field"><label for="wSite">Závod / provozovna</label><select id="wSite"></select></div>
-            <div class="field"><label for="wPlace">Pracoviště / místo</label><input type="text" id="wPlace" list="wPlaceDl" placeholder="nepovinné, např. Hala 2"><datalist id="wPlaceDl"></datalist></div>
+            <div class="field"><label for="wPlace">Pracoviště</label><select id="wPlace"></select></div>
             <div class="field"><label for="wDate">Datum kontroly</label><input type="date" id="wDate"></div>
             <div class="field"><label for="wBy">Kontrolu provedl</label><input type="text" id="wBy"></div>
           </div>
         </div>
+        <p class="small-note" id="wRotInfo"></p>
         <div class="wk-sticky">
           <div class="row-line"><b id="wProgText">0 z 0</b><span id="wProgRes"></span></div>
           <div class="progress"><i id="wProgBar"></i></div>
-          <div class="toolbar"><button class="btn small" type="button" data-action="w-all-ok">Zbytek označit jako V pořádku</button></div>
+          <div class="toolbar"><button class="btn small" type="button" data-action="w-all-ok">Zbytek označit jako Vyhovuje</button></div>
         </div>
         <div id="wQuestions" class="section" style="margin:0"></div>
         <div class="panel">
@@ -680,7 +690,7 @@ body.locked .app { display: none; }
       <form class="section" id="wQEdit" hidden>
         <div class="section-head"><h2>Kontrolní otázky</h2><span class="hint">jen správce</span></div>
         <div class="panel">
-          <p class="small-note">Jedna otázka na řádek. Řádek začínající znakem <b>#</b> je nadpis oblasti. Změna platí pro nové kontroly, uložené kontroly si drží své znění.</p>
+          <p class="small-note">Jedna otázka na řádek, na začátku číslo bodu (např. <b>1.3.5</b>). Řádek začínající znakem <b>#</b> je nadpis oblasti. Po uložení začne obměna otázek u všech pracovišť od nového cyklu; uložené kontroly si drží své znění.</p>
           <textarea id="wQText" rows="16"></textarea>
           <div class="form-actions">
             <button class="btn primary" type="submit">Uložit otázky</button>
@@ -811,7 +821,7 @@ body.locked .app { display: none; }
 <div class="modal" id="renameModal" hidden>
   <form class="panel" id="renameForm">
     <h3 id="renameTitle">Přejmenovat</h3>
-    <div class="field"><label for="renameInput">Nový název</label><input type="text" id="renameInput" autocomplete="off"></div>
+    <div class="field"><label for="renameInput" id="renameLbl">Nový název</label><input type="text" id="renameInput" autocomplete="off"></div>
     <p class="small-note" id="renameNote"></p>
     <div class="form-actions">
       <button class="btn primary" type="submit" id="renameSave">Přejmenovat</button>
@@ -839,13 +849,15 @@ body.locked .app { display: none; }
     <h3>Protokol o kontrole pracoviště · ZQ-10-01</h3>
     <div class="grid-2">
       <div class="field"><label for="pSite">Závod / provozovna</label><select id="pSite" required></select></div>
+      <div class="field"><label for="pPlace">Pracoviště</label><select id="pPlace"></select></div>
       <div class="field"><label for="pNo">Číslo protokolu</label><input type="text" id="pNo" placeholder="01/2026"></div>
       <div class="field"><label for="pDate">Datum kontroly</label><input type="date" id="pDate" required></div>
-      <div class="field"><label for="pAddr">Sídlo závodu</label><input type="text" id="pAddr" placeholder="např. Litice nad Orlicí 123"></div>
-      <div class="field"><label for="pMgr">Zodpovědný vedoucí</label><input type="text" id="pMgr"></div>
       <div class="field"><label for="pBy">Kontrolu provedl</label><input type="text" id="pBy"></div>
       <div class="field"><label for="pFor">Za závod</label><input type="text" id="pFor" placeholder="jméno přítomného zástupce"></div>
-      <div class="field"><label for="pTo">Převzal</label><input type="text" id="pTo" placeholder="nepovinné"></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><span class="label">Sídlo závodu</span><div class="ro" id="pAddr"></div></div>
+      <div class="field"><span class="label">Zodpovědný vedoucí</span><div class="ro" id="pMgr"></div></div>
     </div>
     <div class="field"><label for="pWork">Pracoviště</label><textarea id="pWork"></textarea></div>
     <div class="field">
@@ -853,6 +865,7 @@ body.locked .app { display: none; }
       <div class="pick-list" id="pFindings"></div>
       <div class="toolbar"><button class="btn small" type="button" data-action="p-all">Vybrat otevřené</button><button class="btn small" type="button" data-action="p-none">Zrušit výběr</button></div>
     </div>
+    <label class="check-line"><input type="checkbox" id="pFix" checked> Před uložením opravit pravopis a gramatiku textů (Claude)</label>
     <div class="form-actions">
       <button class="btn primary" type="submit" id="pSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Stáhnout protokol (Word)</button>
       <button class="btn" type="button" data-action="close-proto">Zavřít</button>
@@ -958,15 +971,15 @@ body.locked .app { display: none; }
   let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
   let accounts = [], me = null, accountsLoaded = false, isOwner = null;
   let terms = [], findings = [], firms = [], sites = [], places = [], people = [], notifyInfo = null;
-  let checks = [], protocols = [], qDoc = null;
-  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map(), kontroly: new Map(), protokoly: new Map() };
+  let checks = [], protocols = [], qDoc = null, rots = [];
+  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map(), kontroly: new Map(), protokoly: new Map(), rotace: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else if (col === 'kontroly') checks = arr; else if (col === 'protokoly') protocols = arr; else findings = arr;
+    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else if (col === 'kontroly') checks = arr; else if (col === 'protokoly') protocols = arr; else if (col === 'rotace') rots = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -1037,6 +1050,7 @@ body.locked .app { display: none; }
     }, () => {});
     db.collection('kontroly').onSnapshot(s => { checks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.collection('protokoly').onSnapshot(s => { protocols = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.collection('rotace').onSnapshot(s => { rots = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.doc('system/kontrolni-otazky').onSnapshot(s => { qDoc = s.exists ? s.data() : null; render(); }, () => {});
     db.doc('system/notifikace').onSnapshot(s => {
       notifyInfo = s.exists ? s.data() : null;
@@ -1319,9 +1333,12 @@ body.locked .app { display: none; }
             <div class="chips">${siteChips || '<span class="small-note">Zatím žádné.</span>'}</div>
             <div class="add-row"><input type="text" id="ns-${id}" placeholder="Nový závod / provozovna" aria-label="Nový závod"><button class="btn small" data-action="add-site" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
           </div>
-          <div class="sub"><span class="label">${ic('pin')}Místa</span>
+          ${siteDocs.length ? `<div class="sub"><span class="label">${ic('building')}Sídla závodů (do protokolu)</span>
+            ${siteDocs.map(d => `<div class="add-row"><span class="chip plain">${esc(d.name)}</span><input type="text" id="sa-${esc(d.id)}" value="${esc(d.address || '')}" placeholder="Adresa sídla závodu" aria-label="Sídlo závodu ${esc(d.name)}"><button class="btn small" data-action="save-addr" data-id="${esc(d.id)}">${ic('check')}Uložit</button></div>`).join('')}
+          </div>` : ''}
+          <div class="sub"><span class="label">${ic('pin')}Pracoviště</span>
             <div class="chips">${placeChips || '<span class="small-note">Zatím žádná.</span>'}</div>
-            <div class="add-row"><select id="npS-${id}" aria-label="Závod pro nové místo"><option value="">celá firma</option>${sitesOf(n).map(sn => `<option>${esc(sn)}</option>`).join('')}</select><input type="text" id="np-${id}" placeholder="Nové místo, např. Hala 2" aria-label="Nové místo"><button class="btn small" data-action="add-place" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
+            <div class="add-row"><select id="npS-${id}" aria-label="Závod pro nové místo"><option value="">celá firma</option>${sitesOf(n).map(sn => `<option>${esc(sn)}</option>`).join('')}</select><input type="text" id="np-${id}" placeholder="Nové pracoviště, např. Hala 2" aria-label="Nové pracoviště"><button class="btn small" data-action="add-place" data-name="${esc(n)}">${ic('plus')}Přidat</button></div>
           </div>
           <div class="sub"><span class="label">${ic('user')}Osoby a zařízení</span>
             <div class="chips">${personChips || '<span class="small-note">Zatím žádné.</span>'}</div>
@@ -1663,6 +1680,7 @@ body.locked .app { display: none; }
   function openRename(ctx) {
     renameCtx = ctx;
     $('#renameTitle').textContent = `Přejmenovat ${KIND_LABEL[ctx.kind]}`;
+    $('#renameLbl').textContent = 'Nový název'; $('#renameSave').textContent = 'Přejmenovat';
     $('#renameInput').value = ctx.old;
     $('#renameNote').textContent = 'Nový název se propíše do všech termínů a závad.';
     $('#renameModal').hidden = false; $('#renameInput').select();
@@ -1697,9 +1715,12 @@ body.locked .app { display: none; }
       for (const z of findings.filter(z => z.company === firm && z.site === old)) await patch('zavady', z.id, { site: nv });
     } else if (kind === 'place') {
       const oid = fid + '--' + seg(site) + '--' + seg(old), nid = fid + '--' + seg(site) + '--' + seg(nv);
-      await put('mista', nid, { firmId: fid, firm, site: site || '', name: nv });
+      const opd = places.find(x => x.id === oid);
+      await put('mista', nid, { ...(opd ? strip(opd) : {}), firmId: fid, firm, site: site || '', name: nv });
       if (oid !== nid && places.some(x => x.id === oid)) await del('mista', oid);
       for (const z of findings.filter(z => z.company === firm && (z.site || '') === (site || '') && z.place === old)) await patch('zavady', z.id, { place: nv });
+      for (const k of checks.filter(k => k.company === firm && (k.site || '') === (site || '') && k.place === old)) await patch('kontroly', k.id, { place: nv });
+      const ro = rots.find(r => r.id === oid); if (ro && oid !== nid) { await put('rotace', nid, strip(ro)); await del('rotace', oid); }
     } else if (kind === 'person') {
       const oid = fid + '--' + seg(old), nid = fid + '--' + seg(nv);
       await put('osoby', nid, { firmId: fid, firm, name: nv });
@@ -1717,6 +1738,24 @@ body.locked .app { display: none; }
     e.preventDefault();
     const nv = $('#renameInput').value.trim(), btn = $('#renameSave');
     if (!renameCtx) return;
+    if (renameCtx.kind === 'mgr') {
+      const { firm, site, place } = renameCtx, now = new Date().toISOString();
+      btn.disabled = true;
+      try {
+        if (place) {
+          await ensureEntities({ firm, site, place });
+          const id = placeKey(firm, site, place), d = places.find(x => x.id === id);
+          await put('mista', id, { ...(d ? strip(d) : { firmId: slug(firm), firm, site, name: place }), manager: nv, updatedAt: now });
+        } else {
+          await ensureEntities({ firm, site });
+          const d = sites.find(x => x.id === keyOf(firm, site));
+          await put('provozovny', keyOf(firm, site), { ...(d ? strip(d) : { firmId: slug(firm), firm, name: site }), manager: nv });
+        }
+        closeRename(); toast('Vedoucí uložen.'); render();
+      } catch (err) { $('#renameNote').textContent = 'Uložení se nepovedlo. Zkus to znovu.'; }
+      finally { btn.disabled = false; btn.textContent = 'Přejmenovat'; }
+      return;
+    }
     if (!nv) { $('#renameNote').textContent = 'Název nesmí být prázdný.'; return; }
     if (nv === renameCtx.old) { closeRename(); return; }
     btn.disabled = true; btn.textContent = 'Přejmenovávám…';
@@ -2066,7 +2105,7 @@ body.locked .app { display: none; }
     const row = (a, acts) => `<div class="row user-row">
       <div class="pillcell"><span class="pill ${a.status === 'active' ? 'ok' : a.status === 'blocked' ? 'red' : 'amber'}">${a.role === 'admin' ? 'správce' : a.status === 'active' ? 'aktivní' : a.status === 'blocked' ? 'zablokovaný' : 'čeká'}</span></div>
       <div><div class="who">${esc(a.name)}<small>${esc(a.osc)}</small></div><div class="what">${esc(a.email || 'bez e-mailu')}</div>
-      <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}</div>
+      <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}${a.testMailAt ? ' · zkušební e-mail ' + fmt(a.testMailAt.slice(0, 10)) : ''}</div>
       ${a.role === 'admin' ? '<div class="site-chips"><span>všechny závody</span></div>' : `<div class="site-chips">${(a.sites || []).length ? a.sites.map(k => { const p = allPairs(true).find(x => x.key === k); return `<span>${esc(p ? p.label : k)}</span>`; }).join('') : '<span class="warn">bez přiřazeného závodu</span>'}</div>`}</div>
       <div class="acts">${acts}</div></div>`;
     $('#uPending').innerHTML = pend.length ? `<div class="list">${pend.map(a => row(a,
@@ -2077,6 +2116,7 @@ body.locked .app { display: none; }
     $('#uList').innerHTML = others.length ? `<div class="list">${others.map(a => row(a, a.role === 'admin' ? '' :
       `${a.status === 'blocked' ? `<button class="btn small" data-action="u-unblock" data-id="${a.id}">${ic('undo')}Odblokovat</button>` : `<button class="btn small" data-action="u-block" data-id="${a.id}">Zablokovat</button>`}
        <button class="btn small primary" data-action="u-sites" data-id="${a.id}">${ic('factory')}Závody</button>
+       ${a.email ? `<button class="btn small" data-action="u-test" data-id="${a.id}">${ic('mail')}Zkušební e-mail</button>` : ''}
        ${a.email ? `<button class="btn small" data-action="u-code" data-id="${a.id}">${ic('mail')}Kód pro nové heslo</button>` : ''}
        <button class="btn small danger" data-action="u-delete" data-id="${a.id}">${ic('trash')}Smazat</button>`)).join('')}</div>` : '<div class="empty">Zatím žádní uživatelé.</div>';
   }
@@ -2092,6 +2132,20 @@ body.locked .app { display: none; }
     } else if (action === 'u-block') { await patch('ucty', id, { status: 'blocked' }); toast('Účet zablokován.'); }
     else if (action === 'u-unblock') { await patch('ucty', id, { status: 'active' }); toast('Účet odblokován.'); }
     else if (action === 'u-sites') openSites(a);
+    else if (action === 'u-test') {
+      if (!a.email) { toast('Účet nemá e-mail.'); return; }
+      btn.disabled = true;
+      try {
+        await sendMail(a.email, 'Hlídač BOZP – zkušební e-mail', 'Zkušební e-mail',
+          `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0 0 12px">toto je zkušební e-mail z aplikace Hlídač BOZP. Pokud ho čtete, doručování e-mailů na vaši adresu funguje.</p><p style="margin:0;color:#6b6864;font-size:13px">Odeslal správce ${esc(me.name)} ${fmt(todayISO)}. Na e-mail není třeba odpovídat.</p>`,
+          `Dobrý den, ${a.name},\n\ntoto je zkušební e-mail z aplikace Hlídač BOZP. Pokud ho čtete, doručování e-mailů na vaši adresu funguje.\n\nOdeslal správce ${me.name} ${fmt(todayISO)}.`);
+        await patch('ucty', id, { testMailAt: nowIso() });
+        toast(`Zkušební e-mail odeslán na ${a.email}.`);
+      } catch (err) {
+        const c = err && err.code;
+        toast(c === 'server_not_connected' || c === 'no_mcp' ? 'Gmail není připojený (claude.ai → Nastavení → Konektory).' : c === 'needs_reauth' ? 'Přihlášení ke Gmailu vypršelo, připoj Gmail znovu.' : c === 'tool_error' ? 'Gmail e-mail odmítl: ' + (err.message || 'neznámý důvod') : 'E-mail se nepodařilo odeslat (' + (c || 'chyba') + ').');
+      } finally { btn.disabled = false; }
+    }
     else if (action === 'u-code') {
       if (!a.email) { toast('Účet nemá e-mail.'); return; }
       btn.disabled = true;
@@ -2114,33 +2168,7 @@ body.locked .app { display: none; }
   document.querySelectorAll('[data-kmode]').forEach(b => b.addEventListener('click', () => setKMode(b.dataset.kmode)));
 
   // ---------- týdenní kontrola · 08-01-SM-GŘ-Q10, Vnitřní kontroly (vedoucí pracoviště min. 1× týdně) ----------
-  const DEFAULT_Q = [
-    '# Pracoviště a pořádek',
-    'Komunikace, únikové cesty a nouzové východy jsou volné a označené',
-    'Na pracovišti je pořádek, materiál je uložen stabilně a bezpečně',
-    'Podlahy jsou bez nerovností a skluzu, otvory a jámy jsou zakryté nebo ohrazené',
-    'Osvětlení pracoviště je funkční a dostatečné',
-    '# Stroje a zařízení',
-    'Ochranné kryty a bezpečnostní prvky strojů jsou na místě a funkční',
-    'Tlačítka nouzového zastavení jsou přístupná a funkční',
-    'Elektrická zařízení, kabely a rozvaděče jsou bez poškození, rozvaděče jsou uzavřené',
-    'Zdvihací zařízení a vázací prostředky jsou nepoškozené a označené',
-    'Regály a žebříky jsou bez poškození, regály mají označenou nosnost',
-    '# Zaměstnanci a OOPP',
-    'Zaměstnanci používají předepsané OOPP',
-    'Práce probíhá podle pracovních postupů a MPBP, včetně LOTO a povolení k práci tam, kde se vyžadují',
-    'Nikdo nejeví známky ovlivnění alkoholem nebo návykovými látkami',
-    '# Doprava a manipulace',
-    'Provoz VZV a manipulační techniky je bezpečný, vozíky mají provedenou denní kontrolu',
-    'Dopravní značení a vyznačení komunikací je čitelné',
-    '# Požární ochrana, první pomoc a chemie',
-    'Hasicí přístroje a hydranty jsou přístupné, označené a s platnou kontrolou',
-    'Lékárnička je dostupná a vybavená',
-    'Chemické látky jsou označené a správně uložené, bezpečnostní listy jsou k dispozici',
-    '# Značení a dokumentace',
-    'Bezpečnostní značení a výstražné tabulky jsou na místě a čitelné',
-    'Místní provozní bezpečnostní předpisy a návody jsou na pracovišti k dispozici',
-  ].join('\n');
+  const DEFAULT_Q = "# 1.1 Bezpečnost práce – kontrola dokumentace (přítomnost, úplnost a platnost)\n1.1.1 Pracovní předpisy (pokyny, pracovní postupy, stavební dokumentace)\n1.1.2 Bezpečnostní plán stavby\n1.1.3 Místní provozní bezpečnostní předpis\n1.1.4 Návody k obsluze jednotlivých zařízení (od výrobce)\n1.1.5 Seznamy hodnocení rizik (registr rizik)\n1.1.6 Stavební deník (zápisy jsou prováděny řádně)\n1.1.7 Provozní deníky VTZ\n1.1.8 Seznam jeřábů a zdvihacích zařízení\n1.1.9 Seznam tlakových nádob\n1.1.10 Seznam elektrických strojů, zařízení a spotřebičů\n1.1.11 Revize elektrických zařízení (rozvaděče, buňka UNIMO)\n1.1.12 Revize elektrického ručního nářadí a spotřebičů\n1.1.13 Revize jeřábů a zdvihacích zařízení\n1.1.14 Pověření odpovědných osob za VTZ\n1.1.15 Kniha evidence pracovních úrazů\n1.1.16 Přidělování OOPP a jejich používání\n1.1.17 Zabezpečení stavby proti vstupu nepovolaných osob\n1.1.18 Vybavení lékárničky a její označení\n1.1.19 Průkaz vazače\n1.1.20 Průkaz jeřábníka\n1.1.21 Průkaz obsluhy plošin\n1.1.22 Průkaz lešenáře\n1.1.23 Průkaz strojníka (obsluha stavebních strojů)\n# 1.2 Vzdělávání v oblasti bezpečnosti a hygieny práce, lékařské prohlídky\n1.2.1 Základní školení nových zaměstnanců\n1.2.2 Školení na pracovišti\n1.2.3 Opakované (periodické) školení\n1.2.4 Mimořádné školení\n1.2.5 Profesní školení\n1.2.6 Školení vedoucích zaměstnanců\n1.2.7 Vstupní lékařské prohlídky\n1.2.8 Seznam zaměstnanců na rizikových pracovištích\n# 1.3 Kontrola pracoviště\n1.3.1 Jsou komunikace v nezávadném stavu (bez nánosů, děr, oleje a jiných překážek)?\n1.3.2 Jsou cesty a chodníky zřetelně označeny?\n1.3.3 Jsou držadla, madla a příčle žebříků bez poškození?\n1.3.4 Jsou schody čisté a nepoškozené a je první a poslední schod barevně odlišen?\n1.3.5 Jsou víka a kryty kanálů dostatečně pevné, nepoškozené a nepřečnívají nad okolní terén?\n1.3.6 Jsou zvýšené pracovní plošiny nepoškozené a je zábradlí dostatečně vysoké a nepoškozené?\n1.3.7 Jsou dveře výtahů nepoškozené a je provedena revize výtahů?\n1.3.8 Je osvětlení pracoviště dostatečné?\n1.3.9 Mají zaměstnanci přístup k sociálním a sanitárním zařízením?\n1.3.10 Jsou dveře rozvaděčů uzavřené a nepoškozené?\n1.3.11 Jsou vypínače strojů označené, snadno přístupné a nepoškozené?\n1.3.12 Jsou nebezpečná místa strojů dobře zabezpečena proti vzniku úrazů?\n1.3.13 Jsou bezpečnostní vypínání strojů pravidelně kontrolována?\n1.3.14 Jsou okraje, odkud mohou lidé spadnout, opatřeny zábradlím nebo jinou dostatečnou ochranou?\n1.3.15 Jsou kryty točivých prvků a soukolí řádně upevněny?\n1.3.16 Jsou vázací prostředky řádně uloženy a označeny?\n1.3.17 Jsou zdvihací zařízení řádně označena maximální nosností?\n1.3.18 Jsou regály označeny maximální nosností?\n1.3.19 Je používané ruční nářadí v bezvadném stavu?\n1.3.20 Jsou elektrická vedení na strojích neporušená a řádně upevněná?\n1.3.21 Plní bezpečnostní vypínače a zarážky spolehlivě svou funkci?\n1.3.22 Může se každý na své pracovní místo bezpečně dostat a bezpečně tam pracovat?\n1.3.23 Je pracoviště (staveniště) uklizené a je materiál bezpečně uložen?\n1.3.24 Jsou hadice s tlakovým vzduchem nepoškozené a řádně upevněné?\n1.3.25 Jsou pracovní a skladovací prostory udržovány v čistotě a pořádku?\n1.3.26 Jsou sociální prostory udržovány v čistotě a pořádku?\n1.3.27 Je nářadí uloženo na určených místech?\n1.3.28 Jsou k dispozici umývárny s tekoucí teplou a studenou vodou?\n1.3.29 Je k dispozici místo, kde je možné se osušit, převléknout a uschovat si oděv?\n1.3.30 Mají zaměstnanci k dispozici pitnou vodu?\n1.3.31 Jsou kabely a vodiče chráněny před poškozením?\n1.3.32 Jsou všechny přípojky řádně instalovány a používají se vhodné zásuvky a zástrčky?\n1.3.33 Používají zaměstnanci OOPP předepsané pro danou profesi?\n1.3.34 Je provedeno bezpečnostní značení podle nařízení vlády č. 375/2017 Sb.?\n# 2.1 Požární ochrana – kontrola dokumentace (přítomnost, úplnost, platnost)\n2.1.1 Požární předpisy\n2.1.2 Požární řád\n2.1.3 Požární směrnice\n2.1.4 Požární evakuační řád\n2.1.5 Začlenění činností podle požárního nebezpečí\n2.1.6 Požární kniha\n2.1.7 Organizační směrnice zabezpečení PO\n# 2.2 Vzdělávání v oblasti PO\n2.2.1 Vstupní školení PO\n2.2.2 Školení PO na pracovišti\n2.2.3 Opakované školení PO\n2.2.4 Odborná příprava preventistů PO\n2.2.5 Školení vedoucích zaměstnanců v PO\n# 2.3 Technické prostředky PO\n2.3.1 Jsou přenosné hasicí přístroje správně rozmístěny a přístupné?\n2.3.2 Jsou nástěnné požární hydranty v pohotovostním stavu a volně přístupné?\n2.3.3 Jsou ventilové stanice vodních clon a stabilních hasicích zařízení kompletní včetně návodu k obsluze a jsou přístupné?\n2.3.4 Jsou požární dveře a vrata funkční včetně samozavíračů?\n2.3.5 Jsou tlačítka elektrické požární signalizace viditelná a volně přístupná?\n2.3.6 Jsou u telefonů uvedena čísla tísňového volání?\n2.3.7 Jsou barevně vymezeny prostory kolem požárně technických zařízení, elektrických rozvaděčů a požárních vstupů do energokanálů, které musí zůstat volné?\n2.3.8 Jsou utěsněny prostupy potrubí a kabelů požárně dělicími a stavebními konstrukcemi?\n2.3.9 Jsou nástěnné hydranty vybaveny hadicí a proudnicí?\n2.3.10 Jsou hadice a proudnice v dobrém technickém stavu?\n# 2.4 Požární rizika pracoviště\n2.4.1 Jsou hořlavé materiály ukládány v požárně bezpečné vzdálenosti od zdrojů tepla a elektrických rozvaděčů?\n2.4.2 Jsou dodržována pravidla pro skladování hořlavých kapalin a plynů a pro manipulaci s nimi?\n2.4.3 Jsou odstraňovány hořlavé usazeniny a prach ze strojních a stavebních konstrukcí?\n2.4.4 Je dodržována požárně bezpečná vzdálenost tepelných spotřebičů a ostatních zdrojů zapálení od hořlavých předmětů a materiálů?\n2.4.5 Jsou elektrické vařiče, konvektory a mikrovlnné trouby provozovány pod přímým dohledem zaměstnanců a na základě písemného povolení?\n2.4.6 Jsou dodržovány technologické předpisy a požární řády?\n2.4.7 Je pravidelně prováděno čištění vzduchotechniky?\n2.4.8 Jsou dodržována pravidla pro svařování a ostatní požárně nebezpečné práce?\n2.4.9 Jsou únikové cesty a úniková schodiště průchodné v celém profilu?\n2.4.10 Je dodržován zákaz kouření na pracovišti?\n2.4.11 Jsou kuřárny označené, požárně bezpečné a vybavené nehořlavými nádobami na odpad?\n2.4.12 Je na viditelném a všem zaměstnancům přístupném místě vyvěšen pracovní řád, požární směrnice, požární evakuační řád a seznam požární hlídky a je tato dokumentace aktuální?\n2.4.13 Jsou místa uložení hořlavých kapalin a lahví s plyny označena požárními bezpečnostními tabulkami?\n2.4.14 Jsou místa s nebezpečím výbuchu označena bezpečnostními tabulkami a nápisy?\n2.4.15 Jsou povolené tepelné spotřebiče označeny?\n2.4.16 Jsou údaje v požárním evakuačním plánu aktuální?\n2.4.17 Jsou příjezdové komunikace pro požární zásah volně průchodné a průjezdné a jsou vyznačeny jízdní pruhy?";
   const W_START = '2026-10-05'; // od tohoto týdne aplikace eviduje týdenní kontroly; starší týdny se nepočítají jako zmeškané
   const qText = () => (qDoc && qDoc.text) || DEFAULT_Q;
   function parseQ(text) {
@@ -2148,9 +2176,30 @@ body.locked .app { display: none; }
     String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
       if (l.startsWith('#')) { g = { title: l.replace(/^#+\s*/, ''), items: [] }; groups.push(g); return; }
       if (!g) { g = { title: 'Kontrola', items: [] }; groups.push(g); }
-      n++; g.items.push({ id: 'q' + n, n, text: l });
+      n++;
+      const m = l.match(/^(\d+(?:\.\d+)+)\.?\s+(.+)$/);
+      const no = m ? m[1] : String(n);
+      g.items.push({ id: 'q' + no.replace(/\./g, '_'), n, no, text: m ? m[2] : l });
     });
     return groups.filter(x => x.items.length);
+  }
+  const allQ = () => parseQ(qText()).flatMap(g => g.items.map(q => ({ ...q, g: g.title })));
+  const qSig = () => { const s = qText(); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
+  const placeKey = (company, site, place) => keyOf(company, site) + '--' + seg(place || '');
+  // Obměna otázek ZQ-10-02 pro každé pracoviště zvlášť: 1. kontrola cyklu = každá 2. otázka,
+  // další kontrola = každá 3. otázka z dosud nepoložených, pak každá 4. … Po vyčerpání všech otázek začíná nový cyklus.
+  const ROT_MIN = 10; // aby kontrola na konci cyklu neměla jen 1–2 otázky
+  function rotationFor(pk) {
+    const all = allQ(), sig = qSig(), r = rots.find(x => x.id === pk);
+    const same = r && r.sig === sig;
+    let asked = same ? r.asked || [] : [], round = same ? r.round || 0 : 0, cycle = same ? r.cycle || 1 : 1;
+    let pool = all.filter(q => !asked.includes(q.id));
+    if (!pool.length) { cycle++; round = 0; asked = []; pool = all; }
+    const step = round + 2;
+    let pick = new Set(pool.filter((_, i) => (i + 1) % step === 0).map(q => q.id));
+    for (const q of pool) { if (pick.size >= ROT_MIN) break; pick.add(q.id); }
+    const sel = pool.filter(q => pick.has(q.id));
+    return { sel, step, cycle, round, asked, left: pool.length - sel.length, total: all.length, sig };
   }
   function weekStart(iso) { const { y, m, d } = parseISO(iso); return addDays(iso, -((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7)); }
   function isoWeek(iso) {
@@ -2164,82 +2213,117 @@ body.locked .app { display: none; }
   const keyOfCheck = k => k.key || keyOf(k.company, k.site);
   const weeklyPairs = () => visPairs().filter(p => p.site && (!scope || p.key === scope));
   const tracked = p => { const d = sites.find(x => x.id === p.key); return !d || d.weekly !== false; };
+  const unitsOf = p => { const pl = placesOf(p.company, p.site); return pl.length ? pl : ['']; };
+  function mgrOf(company, site, place) {
+    const d = place ? places.find(x => x.id === placeKey(company, site, place)) : sites.find(x => x.id === keyOf(company, site));
+    return (d && d.manager) || '';
+  }
+  const addrOf = (company, site) => { const d = sites.find(x => x.id === keyOf(company, site)); return (d && d.address) || ''; };
+  const checksOf = (key, place) => checks.filter(k => keyOfCheck(k) === key && (k.place || '') === (place || '')).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const plural = (n, a, b, c) => (n === 1 ? a : n >= 2 && n <= 4 ? b : c);
 
   function renderWeekly() {
     if (!me) return;
-    const ws = weekStart(todayISO), we = addDays(ws, 6), dow = daysUntil(ws) * -1;
+    const ws = weekStart(todayISO), we = addDays(ws, 6), dow = daysUntil(ws) * -1, WS0 = weekStart(W_START);
     $('#wWeekHint').textContent = `týden ${weekNo(todayISO)} · ${fmt(ws).replace(/ \d{4}$/, '')} – ${fmt(we)}`;
     const pairs = weeklyPairs(), on = pairs.filter(tracked), off = pairs.filter(p => !tracked(p));
     const weeks = Array.from({ length: 8 }, (_, i) => addDays(ws, -7 * (7 - i)));
-    $('#wBoard').innerHTML = on.length ? on.map(p => {
-      const ks = checks.filter(k => keyOfCheck(k) === p.key).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-      const thisW = ks.find(k => k.date >= ws && k.date <= we);
-      const cls = thisW ? 'ok' : dow >= 4 ? 'red' : 'amber';
-      const pill = thisW ? `<span class="pill ok">Hotovo ${fmt(thisW.date)}</span>` : dow >= 4 ? '<span class="pill red">Tento týden chybí</span>' : '<span class="pill amber">Čeká na kontrolu</span>';
-      const missed = weeks.slice(0, 7).filter(w => w >= weekStart(W_START) && !ks.some(k => k.date >= w && k.date <= addDays(w, 6))).length;
+    const board = $('#wBoard');
+    if (!board.contains(document.activeElement)) board.innerHTML = on.length ? on.map(p => {
+      let worst = 'ok';
+      const rows = unitsOf(p).map(u => {
+        const ks = checksOf(p.key, u);
+        const thisW = ks.find(k => k.date >= ws && k.date <= we);
+        const cls = thisW ? 'ok' : dow >= 4 ? 'red' : 'amber';
+        if (cls === 'red' || (cls === 'amber' && worst === 'ok')) worst = cls;
+        const pill = thisW ? `<span class="pill ok">Hotovo ${fmt(thisW.date)}</span>` : dow >= 4 ? '<span class="pill red">Tento týden chybí</span>' : '<span class="pill amber">Čeká na kontrolu</span>';
+        const missed = weeks.slice(0, 7).filter(w => w >= WS0 && !ks.some(k => k.date >= w && k.date <= addDays(w, 6))).length;
+        const bars = weeks.map(w => {
+          const done = ks.some(k => k.date >= w && k.date <= addDays(w, 6));
+          const c = done ? 'ok' : w === ws || w < WS0 ? '' : 'miss';
+          return `<i class="${c}${w === ws ? ' now' : ''}" title="Týden ${weekNo(w)}: ${done ? 'provedeno' : w === ws ? 'probíhá' : w < WS0 ? 'před zavedením' : 'chybí'}"></i>`;
+        }).join('');
+        const mgr = mgrOf(p.company, p.site, u), rot = rotationFor(placeKey(p.company, p.site, u));
+        return `<div class="wk-unit">
+          <div class="wk-unit-head"><b>${ic('pin')}${esc(u || 'Celý závod')}</b>${pill}</div>
+          <div class="meta">Zodpovědný vedoucí: ${mgr ? `<b>${esc(mgr)}</b>` : '<span style="color:var(--amber)">nezadán</span>'} · <button class="link" data-action="w-mgr" data-id="${esc(p.key)}" data-place="${esc(u)}">${mgr ? 'změnit' : 'zadat'}</button></div>
+          <div class="weeks">${bars}</div>
+          <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím bez kontroly'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''} · příště ${rot.sel.length} ${plural(rot.sel.length, 'otázka', 'otázky', 'otázek')} ZQ-10-02</div>
+          <div class="form-actions"><button class="btn primary small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}">${ic('check')}${thisW ? 'Další kontrola' : 'Provést kontrolu'}</button></div>
+        </div>`;
+      }).join('');
       const openF = findings.filter(f => f.status !== 'done' && keyOf(f.company, f.site) === p.key);
       const lateF = openF.filter(f => f.due && daysUntil(f.due) < 0);
-      const bars = weeks.map(w => {
-        const done = ks.some(k => k.date >= w && k.date <= addDays(w, 6));
-        const c = done ? 'ok' : w === ws || w < weekStart(W_START) ? '' : 'miss';
-        return `<i class="${c}${w === ws ? ' now' : ''}" title="Týden ${weekNo(w)}: ${done ? 'provedeno' : w === ws ? 'probíhá' : w < weekStart(W_START) ? 'před zavedením' : 'chybí'}"></i>`;
-      }).join('');
-      return `<article class="wk-card ${cls}">
+      const addr = addrOf(p.company, p.site);
+      return `<article class="wk-card ${worst}">
         <h3>${ic('factory')}${esc(p.site)} <small>${esc(p.company)}</small></h3>
-        <div>${pill}</div>
-        <div><div class="weeks">${bars}</div><div class="weeks-lbl"><span>t. ${weekNo(weeks[0])}</span><span>t. ${weekNo(ws)}</span></div></div>
-        <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím žádná kontrola'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''}</div>
-        <div class="meta">Otevřené závady ${openF.length}${lateF.length ? ` · <b style="color:var(--red)">po termínu ${lateF.length}</b>` : ''}</div>
-        <div class="form-actions"><button class="btn primary" data-action="w-start" data-id="${esc(p.key)}">${ic('check')}${thisW ? 'Další kontrola' : 'Provést kontrolu'}</button>${isAdmin() && sites.some(x => x.id === p.key) ? `<button class="btn small" data-action="w-track" data-id="${esc(p.key)}" data-on="0" title="Závod nebude v přehledu týdenních kontrol">Nesledovat</button>` : ''}</div>
+        <div class="meta">Sídlo závodu: ${addr ? esc(addr) : `<span style="color:var(--amber)">nezadáno${isAdmin() ? ' (doplň v záložce Firmy)' : ' (doplní správce)'}</span>`}</div>
+        ${rows}
+        <div class="add-row"><input type="text" id="wap-${esc(p.key)}" placeholder="Nové pracoviště, např. Hala 2" aria-label="Nové pracoviště"><button class="btn small" data-action="w-add-place" data-id="${esc(p.key)}">${ic('plus')}Přidat pracoviště</button></div>
+        <div class="meta">Otevřené závady ${openF.length}${lateF.length ? ` · <b style="color:var(--red)">po termínu ${lateF.length}</b>` : ''}${isAdmin() && sites.some(x => x.id === p.key) ? ` · <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="0">nesledovat závod</button>` : ''}</div>
       </article>`;
     }).join('') : `<div class="empty">${pairs.length ? 'Všechny závody jsou vypnuté ze sledování.' : isAdmin() ? 'Zatím žádný závod. Založ ho v záložce Firmy.' : 'Nemáš přiřazený žádný závod.'}</div>`;
-    $('#wHidden').innerHTML = off.length ? `<p class="small-note">Nesledované závody: ${off.map(p => `${esc(p.label)} <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="1">zapnout</button>`).join(' · ')}</p>` : '';
-    if (isAdmin()) $('#wHidden').innerHTML += `<div class="toolbar"><button class="btn small" data-action="w-q-edit">${ic('edit')}Upravit kontrolní otázky</button></div>`;
-    // historie
+    $('#wHidden').innerHTML = (off.length ? `<p class="small-note">Nesledované závody: ${off.map(p => `${esc(p.label)} <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="1">zapnout</button>`).join(' · ')}</p>` : '')
+      + (isAdmin() ? `<div class="toolbar"><button class="btn small" data-action="w-q-edit">${ic('edit')}Upravit kontrolní otázky ZQ-10-02</button></div>` : '');
     const hist = checks.filter(k => inScope(k)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30);
     $('#wHistory').innerHTML = hist.length ? `<div class="list">${hist.map(k => `<div class="row">
       <div class="pillcell"><span class="pill ${k.nok ? 'red' : 'ok'}">${k.nok ? `${k.nok}× nevyhovuje` : 'Bez závad'}</span></div>
-      <div><div class="who">${esc(pairLabel(k.company, k.site))}${k.place ? ' · ' + esc(k.place) : ''}</div>
-      <div class="what">Provedl ${esc(k.by || '–')} · ${k.ok || 0}× v pořádku${k.na ? ` · ${k.na}× netýká se` : ''}</div>
+      <div><div class="who">${esc(pairLabel(k.company, k.site))}${k.place ? ' › ' + esc(k.place) : ''}</div>
+      <div class="what">Provedl ${esc(k.by || '–')} · ${k.ok || 0}× vyhovuje${k.na ? ` · ${k.na}× netýká se` : ''}${k.step ? ` · sada: každá ${k.step}. otázka` : ''}</div>
       <div class="when">${fmt(k.date)} · týden ${weekNo(k.date)}</div></div>
       <div class="acts"><button class="btn small" data-action="w-detail" data-id="${k.id}">Detail</button><button class="btn small" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol</button>${isAdmin() ? `<button class="btn small danger icon-only" data-action="w-del" data-id="${k.id}" aria-label="Smazat kontrolu" title="Smazat">${ic('trash')}</button>` : ''}</div>
     </div>`).join('')}</div>` : '<div class="empty">Zatím žádná týdenní kontrola.</div>';
   }
 
   // vyplňování kontroly
-  let wq = null; // { groups, answers, fail, photos }
+  let wq = null; // { pk, rot, groups, answers, fail, photos }
   const wDraftKey = () => 'hlidac_wdraft_' + (me ? me.id : '');
-  function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ key: $('#wSite').value, place: $('#wPlace').value, answers: wq.answers, fail: wq.fail, note: $('#wNote').value, text: qText() })); } catch (e) { /* */ } }
-  function startWeekly(key) {
+  function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ pk: wq.pk, ids: wq.rot.sel.map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value })); } catch (e) { /* */ } }
+  function startWeekly(key, place = '') {
     const pairs = weeklyPairs();
     if (!pairs.length) { toast('Nemáš přiřazený žádný závod.'); return; }
     $('#wSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
     $('#wSite').value = pairs.some(p => p.key === key) ? key : pairs[0].key;
+    fillPlaces(place);
     $('#wDate').value = todayISO; $('#wDate').max = todayISO;
     $('#wBy').value = me ? me.name : '';
-    $('#wPlace').value = ''; $('#wNote').value = ''; $('#wStatus').textContent = '';
-    wq = { groups: parseQ(qText()), answers: {}, fail: {}, photos: {} };
-    try {
-      const d = JSON.parse(localStorage.getItem(wDraftKey()) || 'null');
-      if (d && d.key === $('#wSite').value && d.text === qText() && Object.keys(d.answers || {}).length) {
-        wq.answers = d.answers || {}; wq.fail = d.fail || {}; $('#wPlace').value = d.place || ''; $('#wNote').value = d.note || '';
-        $('#wStatus').textContent = 'Pokračuješ v rozpracované kontrole (bez fotek, ty přidej znovu).';
-      }
-    } catch (e) { /* */ }
-    wSiteChanged();
+    $('#wNote').value = ''; $('#wStatus').textContent = '';
     $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
-    renderQuestions();
+    prepareQuestions(true);
     window.scrollTo(0, 0);
   }
   function wPair() { return allPairs(true).find(p => p.key === $('#wSite').value); }
-  function wSiteChanged() {
+  function fillPlaces(want) {
     const p = wPair(); if (!p) return;
-    $('#wFormTitle').textContent = 'Kontrola · ' + p.site;
-    $('#wFormHint').textContent = 'týden ' + weekNo($('#wDate').value || todayISO);
-    $('#wPlaceDl').innerHTML = placesOf(p.company, p.site).map(x => `<option value="${esc(x)}">`).join('');
+    const us = unitsOf(p);
+    $('#wPlace').innerHTML = us.map(u => `<option value="${esc(u)}">${esc(u || 'Celý závod')}</option>`).join('');
+    $('#wPlace').value = us.includes(want) ? want : us[0];
   }
-  $('#wSite').addEventListener('change', wSiteChanged);
-  $('#wDate').addEventListener('change', wSiteChanged);
+  function prepareQuestions(restore) {
+    const p = wPair(); if (!p) return;
+    const place = $('#wPlace').value, pk = placeKey(p.company, p.site, place), rot = rotationFor(pk);
+    if (wq) Object.values(wq.photos).flat().forEach(x => URL.revokeObjectURL(x.url));
+    const groups = [];
+    rot.sel.forEach(q => { let g = groups.find(x => x.title === q.g); if (!g) { g = { title: q.g, items: [] }; groups.push(g); } g.items.push(q); });
+    wq = { pk, rot, groups, answers: {}, fail: {}, photos: {} };
+    if (restore) {
+      try {
+        const d = JSON.parse(localStorage.getItem(wDraftKey()) || 'null');
+        if (d && d.pk === pk && (d.ids || []).join() === rot.sel.map(q => q.id).join() && Object.keys(d.answers || {}).length) {
+          wq.answers = d.answers || {}; wq.fail = d.fail || {}; $('#wNote').value = d.note || '';
+          $('#wStatus').textContent = 'Pokračuješ v rozpracované kontrole (bez fotek, ty přidej znovu).';
+        }
+      } catch (e) { /* */ }
+    }
+    const mgr = mgrOf(p.company, p.site, place);
+    $('#wFormTitle').textContent = 'Kontrola · ' + p.site + (place ? ' › ' + place : '');
+    $('#wFormHint').textContent = `týden ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgr || 'nezadán'}`;
+    $('#wRotInfo').innerHTML = `<b>Otázky ZQ-10-02 · cyklus ${rot.cycle}, sada ${rot.round + 1}:</b> každá ${rot.step}. otázka z dosud nepoložených (${rot.sel.length} z ${rot.total}). ${rot.left ? `Do konce cyklu zbývá ${rot.left} ${plural(rot.left, 'otázka', 'otázky', 'otázek')}.` : 'Tato sada cyklus uzavře, příště se začíná znovu.'}`;
+    renderQuestions();
+  }
+  $('#wSite').addEventListener('change', () => { fillPlaces(''); prepareQuestions(true); });
+  $('#wPlace').addEventListener('change', () => prepareQuestions(true));
+  $('#wDate').addEventListener('change', () => { const p = wPair(); if (p) $('#wFormHint').textContent = `týden ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgrOf(p.company, p.site, $('#wPlace').value) || 'nezadán'}`; });
   function closeWeekly() {
     if (wq) Object.values(wq.photos).flat().forEach(p => URL.revokeObjectURL(p.url));
     wq = null;
@@ -2247,7 +2331,7 @@ body.locked .app { display: none; }
     renderWeekly(); window.scrollTo(0, 0);
   }
   function qRow(q) {
-    const a = wq.answers[q.id], f = wq.fail[q.id] || {}, p = wPair();
+    const a = wq.answers[q.id], f = wq.fail[q.id] || {};
     const btn = (v, cls, label, icon) => `<button type="button" class="${cls}" data-action="w-ans" data-q="${q.id}" data-v="${v}" aria-pressed="${a === v}" aria-label="${label}" title="${label}">${icon}</button>`;
     const fail = a === 'nok' ? `<div class="qfail">
       <div class="field wide"><label for="wf-text-${q.id}">Co nevyhovuje</label><textarea id="wf-text-${q.id}" data-wf="text" data-q="${q.id}" placeholder="${esc(q.text)}">${esc(f.text || '')}</textarea></div>
@@ -2257,10 +2341,9 @@ body.locked .app { display: none; }
       <div class="field"><span class="label">Závažnost</span><div class="seg mini">${['vysoka', 'stredni', 'nizka'].map(v => `<label class="${v === 'vysoka' ? 'v' : v === 'stredni' ? 's' : ''}"><input type="radio" name="wsev-${q.id}" value="${v}" data-wf="sev" data-q="${q.id}" ${(f.sev || 'stredni') === v ? 'checked' : ''}><span>${SEV[v]}</span></label>`).join('')}</div></div>
       <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, 14))}"></div>
       <div class="field"><label for="wf-owner-${q.id}">Odpovídá</label><input type="text" id="wf-owner-${q.id}" data-wf="owner" data-q="${q.id}" list="wOwnerDl" value="${esc(f.owner || '')}" placeholder="např. mistr výroby"></div>
-      <div class="field"><label for="wf-place-${q.id}">Místo</label><input type="text" id="wf-place-${q.id}" data-wf="place" data-q="${q.id}" list="wPlaceDl" value="${esc(f.place || '')}" placeholder="${esc($('#wPlace').value || 'nepovinné')}"></div>
     </div>` : '';
-    return `<div class="q ${a || ''}" id="row-${q.id}"><div class="qt"><b>${q.n}.</b>${esc(q.text)}</div>
-      <div class="ans" role="group" aria-label="Odpověď">${btn('ok', 'a-ok', 'V pořádku', ic('check') + '<span>OK</span>')}${btn('nok', 'a-nok', 'Nevyhovuje', '✗<span>Závada</span>')}${btn('na', 'a-na', 'Netýká se', '–')}</div>${fail}</div>`;
+    return `<div class="q ${a || ''}" id="row-${q.id}"><div class="qt"><b>${esc(q.no)}</b>${esc(q.text)}</div>
+      <div class="ans" role="group" aria-label="Odpověď">${btn('ok', 'a-ok', 'Vyhovuje', ic('check') + '<span>Vyhovuje</span>')}${btn('nok', 'a-nok', 'Nevyhovuje', '✗<span>Nevyhovuje</span>')}${btn('na', 'a-na', 'Netýká se', '<span>Netýká se</span>')}</div>${fail}</div>`;
   }
   function renderQuestions() {
     const p = wPair();
@@ -2271,11 +2354,11 @@ body.locked .app { display: none; }
   function wProgress() {
     const all = wq.groups.flatMap(g => g.items), vals = all.map(q => wq.answers[q.id]);
     const done = vals.filter(Boolean).length, ok = vals.filter(v => v === 'ok').length, nok = vals.filter(v => v === 'nok').length, na = vals.filter(v => v === 'na').length;
-    $('#wProgText').textContent = `${done} z ${all.length} otázek`;
+    $('#wProgText').textContent = `${done} z ${all.length} ${plural(all.length, 'otázky', 'otázek', 'otázek')}`;
     $('#wProgRes').textContent = `✓ ${ok} · ✗ ${nok} · – ${na}`;
     $('#wProgBar').style.width = (all.length ? (done / all.length) * 100 : 0) + '%';
     const left = all.length - done;
-    $('#wSave').textContent = left ? `Zbývá ${left} ${left === 1 ? 'otázka' : left < 5 ? 'otázky' : 'otázek'}` : nok ? `Uložit kontrolu a ${nok} ${nok === 1 ? 'závadu' : nok < 5 ? 'závady' : 'závad'}` : 'Uložit kontrolu';
+    $('#wSave').textContent = left ? `Zbývá ${left} ${plural(left, 'otázka', 'otázky', 'otázek')}` : nok ? `Uložit kontrolu a ${nok} ${plural(nok, 'závadu', 'závady', 'závad')}` : 'Uložit kontrolu';
   }
   $('#wQuestions').addEventListener('input', e => {
     const t = e.target; if (!t.dataset.wf || !wq) return;
@@ -2295,40 +2378,39 @@ body.locked .app { display: none; }
     e.preventDefault();
     if (!wq) return;
     const st = $('#wStatus'), btn = $('#wSave'), p = wPair();
-    const all = wq.groups.flatMap(g => g.items.map(q => ({ ...q, g: g.title })));
+    const all = wq.groups.flatMap(g => g.items);
     const missing = all.find(q => !wq.answers[q.id]);
-    if (missing) { const r = $('#row-' + missing.id); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); st.textContent = 'Odpověz na všechny otázky (OK, Závada nebo Netýká se).'; return; }
+    if (missing) { const r = $('#row-' + missing.id); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); st.textContent = 'Odpověz na všechny otázky (Vyhovuje, Nevyhovuje nebo Netýká se).'; return; }
     if (!p || !allowed(p)) { st.textContent = 'K tomuto závodu nemáš přístup.'; return; }
     const date = $('#wDate').value || todayISO;
     if (date > todayISO) { st.textContent = 'Datum kontroly nemůže být v budoucnu.'; return; }
     const by = $('#wBy').value.trim() || (me ? me.name : '');
-    const place = $('#wPlace').value.trim();
+    const place = $('#wPlace').value, rot = wq.rot, pk = wq.pk;
     btn.disabled = true; st.textContent = '';
     const kid = newId(), items = [], fIds = [];
     try {
-      await ensureEntities({ firm: p.company, site: p.site, place });
+      if (place) await ensureEntities({ firm: p.company, site: p.site, place });
       for (const q of all) {
         const a = wq.answers[q.id], f = wq.fail[q.id] || {};
         let fid = '';
         if (a === 'nok') {
           const ids = [], ph = wq.photos[q.id] || [];
-          if (assets) for (let i = 0; i < ph.length; i++) { btn.textContent = `Nahrávám fotku k otázce ${q.n}…`; ids.push((await assets.upload(ph[i].blob, { type: 'image/jpeg' })).id); }
+          if (assets) for (let i = 0; i < ph.length; i++) { btn.textContent = `Nahrávám fotku k bodu ${q.no}…`; ids.push((await assets.upload(ph[i].blob, { type: 'image/jpeg' })).id); }
           fid = newId();
-          const fplace = (f.place || '').trim() || place;
-          if (fplace && fplace !== place) await ensureEntities({ firm: p.company, site: p.site, place: fplace });
           btn.textContent = 'Ukládám závady…';
           await put('zavady', fid, {
-            company: p.company, site: p.site, place: fplace, text: (f.text || '').trim() || 'Nevyhovuje: ' + q.text, measure: (f.measure || '').trim(),
+            company: p.company, site: p.site, place, text: (f.text || '').trim() || 'Nevyhovuje: ' + q.text, measure: (f.measure || '').trim(),
             severity: f.sev || 'stredni', owner: (f.owner || '').trim(), due: f.due || addDays(todayISO, 14), status: 'open', photos: ids,
-            createdAt: date, doneAt: '', source: 'tydenni', kontrolaId: kid,
+            createdAt: date, doneAt: '', source: 'tydenni', kontrolaId: kid, qNo: q.no,
           });
           fIds.push(fid);
         }
-        items.push({ g: q.g, text: q.text, a, note: a === 'nok' ? (f.text || '').trim() : '', findingId: fid });
+        items.push({ g: q.g, no: q.no, text: q.text, a, note: a === 'nok' ? (f.text || '').trim() : '', findingId: fid });
       }
       btn.textContent = 'Ukládám kontrolu…';
       const cnt = v => items.filter(i => i.a === v).length;
-      await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, createdAt: nowIso() });
+      await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, step: rot.step, cycle: rot.cycle, createdAt: nowIso() });
+      await put('rotace', pk, { asked: [...rot.asked, ...rot.sel.map(q => q.id)], round: rot.round + 1, cycle: rot.cycle, sig: rot.sig, updatedAt: nowIso() });
       try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ }
       toast(fIds.length ? `Kontrola uložena, ${fIds.length}× závada v záložce Závady.` : 'Kontrola uložena. Bez závad.');
       closeWeekly();
@@ -2338,13 +2420,13 @@ body.locked .app { display: none; }
     } finally { btn.disabled = false; if (wq) wProgress(); }
   });
   function showCheck(k) {
-    $('#wdTitle').textContent = `Týdenní kontrola · ${pairLabel(k.company, k.site)}`;
-    $('#wdMeta').textContent = `${fmt(k.date)} · týden ${weekNo(k.date)} · provedl ${k.by || '–'}${k.place ? ' · ' + k.place : ''}${k.note ? ' · ' + k.note : ''}`;
+    $('#wdTitle').textContent = `Týdenní kontrola · ${pairLabel(k.company, k.site)}${k.place ? ' › ' + k.place : ''}`;
+    $('#wdMeta').textContent = `${fmt(k.date)} · týden ${weekNo(k.date)} · provedl ${k.by || '–'}${k.note ? ' · ' + k.note : ''}`;
     let g = null;
     $('#wdBody').innerHTML = (k.items || []).map(i => {
       const head = i.g !== g ? `<div class="grp">${esc((g = i.g))}</div>` : '';
       const mark = i.a === 'ok' ? '<b style="color:var(--ok)">✓</b>' : i.a === 'nok' ? '<b style="color:var(--red)">✗</b>' : '<b class="muted">–</b>';
-      return head + `<label style="cursor:default">${mark}<span>${esc(i.text)}</span>${i.note ? `<small>${esc(i.note)}</small>` : ''}</label>`;
+      return head + `<label style="cursor:default">${mark}<span>${i.no ? `<b>${esc(i.no)}</b> ` : ''}${esc(i.text)}</span>${i.note ? `<small>${esc(i.note)}</small>` : ''}</label>`;
     }).join('');
     $('#wdActs').innerHTML = `<button class="btn primary" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol ZQ-10-01</button><button class="btn" data-action="close-wd">Zavřít</button>`;
     $('#wDetailModal').hidden = false;
@@ -2354,60 +2436,108 @@ body.locked .app { display: none; }
     const text = $('#wQText').value.trim();
     if (!parseQ(text).length) { toast('Zadej aspoň jednu otázku.'); return; }
     const doc = { text, updatedAt: nowIso(), by: me ? me.name : '' };
-    try { if (db) await db.doc('system/kontrolni-otazky').set(doc); else qDoc = doc; toast('Otázky uloženy.'); $('#wQEdit').hidden = true; renderWeekly(); }
+    try { if (db) await db.doc('system/kontrolni-otazky').set(doc); else qDoc = doc; toast('Otázky uloženy. Obměna otázek začne u všech pracovišť od nového cyklu.'); $('#wQEdit').hidden = true; renderWeekly(); }
     catch (err) { handleWriteError(err); }
   });
 
   // ---------- protokol ZQ-10-01 (Word) ----------
-  const PROTO_WORK = 'Proběhla kontrola areálu závodu a pracovišť (výrobních hal) a provozní dokumentace při pravidelné prohlídce pracoviště a dostupnost dokumentace na jednotlivých pracovištích, včetně technických prostředků PO.';
+  const ZQ02 = 'ZQ-10-02 Kontrolní otázky ke zhodnocení plnění požadavků právních předpisů v oblasti bezpečnosti a hygieny práce, včetně požární ochrany';
+  function workText(pair, place, chk) {
+    const where = place ? `pracoviště ${place}` : `pracovišť závodu ${pair.site || pair.company}`;
+    if (chk) {
+      const n = (chk.items || []).length;
+      const parts = [[chk.ok, 'vyhovuje', 'vyhovují', 'vyhovuje'], [chk.nok, 'nevyhovuje', 'nevyhovují', 'nevyhovuje'], [chk.na, 'se netýká', 'se netýkají', 'se netýká']].filter(x => x[0]).map(([c, a, b2, d2]) => `${c} ${plural(c, a, b2, d2)}`);
+      return `Proběhla týdenní kontrola ${where} podle kontrolních otázek ${ZQ02}. Kontrolováno ${n} ${plural(n, 'bod', 'body', 'bodů')}${parts.length ? ': ' + parts.join(', ') : ''}.`;
+    }
+    return `Proběhla kontrola ${where} podle kontrolních otázek ${ZQ02}, včetně kontroly provozní dokumentace a technických prostředků PO.`;
+  }
   let protoCtx = null;
   const seqOf = s => Number(String(s || '').split('/')[0]) || 0;
   function nextProtoNo(key, year) {
     const n = Math.max(0, ...protocols.filter(p => p.key === key && Number(p.year) === year).map(p => Number(p.seq) || 0));
     return `${pad(n + 1)}/${year}`;
   }
-  function managersOf(key) { return accounts.filter(a => a.role !== 'admin' && a.status === 'active' && (a.sites || []).includes(key)).map(a => a.name).join(', '); }
+  function mgrText(pair, place) {
+    if (place) return mgrOf(pair.company, pair.site, place);
+    const us = pair.site ? placesOf(pair.company, pair.site) : [];
+    const list = us.map(u => [u, mgrOf(pair.company, pair.site, u)]).filter(x => x[1]).map(([u, m]) => `${m} (${u})`);
+    const whole = mgrOf(pair.company, pair.site, '');
+    return [whole, ...list].filter(Boolean).join(', ');
+  }
   function openProto(opts = {}) {
     const pairs = visPairs();
     if (!pairs.length) { toast('Nemáš přiřazený žádný závod.'); return; }
     const chk = opts.checkId ? checks.find(k => k.id === opts.checkId) : null;
     const prev = opts.protoId ? protocols.find(p => p.id === opts.protoId) : null;
-    protoCtx = { checkId: chk ? chk.id : '', protoId: prev ? prev.id : '', preset: chk ? chk.findingIds || [] : prev ? prev.findingIds || [] : null };
+    protoCtx = { checkId: chk ? chk.id : prev ? prev.checkId || '' : '', protoId: prev ? prev.id : '', preset: chk ? chk.findingIds || [] : prev ? prev.findingIds || [] : null };
     const key = chk ? keyOfCheck(chk) : prev ? prev.key : (scope || ($('#zCompany').value ? (pairs.find(p => p.company === $('#zCompany').value) || {}).key : '') || pairs.find(p => p.site) && pairs.find(p => p.site).key || pairs[0].key);
     $('#pSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
     $('#pSite').value = pairs.some(p => p.key === key) ? key : pairs[0].key;
     $('#pDate').value = chk ? chk.date : prev ? prev.date : todayISO;
     $('#pBy').value = chk ? chk.by || '' : prev ? prev.by || '' : me ? me.name : '';
-    $('#pTo').value = prev ? prev.to || '' : '';
-    $('#pWork').value = prev ? prev.work || PROTO_WORK : chk && chk.place ? `Proběhla týdenní kontrola pracoviště ${chk.place} podle kontrolních otázek.` : chk ? 'Proběhla týdenní kontrola pracovišť závodu podle kontrolních otázek.' : PROTO_WORK;
     $('#pStatus').textContent = '';
-    protoSiteChanged(prev);
+    protoSiteChanged(prev, chk ? chk.place || '' : prev ? prev.place || '' : '');
+    if (prev && prev.work) $('#pWork').value = prev.work;
     $('#protoModal').hidden = false;
   }
-  function protoSiteChanged(prev) {
-    const key = $('#pSite').value, d = sites.find(x => x.id === key) || {};
+  const protoPair = () => allPairs(true).find(p => p.key === $('#pSite').value);
+  const protoCheck = () => (protoCtx && protoCtx.checkId ? checks.find(k => k.id === protoCtx.checkId) : null);
+  function protoSiteChanged(prev, place) {
+    const pair = protoPair(); if (!pair) return;
     const year = Number(($('#pDate').value || todayISO).slice(0, 4));
-    $('#pNo').value = prev ? prev.number : nextProtoNo(key, year);
-    $('#pAddr').value = prev ? prev.addr || '' : d.address || '';
-    $('#pMgr').value = prev ? prev.mgr || '' : d.manager || managersOf(key);
-    $('#pFor').value = prev ? prev.forPlant || '' : d.forPlant || '';
+    const us = pair.site ? placesOf(pair.company, pair.site) : [];
+    $('#pPlace').innerHTML = `<option value="">${us.length ? 'Všechna pracoviště' : 'Celý závod'}</option>` + us.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+    $('#pPlace').value = place !== undefined && (place === '' || us.includes(place)) ? place : '';
+    $('#pNo').value = prev ? prev.number : nextProtoNo(pair.key, year);
+    $('#pFor').value = prev ? prev.forPlant || '' : (sites.find(x => x.id === pair.key) || {}).forPlant || '';
+    protoPlaceChanged();
+  }
+  function protoPlaceChanged() {
+    const pair = protoPair(); if (!pair) return;
+    const place = $('#pPlace').value, addr = addrOf(pair.company, pair.site), mgr = mgrText(pair, place);
+    $('#pAddr').innerHTML = addr ? esc(addr) : `<span style="color:var(--amber)">Sídlo závodu není zadané.${isAdmin() ? ' Doplň ho v záložce Firmy.' : ' Doplní ho správce.'}</span>`;
+    $('#pMgr').innerHTML = mgr ? esc(mgr) : `<span style="color:var(--amber)">Vedoucí ${place ? 'pracoviště' : 'závodu'} není zadán. Zadej ho v Kontrola → Týdenní kontrola u pracoviště.</span>`;
+    $('#pWork').value = workText(pair, place, protoCheck());
     renderProtoFindings();
   }
   function protoFindings() {
-    const key = $('#pSite').value;
-    return findings.filter(f => keyOf(f.company, f.site) === key && allowed(f))
+    const pair = protoPair(), place = $('#pPlace').value;
+    if (!pair) return [];
+    return findings.filter(f => keyOf(f.company, f.site) === pair.key && allowed(f) && (!place || (f.place || '') === place))
       .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
   }
   function renderProtoFindings() {
     const list = protoFindings(), pre = protoCtx && protoCtx.preset;
-    $('#pFindLbl').textContent = `Zjištěné nedostatky · ${list.length ? 'vyber, co dát do protokolu' : 'v závodě nejsou žádné závady'}`;
+    $('#pFindLbl').textContent = `Zjištěné nedostatky · ${list.length ? 'vyber, co dát do protokolu' : 'žádné závady'}`;
     $('#pFindings').innerHTML = list.length ? list.map(f => `<label><input type="checkbox" value="${f.id}" ${(pre ? pre.includes(f.id) : f.status !== 'done') ? 'checked' : ''}>
       <span>${f.cislo ? `<b>${esc(f.cislo)}</b> · ` : ''}${esc(f.text)}</span>
       <small>${f.status === 'done' ? 'odstraněno ' + fmt(f.doneAt) : 'náprava do ' + fmt(f.due)}${f.place ? ' · ' + esc(f.place) : ''}${(f.photos || []).length ? ` · fotek ${(f.photos || []).length}` : ''}</small></label>`).join('')
-      : '<div class="grp">Protokol bude s textem „Bez zjištěných nedostatků“.</div>';
+      : '<div class="grp">Protokol bude s textem „Při kontrole nebyly zjištěny nedostatky.“</div>';
   }
-  $('#pSite').addEventListener('change', () => { if (protoCtx) protoCtx.preset = null; protoSiteChanged(); });
+  $('#pSite').addEventListener('change', () => { if (protoCtx) { protoCtx.preset = null; protoCtx.checkId = ''; } protoSiteChanged(null, ''); });
+  $('#pPlace').addEventListener('change', () => { if (protoCtx) { protoCtx.preset = null; protoCtx.checkId = ''; } protoPlaceChanged(); });
   $('#pDate').addEventListener('change', () => { if (!protoCtx || !protoCtx.protoId) $('#pNo').value = nextProtoNo($('#pSite').value, Number(($('#pDate').value || todayISO).slice(0, 4))); });
+
+  // oprava pravopisu a gramatiky textů do Wordu (Claude; bez něj jen základní úprava)
+  let sampleNs;
+  const basicFix = s => { let t = String(s || '').replace(/\s+/g, ' ').replace(/\s+([,.;!?])/g, '$1').trim(); if (t) t = t[0].toLocaleUpperCase('cs') + t.slice(1); return t; };
+  async function fixCzech(obj) {
+    const keys = Object.keys(obj).filter(k => String(obj[k] || '').trim());
+    const out = { ...obj };
+    if (!keys.length) return { out, how: 'none' };
+    try {
+      if (sampleNs === undefined) sampleNs = (window.claude && window.claude.use) ? await window.claude.use('sample').catch(() => null) : null;
+      if (!sampleNs) throw { code: 'unavailable' };
+      const src = Object.fromEntries(keys.map(k => [k, String(obj[k])]));
+      const res = await sampleNs.json('Jsi jazykový korektor. Oprav pravopis, gramatiku, interpunkci a velká písmena podle Pravidel českého pravopisu v textech z protokolu o kontrole BOZP a PO. Zachovej význam a odbornou terminologii, neměň zkratky (BOZP, PO, OOPP, VTZ, VZV, MPBP, LOTO, PTW, ZQ-10-02), čísla, data, rozměry ani vlastní jména. Nic nepřidávej, nevynechávej a zbytečně nepřeformulovávej. Text, který je celou větou, začni velkým písmenem a ukonči tečkou. Odpověz pouze JSON objektem se stejnými klíči a opravenými texty.\n\n' + JSON.stringify(src), { modelTier: 'default' });
+      if (!res || typeof res !== 'object') throw { code: 'bad_reply' };
+      keys.forEach(k => { out[k] = typeof res[k] === 'string' && res[k].trim() ? res[k].trim() : basicFix(obj[k]); });
+      return { out, how: 'claude' };
+    } catch (e) {
+      keys.forEach(k => { out[k] = basicFix(obj[k]); });
+      return { out, how: 'basic', code: e && e.code };
+    }
+  }
 
   async function photoBytes(id) {
     const r = await fetch('/_blob/' + encodeURIComponent(id));
@@ -2427,57 +2557,63 @@ body.locked .app { display: none; }
 
   $('#protoForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const st = $('#pStatus'), btn = $('#pSave'), key = $('#pSite').value;
-    const pair = allPairs(true).find(p => p.key === key);
+    const st = $('#pStatus'), btn = $('#pSave'), pair = protoPair();
     if (!pair || !allowed(pair)) { st.textContent = 'K tomuto závodu nemáš přístup.'; return; }
+    if (!downloads) { st.textContent = 'Stahování souborů funguje jen v aplikaci otevřené přes claude.ai.'; return; }
+    const key = pair.key, place = $('#pPlace').value;
     const date = $('#pDate').value || todayISO, year = Number(date.slice(0, 4));
     const number = $('#pNo').value.trim() || nextProtoNo(key, year);
     const ids = new Set([...document.querySelectorAll('#pFindings input:checked')].map(x => x.value));
     const sel = protoFindings().filter(f => ids.has(f.id));
-    // čísla závad xx/rrrr – stálá, přidělí se při prvním zařazení do protokolu
+    const chk = protoCheck();
     let maxNo = Math.max(0, ...findings.filter(f => keyOf(f.company, f.site) === key && String(f.cislo || '').endsWith('/' + year)).map(f => seqOf(f.cislo)));
     const nums = new Map(sel.map(f => [f.id, f.cislo || `${pad(++maxNo)}/${year}`]));
-    btn.disabled = true; st.textContent = 'Připravuji fotky…';
+    btn.disabled = true;
     try {
-      const media = [];
+      // texty do Wordu – oprava češtiny
+      const raw = { work: $('#pWork').value.trim() };
+      sel.forEach(f => { raw['t_' + f.id] = f.text; raw['m_' + f.id] = f.measure || ''; raw['x_' + f.id] = f.fixText || ''; });
+      let fixed = { out: raw, how: 'none' };
+      if ($('#pFix').checked) { st.textContent = 'Kontroluji pravopis a gramatiku… (může trvat i minutu)'; fixed = await fixCzech(raw); }
+      const T = fixed.out;
+      st.textContent = 'Připravuji fotky…';
       const rows = [];
       for (const f of sel) {
         const pics = [], fix = [];
         for (const pid of (f.photos || []).slice(0, 4)) { try { pics.push(await photoBytes(pid)); } catch (err) { /* chybějící fotka */ } }
         if (f.status === 'done') for (const pid of (f.fixPhotos || []).slice(0, 2)) { try { fix.push(await photoBytes(pid)); } catch (err) { /* */ } }
-        rows.push({ f, no: nums.get(f.id), pics, fix });
+        rows.push({ f: { ...f, text: T['t_' + f.id] || f.text, measure: T['m_' + f.id] || '', fixText: T['x_' + f.id] || '' }, no: nums.get(f.id), pics, fix });
       }
+      const qrows = chk ? (chk.items || []).map(i => ({ no: i.no || '', text: i.text, a: i.a, ref: i.findingId && nums.get(i.findingId) ? nums.get(i.findingId) : '' })) : [];
       st.textContent = 'Skládám dokument…';
       const blob = buildProtocolDocx({
-        number, date: ddmm(date), plant: pair.site || pair.company, company: pair.company, addr: $('#pAddr').value.trim(), mgr: $('#pMgr').value.trim(),
-        by: $('#pBy').value.trim(), forPlant: $('#pFor').value.trim(), to: $('#pTo').value.trim(), work: $('#pWork').value.trim(), rows, logo: logoBytes(), author: me ? me.name : '',
+        number, date: ddmm(date), plant: pair.site || pair.company, company: pair.company, place, addr: addrOf(pair.company, pair.site), mgr: mgrText(pair, place),
+        by: $('#pBy').value.trim(), forPlant: $('#pFor').value.trim(), work: T.work || PROTO_FALLBACK, rows, qrows, logo: logoBytes(), author: me ? me.name : '',
       });
-      const fname = `ZQ-10-01_Protokol_${number.replace('/', '-')}_${slug(pair.site || pair.company)}.docx`;
+      const fname = `ZQ-10-01_Protokol_${number.replace('/', '-')}_${slug(pair.site || pair.company)}${place ? '_' + slug(place) : ''}.docx`;
       st.textContent = 'Ukládám soubor…';
-      if (downloads) {
-        try { await downloads.save({ filename: fname, data: blob }); }
-        catch (err) { if (err && err.code === 'declined') { st.textContent = 'Stažení zrušeno.'; return; } throw err; }
-      } else { st.textContent = 'Stahování souborů funguje jen v aplikaci otevřené přes claude.ai.'; return; }
-      // evidence: číslo protokolu, čísla závad, údaje závodu
+      try { await downloads.save({ filename: fname, data: blob }); }
+      catch (err) { if (err && err.code === 'declined') { st.textContent = 'Stažení zrušeno.'; return; } throw err; }
       try {
-        const rec = { key, company: pair.company, site: pair.site, number, seq: seqOf(number), year, date, by: $('#pBy').value.trim(), to: $('#pTo').value.trim(), addr: $('#pAddr').value.trim(), mgr: $('#pMgr').value.trim(), forPlant: $('#pFor').value.trim(), work: $('#pWork').value.trim(), findingIds: sel.map(f => f.id), checkId: protoCtx ? protoCtx.checkId : '', createdBy: me ? me.name : '', createdAt: nowIso() };
+        const rec = { key, company: pair.company, site: pair.site, place, number, seq: seqOf(number), year, date, by: $('#pBy').value.trim(), forPlant: $('#pFor').value.trim(), work: $('#pWork').value.trim(), findingIds: sel.map(f => f.id), checkId: chk ? chk.id : '', createdBy: me ? me.name : '', createdAt: nowIso() };
         await put('protokoly', protoCtx && protoCtx.protoId ? protoCtx.protoId : newId(), rec);
         for (const f of sel) if (!f.cislo) await patch('zavady', f.id, { cislo: nums.get(f.id) });
         const d = sites.find(x => x.id === key);
-        if (pair.site && (!d || d.address !== rec.addr || d.manager !== rec.mgr || d.forPlant !== rec.forPlant)) await put('provozovny', key, { ...(d ? strip(d) : { firmId: slug(pair.company), firm: pair.company, name: pair.site }), address: rec.addr, manager: rec.mgr, forPlant: rec.forPlant });
-      } catch (err) { /* soubor už je stažený; evidenci lze zopakovat */ }
+        if (d && d.forPlant !== rec.forPlant) await put('provozovny', key, { ...strip(d), forPlant: rec.forPlant });
+      } catch (err) { /* soubor už je stažený */ }
       $('#protoModal').hidden = true;
-      toast(`Protokol ${number} připraven.`);
+      toast(fixed.how === 'basic' && $('#pFix').checked ? `Protokol ${number} připraven. Pravopis opraven jen základně (Claude nebyl dostupný).` : `Protokol ${number} připraven.`);
     } catch (err) {
       const c = err && err.code;
       st.textContent = c === 'rejected_extension' || c === 'extension_not_enabled' ? 'Stažení Word souboru tu není povolené.' : c === 'rate_limited' ? 'Počkej chvilku a zkus to znovu.' : 'Protokol se nepodařilo vytvořit. Zkus to znovu.';
     } finally { btn.disabled = false; }
   });
+  const PROTO_FALLBACK = 'Proběhla kontrola pracoviště podle kontrolních otázek ' + ZQ02 + '.';
   function renderProtoList() {
     const list = protocols.filter(p => inScope(p)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 6);
     $('#protoList').innerHTML = list.length ? `<div class="list">${list.map(p => `<div class="row">
       <div class="pillcell"><span class="pill">Protokol ${esc(p.number)}</span></div>
-      <div><div class="who">${esc(pairLabel(p.company, p.site))}</div><div class="what">Provedl ${esc(p.by || '–')} · zjištění ${(p.findingIds || []).length}</div><div class="when">${fmt(p.date)}</div></div>
+      <div><div class="who">${esc(pairLabel(p.company, p.site))}${p.place ? ' › ' + esc(p.place) : ''}</div><div class="what">Provedl ${esc(p.by || '–')} · zjištění ${(p.findingIds || []).length}</div><div class="when">${fmt(p.date)}</div></div>
       <div class="acts"><button class="btn small" data-action="p-again" data-id="${p.id}">${ic('download')}Stáhnout znovu</button></div></div>`).join('')}</div>` : '';
   }
 
@@ -2530,6 +2666,19 @@ body.locked .app { display: none; }
     body += wp(wr('Pracoviště:', { b: true }));
     body += wp(wr(d.work), { jc: 'both' });
     body += wp('');
+    if (d.qrows && d.qrows.length) {
+      const Q1 = 1000, Q2 = 5872, Q3 = 2200;
+      body += wp('');
+      body += wp(wr('Kontrolované body podle ZQ-10-02:', { b: true }), { keep: true, after: 120 });
+      let qt = `<w:tbl><w:tblPr><w:tblW w:w="${Q1 + Q2 + Q3}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${Q1}"/><w:gridCol w:w="${Q2}"/><w:gridCol w:w="${Q3}"/></w:tblGrid>`;
+      qt += `<w:tr><w:trPr><w:tblHeader/></w:trPr>${tc(Q1, wp(wr('Bod', { ...A, b: true })), { fill: 'D9D9D9' })}${tc(Q2, wp(wr('Kontrolní otázka', { ...A, b: true })), { fill: 'D9D9D9' })}${tc(Q3, wp(wr('Výsledek', { ...A, b: true })), { fill: 'D9D9D9' })}</w:tr>`;
+      d.qrows.forEach(r => {
+        const res = r.a === 'ok' ? wr('Vyhovuje', A) : r.a === 'nok' ? wr('Nevyhovuje' + (r.ref ? ` – závada ${r.ref}` : ''), { ...A, b: true, color: 'FF0000' }) : wr('Netýká se', { ...A, color: '808080' });
+        qt += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(Q1, wp(wr(r.no, A)))}${tc(Q2, wp(wr(r.text, A)))}${tc(Q3, wp(res))}</w:tr>`;
+      });
+      body += qt + '</w:tbl>';
+      body += wp('');
+    }
     body += wp(wr('Zjištěné nedostatky:', { b: true }), { keep: true, after: 120 });
     let tbl = `<w:tbl><w:tblPr><w:tblW w:w="${C1 + C2}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${C1}"/><w:gridCol w:w="${C2}"/></w:tblGrid>`;
     tbl += `<w:tr><w:trPr><w:tblHeader/></w:trPr>${tc(C1 + C2, wp(wr('Nová zjištění', { font: 'Aptos', b: true })), { span: 2, fill: 'D9D9D9' })}</w:tr>`;
@@ -2537,11 +2686,12 @@ body.locked .app { display: none; }
     if (!d.rows.length) tbl += `<w:tr>${tc(C1 + C2, wp(wr('Při kontrole nebyly zjištěny nedostatky.', A), { before: 120, after: 120 }), { span: 2 })}</w:tr>`;
     d.rows.forEach(({ f, no, pics, fix }) => {
       let left = '';
-      left += wp(wr('Místo: ', { ...A, b: true }) + wr(f.place || (f.site || ''), A));
+      left += wp(wr('Místo: ', { ...A, b: true }) + wr(f.place || f.site || '', A));
+      if (f.qNo) left += wp(wr('Bod ZQ-10-02: ', { ...A, b: true }) + wr(f.qNo, A));
       left += wp(wr(`Závada ${no}`, { ...A, b: true, color: 'FF0000' }));
       left += wp(wr(f.text, { ...A, color: 'FF0000' }));
       left += wp('');
-      left += wp(wr('Opatření :', { ...A, b: true }));
+      left += wp(wr('Opatření:', { ...A, b: true }));
       left += wp(wr(f.measure || '', A));
       left += wp('');
       left += wp(wr('Termín odstranění:', { ...A, b: true }));
@@ -2560,10 +2710,7 @@ body.locked .app { display: none; }
     });
     tbl += '</w:tbl>';
     body += tbl;
-    body += wp('') + wp('') + wp('');
-    body += wp(wr('Předal: ', { b: true }) + wr(d.by || '……………………') + '<w:r><w:tab/></w:r>' + wr('Převzal: ', { b: true }) + wr(d.to || '……………………'), { tabs: [4820] });
     body += wp('');
-    body += wp(wr('Dne: ', { b: true }) + wr(d.date));
     const sect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
     const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}${sect}</w:body></w:document>`;
     const LW = 1512000, LH = Math.round(LW * 92 / 320);
@@ -2652,7 +2799,7 @@ body.locked .app { display: none; }
       case 'logout': logout(); break;
       case 'my-account': openAccount(); break;
       case 'close-acc': $('#accModal').hidden = true; break;
-      case 'u-approve': case 'u-reject': case 'u-delete': case 'u-block': case 'u-unblock': case 'u-code': case 'u-sites':
+      case 'u-approve': case 'u-reject': case 'u-delete': case 'u-block': case 'u-unblock': case 'u-code': case 'u-sites': case 'u-test':
         try { await adminAction(b.dataset.action, id, b); } catch (err) { /* hláška už zobrazena */ }
         break;
       case 'save-firm': {
@@ -2750,7 +2897,33 @@ body.locked .app { display: none; }
       case 'p-none': document.querySelectorAll('#pFindings input').forEach(x => (x.checked = false)); break;
       case 'p-again': openProto({ protoId: id }); break;
       case 'close-sites': $('#sitesModal').hidden = true; break;
-      case 'w-start': startWeekly(id); break;
+      case 'w-start': startWeekly(id, b.dataset.place || ''); break;
+      case 'w-mgr': {
+        const pr = allPairs(true).find(x => x.key === id); if (!pr) break;
+        const pl = b.dataset.place || '';
+        renameCtx = { kind: 'mgr', firm: pr.company, site: pr.site, old: mgrOf(pr.company, pr.site, pl), place: pl };
+        $('#renameTitle').textContent = `Zodpovědný vedoucí · ${pr.site}${pl ? ' › ' + pl : ''}`;
+        $('#renameLbl').textContent = 'Jméno a příjmení vedoucího';
+        $('#renameInput').value = renameCtx.old;
+        $('#renameNote').textContent = 'Uvede se v protokolu ZQ-10-01 u tohoto pracoviště.';
+        $('#renameSave').textContent = 'Uložit';
+        $('#renameModal').hidden = false; $('#renameInput').focus();
+        break;
+      }
+      case 'w-add-place': {
+        const pr = allPairs(true).find(x => x.key === id), inp = document.getElementById('wap-' + id);
+        const val = inp ? inp.value.trim() : '';
+        if (!pr || !val) { toast('Napiš název pracoviště.'); break; }
+        if (!allowed(pr)) { toast('K tomuto závodu nemáš přístup.'); break; }
+        try { await ensureEntities({ firm: pr.company, site: pr.site, place: val }); inp.value = ''; b.blur(); toast('Pracoviště přidáno.'); render(); } catch (err) { /* */ }
+        break;
+      }
+      case 'save-addr': {
+        const d = sites.find(x => x.id === id), inp = document.getElementById('sa-' + id);
+        if (!d || !inp) break;
+        try { await put('provozovny', id, { ...strip(d), address: inp.value.trim() }); b.blur(); toast('Sídlo závodu uloženo.'); render(); } catch (err) { /* */ }
+        break;
+      }
       case 'w-cancel': closeWeekly(); break;
       case 'w-track': {
         const d = sites.find(x => x.id === id);
