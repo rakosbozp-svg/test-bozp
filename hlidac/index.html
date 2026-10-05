@@ -786,7 +786,7 @@ body.locked .app { display: none; }
       <div id="uResets"></div>
     </div>
     <div class="section">
-      <div class="section-head"><h2>Uživatelé</h2></div>
+      <div class="section-head"><h2>Uživatelé</h2><button class="btn small" data-action="u-test-all" data-id="test-all" type="button">Zkušební e-mail všem</button></div>
       <div id="uList"></div>
     </div>
   </main>
@@ -2146,13 +2146,40 @@ body.locked .app { display: none; }
        ${a.email ? `<button class="btn small" data-action="u-code" data-id="${a.id}">${ic('mail')}Kód pro nové heslo</button>` : ''}
        <button class="btn small danger" data-action="u-delete" data-id="${a.id}">${ic('trash')}Smazat</button>`)).join('')}</div>` : '<div class="empty">Zatím žádní uživatelé.</div>';
   }
+  const CONFIRM_MAIL = 'rakos@zpsv.cz';
+  const CONFIRM_HTML = `<p style="margin:0 0 12px;padding:10px 12px;background:#fff4e0;border-left:4px solid #e8a33d"><b>Prosíme o potvrzení:</b> napište krátce na <a href="mailto:${CONFIRM_MAIL}">${CONFIRM_MAIL}</a>, že vám tento e-mail došel.</p>`;
+  const CONFIRM_TXT = `Prosíme o potvrzení: napište krátce na ${CONFIRM_MAIL}, že vám tento e-mail došel.`;
+  function mailErr(err) {
+    const c = err && err.code;
+    return c === 'server_not_connected' || c === 'no_mcp' ? 'Gmail není připojený (claude.ai → Nastavení → Konektory).' : c === 'needs_reauth' ? 'Přihlášení ke Gmailu vypršelo, připoj Gmail znovu.' : c === 'tool_error' ? 'Gmail e-mail odmítl: ' + (err.message || 'neznámý důvod') : 'E-mail se nepodařilo odeslat (' + (c || 'chyba') + ').';
+  }
+  async function sendTestMail(a) {
+    await sendMail(a.email, 'Hlídač BOZP – zkušební e-mail', 'Zkušební e-mail',
+      `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0 0 12px">toto je zkušební e-mail z aplikace Hlídač BOZP. Ověřujeme, že vám e-maily z aplikace chodí.</p>${CONFIRM_HTML}<p style="margin:0;color:#6b6864;font-size:13px">Odeslal správce ${esc(me.name)} ${fmt(todayISO)}.</p>`,
+      `Dobrý den, ${a.name},\n\ntoto je zkušební e-mail z aplikace Hlídač BOZP. Ověřujeme, že vám e-maily z aplikace chodí.\n\n${CONFIRM_TXT}\n\nOdeslal správce ${me.name} ${fmt(todayISO)}.`);
+    await patch('ucty', a.id, { testMailAt: nowIso() });
+  }
+  async function sendTestAll(btn) {
+    if (!me || me.role !== 'admin') return;
+    const list = accounts.filter(a => a.status === 'active' && a.role !== 'admin' && a.email);
+    if (!list.length) { toast('Žádný aktivní uživatel s e-mailem.'); return; }
+    confirmTwice(btn, async () => {
+      btn.disabled = true; let ok = 0; const bad = [];
+      for (const a of list) {
+        btn.textContent = `Odesílám ${ok + bad.length + 1}/${list.length}…`;
+        try { await sendTestMail(a); ok++; } catch (err) { bad.push(a.name); if (err && (err.code === 'server_not_connected' || err.code === 'no_mcp' || err.code === 'needs_reauth')) { toast(mailErr(err)); break; } }
+      }
+      btn.disabled = false; btn.textContent = 'Zkušební e-mail všem';
+      toast(`Odesláno ${ok} z ${list.length}.` + (bad.length ? ` Nepodařilo se: ${bad.join(', ')}.` : ''));
+    }, `Opravdu poslat? (${list.length} ${list.length === 1 ? "uživatel" : list.length < 5 ? "uživatelé" : "uživatelů"})`);
+  }
   async function adminAction(action, id, btn) {
     const a = accounts.find(x => x.id === id); if (!a || !me || me.role !== 'admin') return;
     if (action === 'u-approve') {
       await patch('ucty', id, { status: 'active', approvedAt: nowIso(), approvedBy: me.name });
       toast(`${a.name} schválen(a). Vyber, které závody uvidí.`);
       openSites(a);
-      if (a.email) sendMail(a.email, 'Hlídač BOZP – účet schválen', 'Účet schválen', `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0">tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlásíš se osobním číslem <b>${esc(a.osc)}</b> a svým heslem.</p>`, `Tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlas se osobním číslem ${a.osc}.`).catch(() => {});
+      if (a.email) sendMail(a.email, 'Hlídač BOZP – účet schválen', 'Účet schválen', `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0 0 12px">váš účet v aplikaci Hlídač BOZP byl schválen. Přihlásíte se osobním číslem <b>${esc(a.osc)}</b> a svým heslem.</p>${CONFIRM_HTML}`, `Dobrý den, ${a.name},\n\nváš účet v aplikaci Hlídač BOZP byl schválen. Přihlásíte se osobním číslem ${a.osc} a svým heslem.\n\n${CONFIRM_TXT}`).then(() => patch('ucty', id, { testMailAt: nowIso() })).catch(() => {});
     } else if (action === 'u-reject' || action === 'u-delete') {
       confirmTwice(btn, async () => { await del('ucty', id); toast('Účet odstraněn.'); }, action === 'u-reject' ? 'Opravdu zamítnout?' : 'Opravdu smazat?');
     } else if (action === 'u-block') { await patch('ucty', id, { status: 'blocked' }); toast('Účet zablokován.'); }
@@ -2161,16 +2188,9 @@ body.locked .app { display: none; }
     else if (action === 'u-test') {
       if (!a.email) { toast('Účet nemá e-mail.'); return; }
       btn.disabled = true;
-      try {
-        await sendMail(a.email, 'Hlídač BOZP – zkušební e-mail', 'Zkušební e-mail',
-          `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0 0 12px">toto je zkušební e-mail z aplikace Hlídač BOZP. Pokud ho čtete, doručování e-mailů na vaši adresu funguje.</p><p style="margin:0;color:#6b6864;font-size:13px">Odeslal správce ${esc(me.name)} ${fmt(todayISO)}. Na e-mail není třeba odpovídat.</p>`,
-          `Dobrý den, ${a.name},\n\ntoto je zkušební e-mail z aplikace Hlídač BOZP. Pokud ho čtete, doručování e-mailů na vaši adresu funguje.\n\nOdeslal správce ${me.name} ${fmt(todayISO)}.`);
-        await patch('ucty', id, { testMailAt: nowIso() });
-        toast(`Zkušební e-mail odeslán na ${a.email}.`);
-      } catch (err) {
-        const c = err && err.code;
-        toast(c === 'server_not_connected' || c === 'no_mcp' ? 'Gmail není připojený (claude.ai → Nastavení → Konektory).' : c === 'needs_reauth' ? 'Přihlášení ke Gmailu vypršelo, připoj Gmail znovu.' : c === 'tool_error' ? 'Gmail e-mail odmítl: ' + (err.message || 'neznámý důvod') : 'E-mail se nepodařilo odeslat (' + (c || 'chyba') + ').');
-      } finally { btn.disabled = false; }
+      try { await sendTestMail(a); toast(`Zkušební e-mail odeslán na ${a.email}.`); }
+      catch (err) { toast(mailErr(err)); }
+      finally { btn.disabled = false; }
     }
     else if (action === 'u-code') {
       if (!a.email) { toast('Účet nemá e-mail.'); return; }
@@ -2973,6 +2993,7 @@ body.locked .app { display: none; }
     const id = b.dataset.id;
     switch (b.dataset.action) {
       case 'new-term': openTermForm(null); break;
+      case 'u-test-all': sendTestAll(b); break;
       case 'logout': logout(); break;
       case 'my-account': openAccount(); break;
       case 'close-acc': $('#accModal').hidden = true; break;
