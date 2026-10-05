@@ -652,7 +652,7 @@ body.locked .app { display: none; }
     <div id="weeklyView" hidden>
       <div class="section" id="wBoardSec">
         <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
-        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b>. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (12 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
         <div class="wk-board" id="wBoard"></div>
         <div id="wHidden"></div>
       </div>
@@ -1975,6 +1975,7 @@ body.locked .app { display: none; }
     if (me) { $('#whoName').textContent = me.name; $('#whoRole').hidden = !admin; }
     $('#tab-uzivatele').hidden = !admin;
     $('#tab-firmy').hidden = !admin;
+    document.querySelectorAll('[data-action="open-proto"]').forEach(x => (x.hidden = !admin));
     if (!admin && (tab === 'uzivatele' || tab === 'firmy')) setTab('prehled');
     if ((me ? me.id : null) !== scopeFor) {
       scopeFor = me ? me.id : null;
@@ -2221,6 +2222,36 @@ body.locked .app { display: none; }
   const addrOf = (company, site) => { const d = sites.find(x => x.id === keyOf(company, site)); return (d && d.address) || ''; };
   const checksOf = (key, place) => checks.filter(k => keyOfCheck(k) === key && (k.place || '') === (place || '')).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const plural = (n, a, b, c) => (n === 1 ? a : n >= 2 && n <= 4 ? b : c);
+  // Týdenní kontrola vedoucího (krátká, pro vedoucí výrobních úseků a ne-OZO). Ke každému bodu výchozí zjištění a opatření,
+  // které se doplní, když kontrolující u „Nevyhovuje“ nic nenapíše.
+  const VED_Q = [
+    ['Pořádek a komunikace', 'Na pracovišti je pořádek, materiál a výrobky jsou uloženy stabilně na určených místech.', 'Na pracovišti je nepořádek nebo je materiál uložen nestabilně či mimo určené místo.', 'Uklidit pracoviště a materiál uložit stabilně na určené místo.'],
+    ['Pořádek a komunikace', 'Komunikace, únikové cesty a nouzové východy jsou volné a označené.', 'Komunikace nebo úniková cesta je zastavěná či neoznačená.', 'Komunikaci a únikovou cestu ihned uvolnit a obnovit značení.'],
+    ['Lidé a OOPP', 'Zaměstnanci používají předepsané OOPP (přilba, obuv, rukavice, brýle, reflexní vesta, chrániče sluchu).', 'Zaměstnanec nepoužívá předepsané OOPP.', 'Zjednat okamžitou nápravu a zaměstnance prokazatelně poučit o používání OOPP.'],
+    ['Lidé a OOPP', 'Práce probíhá podle pracovních postupů a MPBP, u údržby a čištění strojů se dodržuje LOTO.', 'Práce neprobíhá podle pracovního postupu nebo nebylo použito LOTO.', 'Práci přerušit, zaměstnance poučit a dodržování postupu a LOTO ověřit.'],
+    ['Stroje a zařízení', 'Ochranné kryty, zábrany a bezpečnostní prvky strojů jsou na místě a funkční, nouzové zastavení je přístupné.', 'Chybí nebo nefunguje ochranný kryt či bezpečnostní prvek stroje.', 'Stroj odstavit z provozu, kryt nebo bezpečnostní prvek doplnit a ověřit jeho funkci.'],
+    ['Stroje a zařízení', 'Elektrická zařízení, kabely, prodlužovací přívody a rozvaděče jsou nepoškozené, rozvaděče uzavřené.', 'Elektrické zařízení nebo kabel je poškozený, případně je rozvaděč otevřený.', 'Zařízení vyřadit z provozu a zajistit opravu osobou s elektrotechnickou kvalifikací.'],
+    ['Manipulace a práce ve výšce', 'Jeřáby a vázací prostředky jsou nepoškozené a označené, vázání provádí jen vazači s oprávněním.', 'Vázací prostředek je poškozený nebo neoznačený, případně váže osoba bez oprávnění.', 'Vázací prostředek vyřadit a nahradit, vázání svěřit jen proškolenému vazači.'],
+    ['Manipulace a práce ve výšce', 'VZV a manipulační technika mají provedenou denní kontrolu a jezdí se bezpečně.', 'U VZV chybí denní kontrola nebo jízda není bezpečná.', 'Provést denní kontrolu VZV a řidiče poučit o bezpečné jízdě.'],
+    ['Manipulace a práce ve výšce', 'Formy, stojany, palety a skladované výrobky jsou stabilní, nepoškozené a nepřetížené.', 'Forma, stojan nebo uložení výrobků je nestabilní, poškozené či přetížené.', 'Uložení stabilizovat, poškozený stojan nebo formu vyřadit z používání.'],
+    ['Manipulace a práce ve výšce', 'Práce ve výšce je zajištěna (zábradlí, kolektivní nebo osobní zajištění), žebříky jsou nepoškozené.', 'Okraj ve výšce není zajištěn nebo je žebřík poškozený.', 'Okraj zajistit zábradlím nebo jiným zajištěním, poškozený žebřík vyřadit.'],
+    ['PO, první pomoc a chemie', 'Hasicí přístroje a hydranty jsou přístupné, označené a s platnou kontrolou.', 'Hasicí přístroj nebo hydrant je nepřístupný, neoznačený či bez platné kontroly.', 'Uvolnit přístup, doplnit označení a zajistit kontrolu hasicího přístroje.'],
+    ['PO, první pomoc a chemie', 'Lékárnička je dostupná a vybavená, chemické látky (oleje, přísady) jsou označené a správně uložené.', 'Lékárnička není kompletní nebo je chemická látka neoznačená či špatně uložená.', 'Doplnit lékárničku, chemickou látku označit a uložit do záchytné vany.'],
+  ].map(([g, text, f, m], i) => ({ id: 'v' + (i + 1), no: String(i + 1), g, text, f, m }));
+  const DUE_BY_SEV = { vysoka: 3, stredni: 14, nizka: 30 };
+  const typeLabel = k => (k.type === 'vedouci' ? 'Kontrola vedoucího' : 'Kontrola ZQ-10-02');
+  // doplnění zjištění a opatření u ZQ-10-02, když je kontrolující nevyplní (Claude; bez něj obecný text)
+  async function autoFillZq(list) {
+    const out = {};
+    if (!list.length) return out;
+    try {
+      if (sampleNs === undefined) sampleNs = (window.claude && window.claude.use) ? await window.claude.use('sample').catch(() => null) : null;
+      if (!sampleNs) throw { code: 'unavailable' };
+      const res = await sampleNs.json('Jsi technik BOZP a PO ve výrobním závodě. U každé kontrolní otázky z formuláře ZQ-10-02 kontrola zjistila „nevyhovuje“. Napiš pro každou stručné zjištění (co nevyhovuje, jedna věta) a opatření (co udělat, jedna věta), věcně, spisovnou češtinou, bez vymýšlení konkrétních podrobností, které nejsou v otázce. Vrať pouze JSON objekt {"<id>": {"zjisteni": "...", "opatreni": "..."}}.\n\n' + JSON.stringify(list.map(q => ({ id: q.id, otazka: q.text }))), { modelTier: 'default' });
+      list.forEach(q => { const r = res && res[q.id]; if (r && typeof r === 'object') out[q.id] = { f: String(r.zjisteni || '').trim(), m: String(r.opatreni || '').trim() }; });
+    } catch (e) { /* obecný text níže */ }
+    return out;
+  }
 
   function renderWeekly() {
     if (!me) return;
@@ -2248,8 +2279,8 @@ body.locked .app { display: none; }
           <div class="wk-unit-head"><b>${ic('pin')}${esc(u || 'Celý závod')}</b>${pill}</div>
           <div class="meta">Zodpovědný vedoucí: ${mgr ? `<b>${esc(mgr)}</b>` : '<span style="color:var(--amber)">nezadán</span>'} · <button class="link" data-action="w-mgr" data-id="${esc(p.key)}" data-place="${esc(u)}">${mgr ? 'změnit' : 'zadat'}</button></div>
           <div class="weeks">${bars}</div>
-          <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím bez kontroly'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''} · příště ${rot.sel.length} ${plural(rot.sel.length, 'otázka', 'otázky', 'otázek')} ZQ-10-02</div>
-          <div class="form-actions"><button class="btn primary small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}">${ic('check')}${thisW ? 'Další kontrola' : 'Provést kontrolu'}</button></div>
+          <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím bez kontroly'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''} </div>
+          <div class="form-actions"><button class="btn primary small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}" data-type="vedouci">${ic('check')}${thisW ? 'Další kontrola vedoucího' : 'Kontrola vedoucího'}</button>${isAdmin() ? `<button class="btn small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}" data-type="zq">Kontrola ZQ-10-02 (${rot.sel.length} ${plural(rot.sel.length, 'otázka', 'otázky', 'otázek')})</button>` : ''}</div>
         </div>`;
       }).join('');
       const openF = findings.filter(f => f.status !== 'done' && keyOf(f.company, f.site) === p.key);
@@ -2269,17 +2300,19 @@ body.locked .app { display: none; }
     $('#wHistory').innerHTML = hist.length ? `<div class="list">${hist.map(k => `<div class="row">
       <div class="pillcell"><span class="pill ${k.nok ? 'red' : 'ok'}">${k.nok ? `${k.nok}× nevyhovuje` : 'Bez závad'}</span></div>
       <div><div class="who">${esc(pairLabel(k.company, k.site))}${k.place ? ' › ' + esc(k.place) : ''}</div>
-      <div class="what">Provedl ${esc(k.by || '–')} · ${k.ok || 0}× vyhovuje${k.na ? ` · ${k.na}× netýká se` : ''}${k.step ? ` · sada: každá ${k.step}. otázka` : ''}</div>
+      <div class="what">Provedl ${esc(k.by || '–')} · ${k.ok || 0}× vyhovuje${k.na ? ` · ${k.na}× netýká se` : ''} · ${typeLabel(k)}${k.step ? ` (každá ${k.step}. otázka)` : ''}</div>
       <div class="when">${fmt(k.date)} · týden ${weekNo(k.date)}</div></div>
-      <div class="acts"><button class="btn small" data-action="w-detail" data-id="${k.id}">Detail</button><button class="btn small" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol</button>${isAdmin() ? `<button class="btn small danger icon-only" data-action="w-del" data-id="${k.id}" aria-label="Smazat kontrolu" title="Smazat">${ic('trash')}</button>` : ''}</div>
+      <div class="acts"><button class="btn small" data-action="w-detail" data-id="${k.id}">Detail</button>${k.type === 'vedouci' ? `<button class="btn small" data-action="w-rep" data-id="${k.id}">${ic('download')}Záznam (Word)</button>` : isAdmin() ? `<button class="btn small" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol ZQ-10-01</button>` : ''}${isAdmin() ? `<button class="btn small danger icon-only" data-action="w-del" data-id="${k.id}" aria-label="Smazat kontrolu" title="Smazat">${ic('trash')}</button>` : ''}</div>
     </div>`).join('')}</div>` : '<div class="empty">Zatím žádná týdenní kontrola.</div>';
   }
 
   // vyplňování kontroly
   let wq = null; // { pk, rot, groups, answers, fail, photos }
   const wDraftKey = () => 'hlidac_wdraft_' + (me ? me.id : '');
-  function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ pk: wq.pk, ids: wq.rot.sel.map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value })); } catch (e) { /* */ } }
-  function startWeekly(key, place = '') {
+  function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ pk: wq.pk + '|' + wq.type, ids: wq.groups.flatMap(g => g.items).map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value })); } catch (e) { /* */ } }
+  let wType = 'vedouci';
+  function startWeekly(key, place = '', type = 'vedouci') {
+    wType = type === 'zq' && isAdmin() ? 'zq' : 'vedouci';
     const pairs = weeklyPairs();
     if (!pairs.length) { toast('Nemáš přiřazený žádný závod.'); return; }
     $('#wSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
@@ -2301,24 +2334,24 @@ body.locked .app { display: none; }
   }
   function prepareQuestions(restore) {
     const p = wPair(); if (!p) return;
-    const place = $('#wPlace').value, pk = placeKey(p.company, p.site, place), rot = rotationFor(pk);
+    const place = $('#wPlace').value, pk = placeKey(p.company, p.site, place), zq = wType === 'zq', rot = zq ? rotationFor(pk) : null;
     if (wq) Object.values(wq.photos).flat().forEach(x => URL.revokeObjectURL(x.url));
     const groups = [];
-    rot.sel.forEach(q => { let g = groups.find(x => x.title === q.g); if (!g) { g = { title: q.g, items: [] }; groups.push(g); } g.items.push(q); });
-    wq = { pk, rot, groups, answers: {}, fail: {}, photos: {} };
+    (zq ? rot.sel : VED_Q).forEach(q => { let g = groups.find(x => x.title === q.g); if (!g) { g = { title: q.g, items: [] }; groups.push(g); } g.items.push(q); });
+    wq = { pk, rot, groups, type: wType, answers: {}, fail: {}, photos: {} };
     if (restore) {
       try {
         const d = JSON.parse(localStorage.getItem(wDraftKey()) || 'null');
-        if (d && d.pk === pk && (d.ids || []).join() === rot.sel.map(q => q.id).join() && Object.keys(d.answers || {}).length) {
+        if (d && d.pk === pk + '|' + wType && (d.ids || []).join() === groups.flatMap(g => g.items).map(q => q.id).join() && Object.keys(d.answers || {}).length) {
           wq.answers = d.answers || {}; wq.fail = d.fail || {}; $('#wNote').value = d.note || '';
           $('#wStatus').textContent = 'Pokračuješ v rozpracované kontrole (bez fotek, ty přidej znovu).';
         }
       } catch (e) { /* */ }
     }
     const mgr = mgrOf(p.company, p.site, place);
-    $('#wFormTitle').textContent = 'Kontrola · ' + p.site + (place ? ' › ' + place : '');
+    $('#wFormTitle').textContent = (zq ? 'Kontrola ZQ-10-02 · ' : 'Kontrola vedoucího · ') + p.site + (place ? ' › ' + place : '');
     $('#wFormHint').textContent = `týden ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgr || 'nezadán'}`;
-    $('#wRotInfo').innerHTML = `<b>Otázky ZQ-10-02 · cyklus ${rot.cycle}, sada ${rot.round + 1}:</b> každá ${rot.step}. otázka z dosud nepoložených (${rot.sel.length} z ${rot.total}). ${rot.left ? `Do konce cyklu zbývá ${rot.left} ${plural(rot.left, 'otázka', 'otázky', 'otázek')}.` : 'Tato sada cyklus uzavře, příště se začíná znovu.'}`;
+    $('#wRotInfo').innerHTML = !zq ? `<b>Týdenní kontrola vedoucího:</b> ${VED_Q.length} bodů. U „Nevyhovuje“ stačí fotka – zjištění, opatření, odpovědnou osobu a termín aplikace doplní sama, když je nevyplníš.` : `<b>Otázky ZQ-10-02 · cyklus ${rot.cycle}, sada ${rot.round + 1}:</b> každá ${rot.step}. otázka z dosud nepoložených (${rot.sel.length} z ${rot.total}). ${rot.left ? `Do konce cyklu zbývá ${rot.left} ${plural(rot.left, 'otázka', 'otázky', 'otázek')}.` : 'Tato sada cyklus uzavře, příště se začíná znovu.'}`;
     renderQuestions();
   }
   $('#wSite').addEventListener('change', () => { fillPlaces(''); prepareQuestions(true); });
@@ -2334,13 +2367,13 @@ body.locked .app { display: none; }
     const a = wq.answers[q.id], f = wq.fail[q.id] || {};
     const btn = (v, cls, label, icon) => `<button type="button" class="${cls}" data-action="w-ans" data-q="${q.id}" data-v="${v}" aria-pressed="${a === v}" aria-label="${label}" title="${label}">${icon}</button>`;
     const fail = a === 'nok' ? `<div class="qfail">
-      <div class="field wide"><label for="wf-text-${q.id}">Co nevyhovuje</label><textarea id="wf-text-${q.id}" data-wf="text" data-q="${q.id}" placeholder="${esc(q.text)}">${esc(f.text || '')}</textarea></div>
-      <div class="field wide"><label for="wf-measure-${q.id}">Opatření</label><input type="text" id="wf-measure-${q.id}" data-wf="measure" data-q="${q.id}" value="${esc(f.measure || '')}" placeholder="nepovinné"></div>
+      <div class="field wide"><label for="wf-text-${q.id}">Co nevyhovuje</label><textarea id="wf-text-${q.id}" data-wf="text" data-q="${q.id}" placeholder="${esc(q.f ? 'Když nevyplníš: ' + q.f : 'Když nevyplníš, doplní se automaticky podle otázky.')}">${esc(f.text || '')}</textarea></div>
+      <div class="field wide"><label for="wf-measure-${q.id}">Opatření</label><input type="text" id="wf-measure-${q.id}" data-wf="measure" data-q="${q.id}" value="${esc(f.measure || '')}" placeholder="${esc(q.m ? 'Když nevyplníš: ' + q.m : 'Když nevyplníš, doplní se automaticky.')}"></div>
       <div class="field wide"><span class="label">Fotky</span><label class="photo-drop"><input type="file" accept="image/*" multiple data-wphoto="${q.id}">${ic('alert').replace('class="ic"', 'class="ic" style="color:var(--brand)"')}<span>Vyfotit závadu</span></label>
         <div class="thumbs">${(wq.photos[q.id] || []).map((x, i) => `<button type="button" class="pending" data-action="w-drop" data-q="${q.id}" data-i="${i}" aria-label="Odebrat fotku"><img src="${x.url}" alt=""><span>×</span></button>`).join('')}</div></div>
       <div class="field"><span class="label">Závažnost</span><div class="seg mini">${['vysoka', 'stredni', 'nizka'].map(v => `<label class="${v === 'vysoka' ? 'v' : v === 'stredni' ? 's' : ''}"><input type="radio" name="wsev-${q.id}" value="${v}" data-wf="sev" data-q="${q.id}" ${(f.sev || 'stredni') === v ? 'checked' : ''}><span>${SEV[v]}</span></label>`).join('')}</div></div>
-      <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, 14))}"></div>
-      <div class="field"><label for="wf-owner-${q.id}">Odpovídá</label><input type="text" id="wf-owner-${q.id}" data-wf="owner" data-q="${q.id}" list="wOwnerDl" value="${esc(f.owner || '')}" placeholder="např. mistr výroby"></div>
+      <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, DUE_BY_SEV[f.sev || 'stredni']))}"></div>
+      <div class="field"><label for="wf-owner-${q.id}">Odpovídá</label><input type="text" id="wf-owner-${q.id}" data-wf="owner" data-q="${q.id}" list="wOwnerDl" value="${esc(f.owner || '')}" placeholder="${esc('Když nevyplníš: ' + (wPair() ? mgrOf(wPair().company, wPair().site, $('#wPlace').value) || 'kontrolující' : 'kontrolující'))}"></div>
     </div>` : '';
     return `<div class="q ${a || ''}" id="row-${q.id}"><div class="qt"><b>${esc(q.no)}</b>${esc(q.text)}</div>
       <div class="ans" role="group" aria-label="Odpověď">${btn('ok', 'a-ok', 'Vyhovuje', ic('check') + '<span>Vyhovuje</span>')}${btn('nok', 'a-nok', 'Nevyhovuje', '✗<span>Nevyhovuje</span>')}${btn('na', 'a-na', 'Netýká se', '<span>Netýká se</span>')}</div>${fail}</div>`;
@@ -2367,7 +2400,11 @@ body.locked .app { display: none; }
   });
   $('#wQuestions').addEventListener('change', async e => {
     const t = e.target;
-    if (t.dataset.wf === 'sev' && wq) { (wq.fail[t.dataset.q] = wq.fail[t.dataset.q] || {}).sev = t.value; saveDraft(); return; }
+    if (t.dataset.wf === 'sev' && wq) {
+      const f = (wq.fail[t.dataset.q] = wq.fail[t.dataset.q] || {}); f.sev = t.value;
+      const due = $('#wf-due-' + t.dataset.q); if (due && !f.due) due.value = addDays($('#wDate').value || todayISO, DUE_BY_SEV[t.value]);
+      saveDraft(); return;
+    }
     if (!t.dataset.wphoto || !wq) return;
     const qid = t.dataset.wphoto, files = [...t.files]; t.value = '';
     for (const f of files) { try { const blob = await compress(f); if (blob) (wq.photos[qid] = wq.photos[qid] || []).push({ blob, url: URL.createObjectURL(blob) }); } catch (err) { toast('Fotku se nepodařilo načíst.'); } }
@@ -2390,6 +2427,10 @@ body.locked .app { display: none; }
     const kid = newId(), items = [], fIds = [];
     try {
       if (place) await ensureEntities({ firm: p.company, site: p.site, place });
+      const mgr = mgrOf(p.company, p.site, place);
+      const need = wq.type === 'zq' ? all.filter(q => wq.answers[q.id] === 'nok' && (!(wq.fail[q.id] || {}).text || !(wq.fail[q.id] || {}).measure)) : [];
+      if (need.length) btn.textContent = 'Doplňuji zjištění a opatření…';
+      const auto = await autoFillZq(need);
       for (const q of all) {
         const a = wq.answers[q.id], f = wq.fail[q.id] || {};
         let fid = '';
@@ -2399,9 +2440,11 @@ body.locked .app { display: none; }
           fid = newId();
           btn.textContent = 'Ukládám závady…';
           await put('zavady', fid, {
-            company: p.company, site: p.site, place, text: (f.text || '').trim() || 'Nevyhovuje: ' + q.text, measure: (f.measure || '').trim(),
-            severity: f.sev || 'stredni', owner: (f.owner || '').trim(), due: f.due || addDays(todayISO, 14), status: 'open', photos: ids,
-            createdAt: date, doneAt: '', source: 'tydenni', kontrolaId: kid, qNo: q.no,
+            company: p.company, site: p.site, place,
+            text: (f.text || '').trim() || q.f || (auto[q.id] && auto[q.id].f) || 'Nevyhovuje: ' + q.text,
+            measure: (f.measure || '').trim() || q.m || (auto[q.id] && auto[q.id].m) || 'Zjednat nápravu a stav ověřit při příští kontrole.',
+            severity: f.sev || 'stredni', owner: (f.owner || '').trim() || mgr || by, due: f.due || addDays(date, DUE_BY_SEV[f.sev || 'stredni']), status: 'open', photos: ids,
+            createdAt: date, doneAt: '', source: wq.type === 'zq' ? 'tydenni' : 'vedouci', kontrolaId: kid, qNo: wq.type === 'zq' ? q.no : '',
           });
           fIds.push(fid);
         }
@@ -2409,8 +2452,8 @@ body.locked .app { display: none; }
       }
       btn.textContent = 'Ukládám kontrolu…';
       const cnt = v => items.filter(i => i.a === v).length;
-      await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, step: rot.step, cycle: rot.cycle, createdAt: nowIso() });
-      await put('rotace', pk, { asked: [...rot.asked, ...rot.sel.map(q => q.id)], round: rot.round + 1, cycle: rot.cycle, sig: rot.sig, updatedAt: nowIso() });
+      await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, type: wq.type, ...(rot ? { step: rot.step, cycle: rot.cycle } : {}), createdAt: nowIso() });
+      if (rot) await put('rotace', pk, { asked: [...rot.asked, ...rot.sel.map(q => q.id)], round: rot.round + 1, cycle: rot.cycle, sig: rot.sig, updatedAt: nowIso() });
       try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ }
       toast(fIds.length ? `Kontrola uložena, ${fIds.length}× závada v záložce Závady.` : 'Kontrola uložena. Bez závad.');
       closeWeekly();
@@ -2420,7 +2463,7 @@ body.locked .app { display: none; }
     } finally { btn.disabled = false; if (wq) wProgress(); }
   });
   function showCheck(k) {
-    $('#wdTitle').textContent = `Týdenní kontrola · ${pairLabel(k.company, k.site)}${k.place ? ' › ' + k.place : ''}`;
+    $('#wdTitle').textContent = `${typeLabel(k)} · ${pairLabel(k.company, k.site)}${k.place ? ' › ' + k.place : ''}`;
     $('#wdMeta').textContent = `${fmt(k.date)} · týden ${weekNo(k.date)} · provedl ${k.by || '–'}${k.note ? ' · ' + k.note : ''}`;
     let g = null;
     $('#wdBody').innerHTML = (k.items || []).map(i => {
@@ -2428,7 +2471,7 @@ body.locked .app { display: none; }
       const mark = i.a === 'ok' ? '<b style="color:var(--ok)">✓</b>' : i.a === 'nok' ? '<b style="color:var(--red)">✗</b>' : '<b class="muted">–</b>';
       return head + `<label style="cursor:default">${mark}<span>${i.no ? `<b>${esc(i.no)}</b> ` : ''}${esc(i.text)}</span>${i.note ? `<small>${esc(i.note)}</small>` : ''}</label>`;
     }).join('');
-    $('#wdActs').innerHTML = `<button class="btn primary" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol ZQ-10-01</button><button class="btn" data-action="close-wd">Zavřít</button>`;
+    $('#wdActs').innerHTML = `${k.type === 'vedouci' ? `<button class="btn primary" data-action="w-rep" data-id="${k.id}">${ic('download')}Záznam (Word)</button>` : isAdmin() ? `<button class="btn primary" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol ZQ-10-01</button>` : ''}<button class="btn" data-action="close-wd">Zavřít</button>`;
     $('#wDetailModal').hidden = false;
   }
   $('#wQEdit').addEventListener('submit', async e => {
@@ -2711,18 +2754,66 @@ body.locked .app { display: none; }
     tbl += '</w:tbl>';
     body += tbl;
     body += wp('');
-    const sect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+    return packDocx({ body, files, rels, logo: d.logo, footer: 'ZQ-10-01', title: 'Protokol ' + d.number, author: d.author });
+  }
+  // ---------- záznam z týdenní kontroly vedoucího (Word, na šířku) ----------
+  async function leaderReport(k) {
+    if (!downloads) { toast('Stahování souborů funguje jen v aplikaci otevřené přes claude.ai.'); return; }
+    const fl = (k.findingIds || []).map(id => findings.find(f => f.id === id)).filter(Boolean);
+    toast('Připravuji záznam…');
+    try {
+      const raw = {}; fl.forEach(f => { raw['t_' + f.id] = f.text; raw['m_' + f.id] = f.measure || ''; });
+      const T = (await fixCzech(raw)).out;
+      const rows = [];
+      for (const f of fl) {
+        const pics = [];
+        for (const pid of (f.photos || []).slice(0, 2)) { try { pics.push(await photoBytes(pid)); } catch (err) { /* */ } }
+        rows.push({ f: { ...f, text: T['t_' + f.id] || f.text, measure: T['m_' + f.id] || f.measure || '' }, pics });
+      }
+      const blob = buildLeaderDocx({ k, rows, mgr: mgrOf(k.company, k.site, k.place || ''), logo: logoBytes(), author: me ? me.name : '' });
+      const fname = `Tydenni_kontrola_${slug(k.site || k.company)}${k.place ? '_' + slug(k.place) : ''}_${k.date}.docx`;
+      try { await downloads.save({ filename: fname, data: blob }); toast('Záznam připraven.'); }
+      catch (err) { if (!(err && err.code === 'declined')) toast('Záznam se nepodařilo uložit.'); }
+    } catch (err) { toast('Záznam se nepodařilo vytvořit.'); }
+  }
+  function buildLeaderDocx(d) {
+    const { k } = d, A = { font: 'Aptos', sz: 20 }, files = [], rels = [];
+    let n = 10;
+    const W = [450, 3000, 3050, 3050, 1700, 1350, 1404];
+    const addPic = p => { const id = 'rIdP' + (++n); files.push({ name: `word/media/foto${n}.jpeg`, data: p.data }); rels.push(`<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/foto${n}.jpeg"/>`); return id; };
+    const img = (p, maxW, maxH) => { let cx = maxW, cy = Math.round(maxW * p.h / p.w); if (cy > maxH) { cy = maxH; cx = Math.round(maxH * p.w / p.h); } return wimg(addPic(p), n, cx, cy); };
+    const SEVC = { vysoka: 'FF0000', stredni: 'C07800', nizka: '2B7355' };
+    let body = '';
+    body += wp(wr('Týdenní kontrola pracoviště – záznam', { b: true, sz: 28 }), { after: 60 });
+    body += wp(wr('Závod / pracoviště: ', { b: true }) + wr(`${k.site || k.company}${k.place ? ' › ' + k.place : ''}`) + '<w:r><w:tab/></w:r>' + wr('Datum: ', { b: true }) + wr(ddmm(k.date)), { tabs: [8500] });
+    body += wp(wr('Kontrolu provedl: ', { b: true }) + wr(k.by || '') + '<w:r><w:tab/></w:r>' + wr('Zodpovědný vedoucí: ', { b: true }) + wr(d.mgr || '—'), { tabs: [8500] });
+    const parts = [[k.ok, 'v pořádku'], [k.nok, 'nevyhovuje'], [k.na, 'netýká se']].filter(x => x[0]).map(x => `${x[0]} ${x[1]}`).join(', ');
+    body += wp(wr(`Kontrolováno ${(k.items || []).length} bodů týdenní kontroly vedoucího${parts ? ': ' + parts : ''}.`, { sz: 22 }), { before: 60, after: 160 });
+    let t = `<w:tbl><w:tblPr><w:tblW w:w="${W.reduce((a, b) => a + b)}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
+    t += `<w:tr><w:trPr><w:tblHeader/></w:trPr>${['Č.', 'Foto', 'Zjištění', 'Opatření', 'Odpovědná osoba', 'Termín', 'Závažnost'].map((h, i) => tc(W[i], wp(wr(h, { ...A, b: true }), { jc: 'center' }), { fill: 'D9D9D9' })).join('')}</w:tr>`;
+    if (!d.rows.length) t += `<w:tr>${tc(W.reduce((a, b) => a + b), wp(wr('Bez zjištěných nedostatků.', { ...A, sz: 22 }), { before: 100, after: 100 }), { span: 7 })}</w:tr>`;
+    d.rows.forEach(({ f, pics }, i) => {
+      const photo = pics.length ? pics.map(p => wp(img(p, (W[1] - 160) * 635, 1900000), { jc: 'center', before: 40, after: 40 })).join('') : wp(wr('bez fotky', { ...A, i: true, color: '808080' }), { jc: 'center' });
+      t += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0], wp(wr(String(i + 1), { ...A, b: true }), { jc: 'center' }))}${tc(W[1], photo)}${tc(W[2], wp(wr(f.text, A)))}${tc(W[3], wp(wr(f.measure || '', A)))}${tc(W[4], wp(wr(f.owner || '', A)))}${tc(W[5], wp(wr(f.due ? ddmm(f.due) : '', A), { jc: 'center' }))}${tc(W[6], wp(wr(SEV[f.severity] || 'Střední', { ...A, b: true, color: SEVC[f.severity] || 'C07800' }), { jc: 'center' }))}</w:tr>`;
+    });
+    body += t + '</w:tbl>' + wp('');
+    return packDocx({ body, files, rels, logo: d.logo, footer: 'Týdenní kontrola vedoucího pracoviště · 08-01-SM-GŘ-Q10', title: 'Týdenní kontrola ' + (k.site || ''), author: d.author, landscape: true });
+  }
+
+  function packDocx(o) {
+    const { body, files, rels } = o;
+    const sect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/>' + (o.landscape ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' : '<w:pgSz w:w="11906" w:h="16838"/>') + '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
     const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}${sect}</w:body></w:document>`;
     const LW = 1512000, LH = Math.round(LW * 92 / 320);
     const hdr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${wp(wimg('rIdL', 1, LW, LH), { jc: 'right' })}</w:hdr>`;
-    const ftr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>${wp(wr('ZQ-10-01', { sz: 20 }))}</w:ftr>`;
+    const ftr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>${wp(wr(o.footer, { sz: 20 }))}</w:ftr>`;
     const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="cs-CZ" w:eastAsia="cs-CZ" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
     const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
     const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`;
     const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`;
     const docRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="${R}/styles" Target="styles.xml"/><Relationship Id="rIdH" Type="${R}/header" Target="header1.xml"/><Relationship Id="rIdF" Type="${R}/footer" Target="footer1.xml"/>${rels.join('')}</Relationships>`;
     const hdrRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdL" Type="${R}/image" Target="media/logo.png"/></Relationships>`;
-    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${X('Protokol ' + d.number)}</dc:title><dc:creator>${X(d.author || 'Hlídač BOZP')}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().slice(0, 19)}Z</dcterms:created></cp:coreProperties>`;
+    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${X(o.title)}</dc:title><dc:creator>${X(o.author || 'Hlídač BOZP')}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().slice(0, 19)}Z</dcterms:created></cp:coreProperties>`;
     const enc = new TextEncoder();
     return zipStore([
       { name: '[Content_Types].xml', data: enc.encode(ct) },
@@ -2734,7 +2825,7 @@ body.locked .app { display: none; }
       { name: 'word/footer1.xml', data: enc.encode(ftr) },
       { name: 'word/_rels/document.xml.rels', data: enc.encode(docRels) },
       { name: 'word/_rels/header1.xml.rels', data: enc.encode(hdrRels) },
-      { name: 'word/media/logo.png', data: d.logo },
+      { name: 'word/media/logo.png', data: o.logo },
       ...files,
     ]);
   }
@@ -2891,13 +2982,14 @@ body.locked .app { display: none; }
       case 'zoom': $('#lightboxImg').src = b.dataset.src; $('#lightbox').hidden = false; break;
       case 'goto-status': $('#tStatus').value = b.dataset.status; setTab('terminy'); render(); break;
       case 'goto-findings': $('#zStatus').value = 'open'; setTab('zavady'); render(); break;
-      case 'open-proto': openProto(); break;
+      case 'open-proto': if (isAdmin()) openProto(); break;
       case 'close-proto': $('#protoModal').hidden = true; break;
       case 'p-all': document.querySelectorAll('#pFindings input').forEach(x => { const f = findings.find(z => z.id === x.value); x.checked = !!f && f.status !== 'done'; }); break;
       case 'p-none': document.querySelectorAll('#pFindings input').forEach(x => (x.checked = false)); break;
       case 'p-again': openProto({ protoId: id }); break;
       case 'close-sites': $('#sitesModal').hidden = true; break;
-      case 'w-start': startWeekly(id, b.dataset.place || ''); break;
+      case 'w-start': startWeekly(id, b.dataset.place || '', b.dataset.type || 'vedouci'); break;
+      case 'w-rep': { $('#wDetailModal').hidden = true; const k = checks.find(x => x.id === id); if (k) leaderReport(k); break; }
       case 'w-mgr': {
         const pr = allPairs(true).find(x => x.key === id); if (!pr) break;
         const pl = b.dataset.place || '';
@@ -2949,7 +3041,7 @@ body.locked .app { display: none; }
       case 'w-drop': { const arr = wq && wq.photos[b.dataset.q]; if (arr) { URL.revokeObjectURL(arr[+b.dataset.i].url); arr.splice(+b.dataset.i, 1); const item = wq.groups.flatMap(g => g.items).find(x => x.id === b.dataset.q); $('#row-' + b.dataset.q).outerHTML = qRow(item); } break; }
       case 'w-detail': { const k = checks.find(x => x.id === id); if (k) showCheck(k); break; }
       case 'close-wd': $('#wDetailModal').hidden = true; break;
-      case 'w-proto': $('#wDetailModal').hidden = true; openProto({ checkId: id }); break;
+      case 'w-proto': $('#wDetailModal').hidden = true; if (isAdmin()) openProto({ checkId: id }); break;
       case 'w-del': confirmTwice(b, async () => { try { await del('kontroly', id); toast('Kontrola smazána. Její závady zůstaly v záložce Závady.'); } catch (err) { /* */ } }); break;
       case 'w-q-edit': $('#wQText').value = qText(); $('#wQEdit').hidden = false; $('#wQEdit').scrollIntoView({ behavior: 'smooth' }); break;
       case 'w-q-default': $('#wQText').value = DEFAULT_Q; break;
