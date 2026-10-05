@@ -489,6 +489,73 @@ body.locked .app { display: none; }
 @media (max-width: 680px) { .ans button { padding: 9px 4px; font-size: 12.5px; } }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ——— vzhled podle návrhu „Hlídač mobil“ (kolo 2) ——— */
+.brand h1 { text-transform: none; letter-spacing: -.005em; font-stretch: 112%; font-weight: 700; font-size: 21px; }
+.ans button { color: var(--ink); font-weight: 600; }
+.ans button[aria-pressed="true"].a-ok { background: var(--ok-soft); color: var(--ok); }
+.ans button[aria-pressed="true"].a-nok { background: var(--red); color: #fff; }
+.ans button[aria-pressed="true"].a-na { background: var(--surface-2); color: var(--graphite); }
+.q.nok { background: color-mix(in srgb, var(--red-soft) 40%, var(--surface)); }
+.qfail { background: transparent; border: 0; padding: 2px 0 4px; gap: 12px; }
+.seg label { color: var(--ink); }
+.seg label:has(input:checked) { background: var(--ok-soft); color: var(--ok); }
+.seg label.v:has(input:checked) { background: var(--red-soft); color: var(--red); }
+.seg label.s:has(input:checked) { background: var(--amber-soft); color: var(--amber); }
+.thumbs.ph { gap: 8px; align-items: center; }
+.thumbs.ph button { width: 64px; height: 54px; }
+.photo-add { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.photo-add span { display: grid; place-items: center; width: 64px; height: 54px; border: 1.5px dashed var(--line-strong); border-radius: 4px; background: var(--surface); font-size: 22px; line-height: 1; color: var(--muted); transition: border-color .15s, color .15s; }
+.photo-add:hover span { border-color: var(--brand); color: var(--brand); }
+.photo-add em { font-style: normal; }
+.thumbs.ph button ~ .photo-add em { display: none; }
+.photo-add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+#wForm .section-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+#wForm .section-head .hint { order: -1; }
+#wForm .section-head h2 { text-transform: none; font-size: 22px; }
+.wk-foot { position: sticky; bottom: 8px; z-index: 6; display: grid; grid-template-columns: 1fr 1.7fr; gap: 8px; padding: 8px; background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.wk-foot .btn { min-height: 46px; white-space: normal; text-align: center; line-height: 1.2; }
+.row:has(> .pillcell .pill.red) { background: color-mix(in srgb, var(--red-soft) 35%, var(--surface)); }
+.row:has(> .pillcell .pill.red):hover { background: color-mix(in srgb, var(--red-soft) 55%, var(--surface)); }
+@media (max-width: 680px) {
+  .app { padding-block: 10px 120px; }
+  .top { background: none; border: 0; box-shadow: none; padding: 6px 0 4px; margin-bottom: 10px; gap: 6px 10px; overflow: visible; }
+  .top::after { display: none; }
+  .brand { gap: 10px; flex: 1 1 auto; }
+  .brand-logo { height: 22px; }
+  .brand-sep, .brand small { display: none; }
+  .brand h1 { font-size: 16px; }
+  .sync { order: 3; flex: 1 1 100%; border: 0; padding: 0; font-size: 11px; text-transform: none; letter-spacing: 0; }
+  .sync.on { color: var(--ok); }
+  .who-chip { order: 2; width: auto; margin-left: auto; gap: 6px; }
+  .who-chip .name { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .who-chip .name .ic { display: none; }
+  .who-chip .name #whoName { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who-chip .btn.small { padding: 4px 8px; font-size: 12px; min-height: 30px; }
+  .who-chip .role { background: none; color: var(--brand); padding: 0; }
+  .tiles { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tile { padding: 10px 10px 9px; gap: 3px; }
+  .tile::before { display: none; }
+  .tile .tile-top { display: none; }
+  .tile b { font-size: 30px; font-stretch: 118%; font-weight: 700; margin-top: 0; }
+  .tile span.lbl { font-size: 9.5px; line-height: 1.3; letter-spacing: .04em; }
+  .row { grid-template-columns: minmax(0, 1fr) auto; padding: 13px 14px; }
+  .row > .pillcell { grid-column: 2; grid-row: 1; align-self: start; justify-self: end; }
+  .row > div:not(.pillcell):not(.acts) { grid-column: 1; grid-row: 1; }
+  .row .pill { font-size: 10.5px; padding: 3px 7px; border-radius: 999px; }
+  .row .pill::before { display: none; }
+  .row .who { font-size: 14.5px; }
+  .row .when { font-size: 10.5px; }
+  .wk-sticky { top: 0; border-radius: 0 0 var(--r) var(--r); }
+  .wk-foot { bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); }
+  .q { padding: 12px 14px; }
+  .q .qt { font-size: 14.5px; }
+  .qfail { grid-template-columns: 1fr 1fr; }
+  .qfail input[type=date] { padding-inline: 8px; }
+}
+@media (max-width: 360px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
+@media (max-width: 680px) { body:has(#wForm:not([hidden])) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); } }
 </style>
 
 <div class="auth" id="auth">
@@ -696,9 +763,11 @@ body.locked .app { display: none; }
         <div id="wQuestions" class="section" style="margin:0"></div>
         <div class="panel">
           <div class="field"><label for="wNote">Poznámka ke kontrole</label><textarea id="wNote" placeholder="nepovinné, např. kontrola po odstávce"></textarea></div>
-          <button class="btn primary big" type="submit" id="wSave">Uložit kontrolu</button>
-          <button class="btn big" type="button" data-action="w-cancel">Zrušit</button>
           <p class="small-note" id="wStatus"></p>
+        </div>
+        <div class="wk-foot">
+          <button class="btn" type="button" data-action="w-cancel" title="Odpovědi zůstanou uložené, příště v kontrole pokračuješ">Rozpracovat</button>
+          <button class="btn primary" type="submit" id="wSave">Uložit kontrolu</button>
         </div>
       </form>
 
@@ -2455,14 +2524,15 @@ body.locked .app { display: none; }
       } catch (e) { /* */ }
     }
     const mgr = mgrOf(p.company, p.site, place);
-    $('#wFormTitle').textContent = (zq ? 'Kontrola ZQ-10-02 · ' : 'Kontrola vedoucího · ') + p.site + (place ? ' › ' + place : '');
-    $('#wFormHint').textContent = `týden ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgr || 'nezadán'}`;
+    $('#wFormTitle').textContent = p.site + (place ? ' › ' + place : '');
+    $('#wForm').dataset.kind = zq ? 'Kontrola ZQ-10-02' : 'Kontrola vedoucího';
+    $('#wFormHint').textContent = `${$('#wForm').dataset.kind} · tý ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgr || 'nezadán'}`;
     $('#wRotInfo').innerHTML = !zq ? `<b>Týdenní kontrola vedoucího:</b> ${VED_Q.length} bodů. U „Nevyhovuje“ stačí fotka – zjištění, opatření, odpovědnou osobu a termín aplikace doplní sama, když je nevyplníš.` : `<b>Otázky ZQ-10-02 · cyklus ${rot.cycle}, sada ${rot.round + 1}:</b> každá ${rot.step}. otázka z dosud nepoložených (${rot.sel.length} z ${rot.total}). ${rot.left ? `Do konce cyklu zbývá ${rot.left} ${plural(rot.left, 'otázka', 'otázky', 'otázek')}.` : 'Tato sada cyklus uzavře, příště se začíná znovu.'}`;
     renderQuestions();
   }
   $('#wSite').addEventListener('change', () => { fillPlaces(''); prepareQuestions(true); });
   $('#wPlace').addEventListener('change', () => prepareQuestions(true));
-  $('#wDate').addEventListener('change', () => { const p = wPair(); if (p) $('#wFormHint').textContent = `týden ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgrOf(p.company, p.site, $('#wPlace').value) || 'nezadán'}`; });
+  $('#wDate').addEventListener('change', () => { const p = wPair(); if (p) $('#wFormHint').textContent = `${$('#wForm').dataset.kind || 'Týdenní kontrola'} · tý ${weekNo($('#wDate').value || todayISO)} · vedoucí ${mgrOf(p.company, p.site, $('#wPlace').value) || 'nezadán'}`; });
   function closeWeekly() {
     if (wq) Object.values(wq.photos).flat().forEach(p => URL.revokeObjectURL(p.url));
     wq = null;
@@ -2475,11 +2545,10 @@ body.locked .app { display: none; }
     const fail = a === 'nok' ? `<div class="qfail">
       <div class="field wide"><label for="wf-text-${q.id}">Co nevyhovuje</label><textarea id="wf-text-${q.id}" data-wf="text" data-q="${q.id}" placeholder="${esc(q.f ? 'Když nevyplníš: ' + q.f : 'Když nevyplníš, doplní se automaticky podle otázky.')}">${esc(f.text || '')}</textarea></div>
       <div class="field wide"><label for="wf-measure-${q.id}">Opatření</label><input type="text" id="wf-measure-${q.id}" data-wf="measure" data-q="${q.id}" value="${esc(f.measure || '')}" placeholder="${esc(q.m ? 'Když nevyplníš: ' + q.m : 'Když nevyplníš, doplní se automaticky.')}"></div>
-      <div class="field wide"><span class="label">Fotky</span><label class="photo-drop"><input type="file" accept="image/*" multiple data-wphoto="${q.id}">${ic('alert').replace('class="ic"', 'class="ic" style="color:var(--brand)"')}<span>Vyfotit závadu</span></label>
-        <div class="thumbs">${(wq.photos[q.id] || []).map((x, i) => `<button type="button" class="pending" data-action="w-drop" data-q="${q.id}" data-i="${i}" aria-label="Odebrat fotku"><img src="${x.url}" alt=""><span>×</span></button>`).join('')}</div></div>
-      <div class="field"><span class="label">Závažnost</span><div class="seg mini">${['vysoka', 'stredni', 'nizka'].map(v => `<label class="${v === 'vysoka' ? 'v' : v === 'stredni' ? 's' : ''}"><input type="radio" name="wsev-${q.id}" value="${v}" data-wf="sev" data-q="${q.id}" ${(f.sev || 'stredni') === v ? 'checked' : ''}><span>${SEV[v]}</span></label>`).join('')}</div></div>
-      <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, DUE_BY_SEV[f.sev || 'stredni']))}"></div>
+      <div class="field wide"><span class="label">Závažnost</span><div class="seg mini">${['vysoka', 'stredni', 'nizka'].map(v => `<label class="${v === 'vysoka' ? 'v' : v === 'stredni' ? 's' : ''}"><input type="radio" name="wsev-${q.id}" value="${v}" data-wf="sev" data-q="${q.id}" ${(f.sev || 'stredni') === v ? 'checked' : ''}><span>${SEV[v]}</span></label>`).join('')}</div></div>
       <div class="field"><label for="wf-owner-${q.id}">Odpovídá</label><input type="text" id="wf-owner-${q.id}" data-wf="owner" data-q="${q.id}" list="wOwnerDl" value="${esc(f.owner || '')}" placeholder="${esc('Když nevyplníš: ' + (wPair() ? mgrOf(wPair().company, wPair().site, $('#wPlace').value) || 'kontrolující' : 'kontrolující'))}"></div>
+      <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, DUE_BY_SEV[f.sev || 'stredni']))}"></div>
+      <div class="field wide"><span class="label">Fotky</span><div class="thumbs ph">${(wq.photos[q.id] || []).map((x, i) => `<button type="button" class="pending" data-action="w-drop" data-q="${q.id}" data-i="${i}" aria-label="Odebrat fotku"><img src="${x.url}" alt=""><span>×</span></button>`).join('')}<label class="photo-add" title="Vyfotit závadu"><input type="file" accept="image/*" multiple data-wphoto="${q.id}"><span aria-hidden="true">+</span><em>Vyfotit závadu</em></label></div></div>
     </div>` : '';
     return `<div class="q ${a || ''}" id="row-${q.id}"><div class="qt"><b>${esc(q.no)}</b>${esc(q.text)}</div>
       <div class="ans" role="group" aria-label="Odpověď">${btn('ok', 'a-ok', 'Vyhovuje', ic('check') + '<span>Vyhovuje</span>')}${btn('nok', 'a-nok', 'Nevyhovuje', '✗<span>Nevyhovuje</span>')}${btn('na', 'a-na', 'Netýká se', '<span>Netýká se</span>')}</div>${fail}</div>`;
