@@ -401,6 +401,75 @@ body.locked .app { display: none; }
 .who-chip .name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
 .who-chip .role { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--brand); border-radius: 3px; padding: 2px 6px; }
 .user-row .who small { font-family: var(--mono); font-weight: 500; color: var(--muted); font-size: 12px; margin-left: 6px; }
+/* ——— rozsah (závod) ——— */
+.scope { display: flex; align-items: center; gap: 10px; margin: -10px 0 18px; flex-wrap: wrap; }
+.scope label { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.scope select { width: auto; flex: 0 1 360px; min-height: 40px; padding: 7px 10px; font-weight: 600; }
+.scope .ic { width: 15px; height: 15px; }
+
+/* ——— přepínač v Kontrole ——— */
+.switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 18px; }
+.switch button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: none; border-radius: 4px; padding: 12px 10px; font-weight: 700; font-size: 15px; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
+.switch button:hover { background: var(--surface-2); color: var(--ink); }
+.switch button[aria-selected="true"] { background: var(--brand); color: #fff; }
+.switch .ic { width: 18px; height: 18px; }
+
+/* ——— týdenní kontrola ——— */
+.wk-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.wk-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
+.wk-card::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--line-strong); }
+.wk-card.ok::before { background: var(--ok); } .wk-card.red::before { background: var(--red); } .wk-card.amber::before { background: var(--amber-bar); }
+.wk-card h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+.wk-card h3 small { font-family: var(--mono); font-weight: 500; font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.wk-card .meta { font-size: 13px; color: var(--muted); }
+.weeks { display: flex; gap: 4px; align-items: flex-end; }
+.weeks i { flex: 1; height: 22px; border-radius: 2px; background: var(--surface-2); border: 1px solid var(--line); position: relative; }
+.weeks i.ok { background: var(--ok); border-color: var(--ok); }
+.weeks i.miss { background: repeating-linear-gradient(112deg, var(--red) 0 3px, transparent 3px 6px); border-color: var(--red); }
+.weeks i.now { outline: 2px solid var(--graphite); outline-offset: 1px; }
+.weeks-lbl { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.progress { height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--brand); width: 0; transition: width .25s; }
+.qgroup { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.qgroup h4 { margin: 0; padding: 10px 16px; font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--graphite); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .qgroup h4 { background: #33312e; } }
+:root[data-theme="dark"] .qgroup h4 { background: #33312e; }
+.q { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); }
+.q:first-of-type { border-top: 0; }
+.q .qt { font-size: 15px; line-height: 1.4; }
+.q .qt b { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-weight: 600; margin-right: 6px; }
+.ans { display: inline-grid; grid-template-columns: repeat(3, auto); border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; }
+.ans button { border: 0; border-left: 1px solid var(--line-strong); background: var(--surface); padding: 9px 12px; min-width: 52px; min-height: 42px; cursor: pointer; font-weight: 700; font-size: 13.5px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.ans button:first-child { border-left: 0; }
+.ans button:hover { background: var(--surface-2); color: var(--ink); }
+.ans button[aria-pressed="true"].a-ok { background: var(--ok); color: #fff; }
+.ans button[aria-pressed="true"].a-nok { background: var(--red); color: #fff; }
+.ans button[aria-pressed="true"].a-na { background: var(--graphite); color: #fff; }
+.q.nok { background: color-mix(in srgb, var(--red-soft) 55%, transparent); }
+.q.ok .qt { color: var(--muted); }
+.qfail { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 4px; }
+.qfail .wide { grid-column: 1 / -1; }
+.qfail textarea { min-height: 70px; }
+.qfail .photo-drop { min-height: 56px; }
+.seg.mini label { padding: 8px 4px; font-size: 13px; }
+@media (max-width: 680px) { .q { grid-template-columns: 1fr; } .ans { width: 100%; grid-template-columns: repeat(3, 1fr); } }
+.wk-sticky { position: sticky; top: 8px; z-index: 6; display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; box-shadow: var(--shadow); }
+.wk-sticky .row-line { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-weight: 600; font-size: 14px; }
+.wk-sticky .row-line span { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.res { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.modal .panel.wide-panel { width: min(760px, 100%); }
+.pick-list { display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r); }
+.pick-list label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 10px 12px; border-top: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+.pick-list label:first-child { border-top: 0; }
+.pick-list label:hover { background: var(--surface-2); }
+.pick-list input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand); }
+.pick-list small { grid-column: 2; color: var(--muted); font-size: 12.5px; }
+.pick-list .grp { padding: 8px 12px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-top: 1px solid var(--line); }
+.pick-list .grp:first-child { border-top: 0; }
+.site-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.site-chips span { font-size: 11.5px; font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--muted); }
+.site-chips span.warn { color: var(--amber); border-color: var(--amber-bar); background: var(--amber-soft); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
@@ -479,6 +548,11 @@ body.locked .app { display: none; }
     <button class="tab" role="tab" data-tab="firmy" id="tab-firmy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V6.5l8-3v17M12 9.5h8v11M2.5 20.5h19M7.5 9.5v.01M7.5 13v.01M7.5 16.5v.01M15.5 13v.01M15.5 16.5v.01"/></svg><span>Firmy</span><span class="count" id="cnt-firmy" hidden></span></button>
     <button class="tab" role="tab" data-tab="uzivatele" id="tab-uzivatele" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6.1M17.5 14.2a6 6 0 0 1 3.7 5.3"/></svg><span>Uživatelé</span><span class="count" id="cnt-uzivatele" hidden></span></button>
   </nav>
+
+  <div class="scope" id="scopeBar" hidden>
+    <label for="scopeSel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20.5V10l5 3v-3l5 3V5.5h7.5v15zM2 20.5h20"/></svg>Závod</label>
+    <select id="scopeSel" aria-label="Zobrazený závod"></select>
+  </div>
 
   <div id="notice"></div>
 
@@ -560,6 +634,63 @@ body.locked .app { display: none; }
 
   <!-- KONTROLA -->
   <main id="view-kontrola" data-view hidden>
+    <div class="switch" role="tablist" aria-label="Druh kontroly">
+      <button type="button" role="tab" data-kmode="zavada" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.8-2.6h6.4L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.3"/></svg>Závada</button>
+      <button type="button" role="tab" data-kmode="tydenni" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 4V2.8h6V4M8.5 10l1.5 1.5 3-3M8.5 16l1.5 1.5 3-3M15 10.5h1.5M15 16.5h1.5"/></svg>Týdenní kontrola</button>
+    </div>
+
+    <!-- TÝDENNÍ KONTROLA dle 08-01-SM-GŘ-Q10, čl. Vnitřní kontroly -->
+    <div id="weeklyView" hidden>
+      <div class="section" id="wBoardSec">
+        <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
+        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b>. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <div class="wk-board" id="wBoard"></div>
+        <div id="wHidden"></div>
+      </div>
+
+      <form class="section" id="wForm" hidden>
+        <div class="section-head"><h2 id="wFormTitle">Týdenní kontrola</h2><span class="hint" id="wFormHint"></span></div>
+        <div class="panel">
+          <div class="grid-form">
+            <div class="field"><label for="wSite">Závod / provozovna</label><select id="wSite"></select></div>
+            <div class="field"><label for="wPlace">Pracoviště / místo</label><input type="text" id="wPlace" list="wPlaceDl" placeholder="nepovinné, např. Hala 2"><datalist id="wPlaceDl"></datalist></div>
+            <div class="field"><label for="wDate">Datum kontroly</label><input type="date" id="wDate"></div>
+            <div class="field"><label for="wBy">Kontrolu provedl</label><input type="text" id="wBy"></div>
+          </div>
+        </div>
+        <div class="wk-sticky">
+          <div class="row-line"><b id="wProgText">0 z 0</b><span id="wProgRes"></span></div>
+          <div class="progress"><i id="wProgBar"></i></div>
+          <div class="toolbar"><button class="btn small" type="button" data-action="w-all-ok">Zbytek označit jako V pořádku</button></div>
+        </div>
+        <div id="wQuestions" class="section" style="margin:0"></div>
+        <div class="panel">
+          <div class="field"><label for="wNote">Poznámka ke kontrole</label><textarea id="wNote" placeholder="nepovinné, např. kontrola po odstávce"></textarea></div>
+          <button class="btn primary big" type="submit" id="wSave">Uložit kontrolu</button>
+          <button class="btn big" type="button" data-action="w-cancel">Zrušit</button>
+          <p class="small-note" id="wStatus"></p>
+        </div>
+      </form>
+
+      <div class="section" id="wHistSec">
+        <div class="section-head"><h2>Provedené kontroly</h2><span class="hint">posledních 30</span></div>
+        <div id="wHistory"></div>
+      </div>
+
+      <form class="section" id="wQEdit" hidden>
+        <div class="section-head"><h2>Kontrolní otázky</h2><span class="hint">jen správce</span></div>
+        <div class="panel">
+          <p class="small-note">Jedna otázka na řádek. Řádek začínající znakem <b>#</b> je nadpis oblasti. Změna platí pro nové kontroly, uložené kontroly si drží své znění.</p>
+          <textarea id="wQText" rows="16"></textarea>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Uložit otázky</button>
+            <button class="btn" type="button" data-action="w-q-default">Vrátit výchozí</button>
+            <button class="btn" type="button" data-action="w-q-close">Zavřít</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
     <form class="section" id="findForm">
       <div class="section-head"><h2 id="kTitle">Nová závada z kontroly</h2><span class="hint" id="kHint">vyfoť, popiš, ulož, další</span></div>
       <div class="panel">
@@ -576,6 +707,7 @@ body.locked .app { display: none; }
             <div class="thumbs" id="kThumbs"></div>
           </div>
           <div class="field wide"><label for="kText">Popis závady</label><textarea id="kText" required placeholder="Chybí zábradlí u plošiny, výška 1,8 m"></textarea></div>
+          <div class="field wide"><label for="kMeasure">Opatření</label><input type="text" id="kMeasure" placeholder="nepovinné, např. Doplnit zábradlí a zarážku u plošiny"></div>
           <div class="field wide">
             <span class="label">Závažnost</span>
             <div class="seg" role="radiogroup" aria-label="Závažnost">
@@ -604,10 +736,11 @@ body.locked .app { display: none; }
           <option value="done">Vyřešené</option>
           <option value="all">Vše</option>
         </select>
-        <button class="btn" data-action="copy-protocol"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="1"/><path d="M15.5 8.5v-3a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"/></svg>Text do protokolu</button>
+        <button class="btn primary" data-action="open-proto"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"/><path d="M14 3.5V8h4.5M8.5 12.5h7M8.5 16h5"/></svg>Protokol ZQ-10-01</button>
+        <button class="btn" data-action="copy-protocol"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="1"/><path d="M15.5 8.5v-3a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"/></svg>Text do schránky</button>
         <button class="btn" data-action="export-findings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Export CSV</button>
       </div>
-      <p class="small-note">Tip: napiš Claudovi „udělej protokol z kontroly v závodě …“ a data si odtud přečte.</p>
+      <div id="protoList"></div>
       <div id="findList"></div>
     </div>
   </main>
@@ -701,6 +834,52 @@ body.locked .app { display: none; }
     <p class="small-note" id="accStatus"></p>
   </form>
 </div>
+<div class="modal" id="protoModal" hidden>
+  <form class="panel wide-panel" id="protoForm">
+    <h3>Protokol o kontrole pracoviště · ZQ-10-01</h3>
+    <div class="grid-2">
+      <div class="field"><label for="pSite">Závod / provozovna</label><select id="pSite" required></select></div>
+      <div class="field"><label for="pNo">Číslo protokolu</label><input type="text" id="pNo" placeholder="01/2026"></div>
+      <div class="field"><label for="pDate">Datum kontroly</label><input type="date" id="pDate" required></div>
+      <div class="field"><label for="pAddr">Sídlo závodu</label><input type="text" id="pAddr" placeholder="např. Litice nad Orlicí 123"></div>
+      <div class="field"><label for="pMgr">Zodpovědný vedoucí</label><input type="text" id="pMgr"></div>
+      <div class="field"><label for="pBy">Kontrolu provedl</label><input type="text" id="pBy"></div>
+      <div class="field"><label for="pFor">Za závod</label><input type="text" id="pFor" placeholder="jméno přítomného zástupce"></div>
+      <div class="field"><label for="pTo">Převzal</label><input type="text" id="pTo" placeholder="nepovinné"></div>
+    </div>
+    <div class="field"><label for="pWork">Pracoviště</label><textarea id="pWork"></textarea></div>
+    <div class="field">
+      <span class="label" id="pFindLbl">Zjištěné nedostatky</span>
+      <div class="pick-list" id="pFindings"></div>
+      <div class="toolbar"><button class="btn small" type="button" data-action="p-all">Vybrat otevřené</button><button class="btn small" type="button" data-action="p-none">Zrušit výběr</button></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn primary" type="submit" id="pSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Stáhnout protokol (Word)</button>
+      <button class="btn" type="button" data-action="close-proto">Zavřít</button>
+    </div>
+    <p class="small-note" id="pStatus"></p>
+  </form>
+</div>
+<div class="modal" id="sitesModal" hidden>
+  <form class="panel" id="sitesForm">
+    <h3>Přístup k závodům</h3>
+    <p class="small-note" id="sitesWho"></p>
+    <div class="pick-list" id="sitesList"></div>
+    <p class="small-note">Uživatel uvidí a vyexportuje jen termíny, závady, kontroly a protokoly vybraných závodů. Správce vidí vše.</p>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Uložit přístup</button>
+      <button class="btn" type="button" data-action="close-sites">Zrušit</button>
+    </div>
+  </form>
+</div>
+<div class="modal" id="wDetailModal" hidden>
+  <div class="panel wide-panel">
+    <h3 id="wdTitle">Kontrola</h3>
+    <p class="small-note" id="wdMeta"></p>
+    <div id="wdBody" class="pick-list"></div>
+    <div class="form-actions" id="wdActs"></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt="Fotka závady"></div>
 
@@ -779,14 +958,15 @@ body.locked .app { display: none; }
   let db = null, assets = null, downloads = null, mcp = null, readOnly = false, settings = {};
   let accounts = [], me = null, accountsLoaded = false, isOwner = null;
   let terms = [], findings = [], firms = [], sites = [], places = [], people = [], notifyInfo = null;
-  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map() };
+  let checks = [], protocols = [], qDoc = null;
+  const mem = { ucty: new Map(), terminy: new Map(), zavady: new Map(), firmy: new Map(), provozovny: new Map(), mista: new Map(), osoby: new Map(), kontroly: new Map(), protokoly: new Map() };
 
   function setSync(state, text) {
     const s = $('#sync'); s.className = 'sync ' + state; s.querySelector('span').textContent = text;
   }
   function memSync(col) {
     const arr = [...mem[col].entries()].map(([id, d]) => ({ id, ...d }));
-    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else findings = arr;
+    if (col === 'ucty') { accounts = arr; accountsLoaded = true; gate(); } else if (col === 'terminy') terms = arr; else if (col === 'firmy') firms = arr; else if (col === 'provozovny') sites = arr; else if (col === 'mista') places = arr; else if (col === 'osoby') people = arr; else if (col === 'kontroly') checks = arr; else if (col === 'protokoly') protocols = arr; else findings = arr;
     render();
   }
   async function put(col, id, data) {
@@ -855,6 +1035,9 @@ body.locked .app { display: none; }
       const el = $('#ownerEmail');
       if (document.activeElement !== el && settings.ownerEmail && !el.value) el.value = settings.ownerEmail;
     }, () => {});
+    db.collection('kontroly').onSnapshot(s => { checks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.collection('protokoly').onSnapshot(s => { protocols = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    db.doc('system/kontrolni-otazky').onSnapshot(s => { qDoc = s.exists ? s.data() : null; render(); }, () => {});
     db.doc('system/notifikace').onSnapshot(s => {
       notifyInfo = s.exists ? s.data() : null;
       render();
@@ -871,6 +1054,7 @@ body.locked .app { display: none; }
     let html = '';
     if (!db) html += `<div class="banner"><p>Data se v tomto zobrazení neukládají a po zavření zmizí. Otevři aplikaci přes odkaz na claude.ai.</p></div>`;
     else if (readOnly) html += `<div class="banner"><p>Máš jen čtení. Pro úpravy potřebuješ od vlastníka roli Contributor.</p></div>`;
+    if (me && !isAdmin() && !(me.sites || []).length) html += `<div class="banner"><p>Správce ti zatím nepřiřadil žádný závod, proto tu nic nevidíš. Požádej ho o přístup (záložka Uživatelé → Závody).</p></div>`;
     const ex = terms.some(t => t.example) || findings.some(f => f.example);
     if (ex) html += `<div class="banner info"><p>Vidíš <b>ukázková data</b> (označená štítkem UKÁZKA). Až přidáš vlastní, smaž je.</p><button class="btn small" data-action="clear-examples">Smazat ukázky</button></div>`;
     n.innerHTML = html;
@@ -901,6 +1085,47 @@ body.locked .app { display: none; }
   const peopleOf = firm => uniq([...people.filter(x => x.firmId === firmIdOf(firm)).map(x => x.name), ...terms.filter(t => t.company === firm).map(t => t.name)]);
   const where = x => esc(x.company) + (x.site ? ' · ' + esc(x.site) : '');
 
+  // ---------- přístup po závodech ----------
+  // Uživatel vidí jen závody, které mu správce přiřadil (ucty.sites = klíče firma--závod). Správce vidí vše.
+  const keyOf = (company, site) => slug(company) + '--' + seg(site || '');
+  const isAdmin = () => !!(me && me.role === 'admin');
+  const myKeys = () => (isAdmin() ? null : (me && Array.isArray(me.sites) ? me.sites : []));
+  const allowed = x => { const k = myKeys(); return !k || k.includes(keyOf(x.company, x.site)); };
+  let scope = '';
+  const inScope = x => allowed(x) && (!scope || keyOf(x.company, x.site) === scope);
+  function allPairs(withWhole) {
+    const out = [];
+    companiesOf().forEach(c => {
+      const ss = sitesOf(c);
+      const whole = withWhole || !ss.length || terms.some(t => t.company === c && !t.site) || findings.some(f => f.company === c && !f.site) || checks.some(k => k.company === c && !k.site);
+      if (whole) out.push({ company: c, site: '', key: keyOf(c, ''), label: c + ' · celá firma' });
+      ss.forEach(sn => out.push({ company: c, site: sn, key: keyOf(c, sn), label: c + ' › ' + sn }));
+    });
+    return out;
+  }
+  const visPairs = withWhole => { const k = myKeys(); return allPairs(withWhole || !!k).filter(p => !k || k.includes(p.key)); };
+  const visCompanies = () => uniq(visPairs().map(p => p.company));
+  const visSitesOf = firm => { const k = myKeys(); return sitesOf(firm).filter(sn => !k || k.includes(keyOf(firm, sn))); };
+  const wholeAllowed = firm => { const k = myKeys(); return !k || k.includes(keyOf(firm, '')); };
+  const pairLabel = (company, site) => company + (site ? ' › ' + site : ' · celá firma');
+  const siteDoc = (company, site) => sites.find(x => x.id === keyOf(company, site));
+  function renderScope() {
+    const bar = $('#scopeBar'), sel = $('#scopeSel');
+    const pairs = me ? visPairs() : [];
+    if (scope && !pairs.some(p => p.key === scope)) scope = '';
+    bar.hidden = !me || pairs.length < 2;
+    if (bar.hidden || document.activeElement === sel) return;
+    const groups = uniq(pairs.map(p => p.company));
+    sel.innerHTML = `<option value="">${isAdmin() ? 'Všechny závody' : 'Všechny moje závody'}</option>` + groups.map(c =>
+      `<optgroup label="${esc(c)}">${pairs.filter(p => p.company === c).map(p => `<option value="${esc(p.key)}">${esc(p.site || 'celá firma')}</option>`).join('')}</optgroup>`).join('');
+    sel.value = scope;
+  }
+  $('#scopeSel').addEventListener('change', () => {
+    scope = $('#scopeSel').value;
+    try { localStorage.setItem('hlidac_scope_' + (me ? me.id : ''), scope); } catch (e) { /* */ }
+    render();
+  });
+
   // rolovací výběr s možností napsat novou položku
   const NEW = '__new';
   const wantSel = {};
@@ -908,28 +1133,34 @@ body.locked .app { display: none; }
     const sel = $('#' + id), inp = $('#' + id + 'New');
     const cur = opts.value !== undefined ? opts.value : sel.value;
     const head = opts.none !== undefined ? `<option value="">${esc(opts.none)}</option>` : (list.length ? '<option value="" disabled>— vyber —</option>' : '');
-    sel.innerHTML = head + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('') + `<option value="${NEW}">+ ${esc(opts.newLabel || 'Nová položka…')}</option>`;
+    sel.innerHTML = head + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('') + (opts.noNew ? '' : `<option value="${NEW}">+ ${esc(opts.newLabel || 'Nová položka…')}</option>`);
     if (wantSel[id] && list.includes(wantSel[id])) { sel.value = wantSel[id]; delete wantSel[id]; inp.value = ''; }
     else if (cur === NEW) sel.value = NEW;
     else if (cur && list.includes(cur)) sel.value = cur;
     else if (cur && opts.value !== undefined) { sel.value = NEW; inp.value = cur; }
     else if (opts.none !== undefined) sel.value = '';
-    else sel.value = list.length ? '' : NEW;
+    else sel.value = list.length || opts.noNew ? (opts.noNew && list.length === 1 && opts.none === undefined ? list[0] : '') : NEW;
     inp.hidden = sel.value !== NEW;
   }
   const getPick = id => ($('#' + id).value === NEW ? $('#' + id + 'New').value.trim() : $('#' + id).value);
   function rememberNew(id) { if ($('#' + id).value === NEW) wantSel[id] = $('#' + id + 'New').value.trim(); }
 
+  // výběr firmy a závodu respektuje přístup uživatele; nové firmy a závody zakládá jen správce
+  const firmOpts = (extra = {}) => ({ newLabel: 'Nová firma…', noNew: !isAdmin(), ...extra });
+  const siteOpts = (firm, extra = {}) => ({ ...(firm && !wholeAllowed(firm) ? {} : { none: '— bez závodu (celá firma) —' }), newLabel: 'Nový závod / provozovna…', noNew: !isAdmin(), ...extra });
+  const scopePair = () => (scope ? allPairs(true).find(p => p.key === scope) : null);
   function refreshTermPickers(o = {}) {
-    setPick('fFirm', companiesOf(), { newLabel: 'Nová firma…', value: o.firm });
+    const sp = scopePair();
+    setPick('fFirm', visCompanies(), firmOpts({ value: o.firm || (sp ? sp.company : undefined) }));
     const firm = getPick('fFirm');
-    setPick('fSite', firm ? sitesOf(firm) : [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…', value: o.site });
+    setPick('fSite', firm ? visSitesOf(firm) : [], siteOpts(firm, { value: o.site !== undefined && o.site !== '' ? o.site : (sp && sp.company === firm ? sp.site : o.site) }));
     setPick('fPerson', firm ? peopleOf(firm) : [], { newLabel: 'Nová osoba / zařízení…', value: o.person });
   }
   function refreshKPickers() {
-    setPick('kFirm', companiesOf(), { newLabel: 'Nová firma…' });
+    const sp = scopePair(), fresh = !$('#kFirm').value && sp;
+    setPick('kFirm', visCompanies(), firmOpts(fresh ? { value: sp.company } : {}));
     const firm = getPick('kFirm');
-    setPick('kSite', firm ? sitesOf(firm) : [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' });
+    setPick('kSite', firm ? visSitesOf(firm) : [], siteOpts(firm, fresh ? { value: sp.site } : {}));
     setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez místa —', newLabel: 'Nové místo…' });
     setPick('kOwner', firm ? ownersOf(firm) : [], { none: '— nevyplněno —', newLabel: 'Nová osoba…' });
   }
@@ -976,8 +1207,9 @@ body.locked .app { display: none; }
     const fix = f.status === 'done' && (f.fixText || fixPhotos)
       ? `<div class="fix"><div><b>Odstraněno ${fmt(f.doneAt)}:</b> ${esc(f.fixText || 'viz fotka')}</div>${fixPhotos ? `<div class="thumbs">${fixPhotos}</div>` : ''}</div>` : '';
     return `<article class="card sev-${esc(f.severity)} ${f.status === 'done' ? 'done' : ''}">
-      <div class="meta"><span class="pill ${dueSt.cls}">${dueSt.text}</span><span>${SEV[f.severity] || ''} závažnost</span>${f.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
+      <div class="meta"><span class="pill ${dueSt.cls}">${dueSt.text}</span><span>${SEV[f.severity] || ''} závažnost</span>${f.cislo ? `<span class="tag">Závada ${esc(f.cislo)}</span>` : ''}${f.source === 'tydenni' ? '<span class="tag">TÝDENNÍ KONTROLA</span>' : ''}${f.example ? '<span class="tag">UKÁZKA</span>' : ''}</div>
       <p class="desc">${esc(f.text)}</p>
+      ${f.measure ? `<div class="meta">Opatření: ${esc(f.measure)}</div>` : ''}
       <div class="meta">${where(f)}${f.place ? ' · ' + esc(f.place) : ''}</div>
       <div class="meta">${f.owner ? 'Odpovídá: ' + esc(f.owner) + ' · ' : ''}Náprava do ${fmt(f.due)} · zjištěno ${fmt(f.createdAt)}</div>
       ${photos ? `<div class="thumbs">${photos}</div>` : ''}
@@ -993,11 +1225,12 @@ body.locked .app { display: none; }
   }
 
   function render() {
-    const all = terms.filter(t => t.last && t.months).map(withDue).sort((a, b) => a.days - b.days);
+    renderScope();
+    const all = terms.filter(t => t.last && t.months && inScope(t)).map(withDue).sort((a, b) => a.days - b.days);
     const late = all.filter(t => t.days < 0);
     const d30 = all.filter(t => t.days >= 0 && t.days <= 30);
     const d90 = all.filter(t => t.days > 30 && t.days <= 90);
-    const openF = findings.filter(f => f.status !== 'done');
+    const openF = findings.filter(f => f.status !== 'done' && inScope(f));
     const lateF = openF.filter(f => f.due && daysUntil(f.due) < 0).sort((a, b) => a.due.localeCompare(b.due));
 
     // počet na záložce
@@ -1008,8 +1241,10 @@ body.locked .app { display: none; }
 
     // datalist a filtry
     const comps = companiesOf();
-    fillSelect($('#tCompany'), comps, 'Všechny firmy');
-    fillSelect($('#zCompany'), comps, 'Všechny firmy');
+    const vcomps = uniq(visPairs().filter(p => !scope || p.key === scope).map(p => p.company));
+    fillSelect($('#tCompany'), vcomps, 'Všechny firmy');
+    fillSelect($('#zCompany'), vcomps, 'Všechny firmy');
+    $('#tCompany').hidden = $('#zCompany').hidden = vcomps.length < 2;
 
     // přehled
     const later = all.filter(t => t.days > 90);
@@ -1046,7 +1281,7 @@ body.locked .app { display: none; }
 
     // závady
     const zc = $('#zCompany').value, zs = $('#zStatus').value;
-    const fs = findings.filter(f => (!zc || f.company === zc) && (zs === 'all' || (zs === 'open' ? f.status !== 'done' : f.status === 'done')))
+    const fs = findings.filter(f => inScope(f) && (!zc || f.company === zc) && (zs === 'all' || (zs === 'open' ? f.status !== 'done' : f.status === 'done')))
       .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
     $('#findList').innerHTML = fs.length ? `<div class="cards">${fs.map(findingCard).join('')}</div>` : `<div class="empty">Žádné závady v tomto výběru.</div>`;
 
@@ -1102,6 +1337,8 @@ body.locked .app { display: none; }
       ? `Poslední rozeslání: ${notifyInfo.lastRun}${notifyInfo.summary ? ' · ' + notifyInfo.summary : ''}`
       : 'Zatím nebylo nic rozesláno.';
 
+    renderProtoList();
+    renderWeekly();
     renderUsers();
     showNotice();
   }
@@ -1228,9 +1465,9 @@ body.locked .app { display: none; }
   });
   ['#fLast', '#fMonths'].forEach(s => $(s).addEventListener('input', updateDuePreview));
   $('#fFirm').addEventListener('change', () => { $('#fFirmNew').hidden = $('#fFirm').value !== NEW; refreshTermPickers({ firm: getPick('fFirm'), site: '', person: '' }); if ($('#fFirm').value === NEW) $('#fFirmNew').focus(); });
-  $('#fFirmNew').addEventListener('input', () => { setPick('fSite', [], { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('fPerson', [], { newLabel: 'Nová osoba / zařízení…' }); });
+  $('#fFirmNew').addEventListener('input', () => { setPick('fSite', [], siteOpts('')); setPick('fPerson', [], { newLabel: 'Nová osoba / zařízení…' }); });
   ['fSite', 'fPerson', 'kSite', 'kPlace', 'kOwner'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
-  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : sitesOf(getPick('kFirm')), { value: '', none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…' }); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); setPick('kOwner', $('#kFirm').value === NEW ? [] : ownersOf(getPick('kFirm')), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
+  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : visSitesOf(getPick('kFirm')), siteOpts($('#kFirm').value === NEW ? '' : getPick('kFirm'), { value: '' })); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); setPick('kOwner', $('#kFirm').value === NEW ? [] : ownersOf(getPick('kFirm')), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
   $('#kSite').addEventListener('change', () => { const firm = getPick('kFirm'); setPick('kPlace', firm && $('#kFirm').value !== NEW && $('#kSite').value !== NEW ? placesOf(firm, getPick('kSite')) : [], { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); });
   function openTermForm(t) {
     editingId = t ? t.id : null;
@@ -1255,6 +1492,7 @@ body.locked .app { display: none; }
     const firm = getPick('fFirm'), site = getPick('fSite'), person = getPick('fPerson');
     if (!firm) { toast('Vyber nebo napiš firmu.'); return; }
     if (!person) { toast('Vyber nebo napiš osobu / zařízení.'); return; }
+    if (!allowed({ company: firm, site })) { toast('K tomuto závodu nemáš přístup.'); return; }
     const p = presetOf(type);
     const data = {
       name: person, company: firm, site, type,
@@ -1337,6 +1575,7 @@ body.locked .app { display: none; }
     const status = $('#kStatus');
     const firm = getPick('kFirm'), site = getPick('kSite'), place = getPick('kPlace'), owner = getPick('kOwner');
     if (!firm) { status.textContent = 'Vyber nebo napiš firmu.'; return; }
+    if (!allowed({ company: firm, site })) { status.textContent = 'K tomuto závodu nemáš přístup. Vyber závod.'; return; }
     const btn = $('#kSave'); btn.disabled = true;
     status.textContent = '';
     const ids = [];
@@ -1355,7 +1594,7 @@ body.locked .app { display: none; }
       ['kFirm', 'kSite', 'kPlace'].forEach(rememberNew);
       await ensureEntities({ firm, site, place });
       const fields = {
-        company: firm, site, place, text: $('#kText').value.trim(),
+        company: firm, site, place, text: $('#kText').value.trim(), measure: $('#kMeasure').value.trim(),
         severity: (document.querySelector('input[name=sev]:checked') || {}).value || 'stredni',
         owner, due: $('#kDue').value || '',
       };
@@ -1372,7 +1611,7 @@ body.locked .app { display: none; }
       await put('zavady', newId(), { ...fields, status: 'open', photos: ids, createdAt: todayISO, doneAt: '' });
       pending.forEach(p => URL.revokeObjectURL(p.url));
       pending = []; renderPending();
-      $('#kText').value = ''; setPick('kOwner', ownersOf(firm), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' });
+      $('#kText').value = ''; $('#kMeasure').value = ''; setPick('kOwner', ownersOf(firm), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' });
       $('#kDue').value = addDays(todayISO, 14);
       status.textContent = 'Uloženo. Firma, závod a místo zůstaly vybrané pro další závadu.';
       toast('Závada uložena.');
@@ -1393,11 +1632,13 @@ body.locked .app { display: none; }
   function openFindEdit(f) {
     editingFind = f.id;
     setTab('kontrola');
-    setPick('kFirm', companiesOf(), { newLabel: 'Nová firma…', value: f.company });
-    setPick('kSite', sitesOf(f.company), { none: '— bez závodu (celá firma) —', newLabel: 'Nový závod / provozovna…', value: f.site || '' });
+    setKMode('zavada');
+    setPick('kFirm', visCompanies(), firmOpts({ value: f.company }));
+    setPick('kSite', visSitesOf(f.company), siteOpts(f.company, { value: f.site || '' }));
     setPick('kPlace', placesOf(f.company, f.site || ''), { none: '— bez místa —', newLabel: 'Nové místo…', value: f.place || '' });
     setPick('kOwner', ownersOf(f.company), { none: '— nevyplněno —', newLabel: 'Nová osoba…', value: f.owner || '' });
     $('#kText').value = f.text || '';
+    $('#kMeasure').value = f.measure || '';
     const r = document.querySelector(`input[name=sev][value="${f.severity || 'stredni'}"]`); if (r) r.checked = true;
     $('#kDue').value = f.due || '';
     $('#kTitle').textContent = 'Úprava závady';
@@ -1412,7 +1653,7 @@ body.locked .app { display: none; }
     $('#kHint').textContent = 'vyfoť, popiš, ulož, další';
     $('#kSave').textContent = 'Uložit závadu';
     $('#kCancel').hidden = true;
-    $('#kText').value = ''; $('#kDue').value = addDays(todayISO, 14); $('#kStatus').textContent = '';
+    $('#kText').value = ''; $('#kMeasure').value = ''; $('#kDue').value = addDays(todayISO, 14); $('#kStatus').textContent = '';
     refreshKPickers();
   }
 
@@ -1439,11 +1680,18 @@ body.locked .app { display: none; }
       for (const x of people.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.name); await put('osoby', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('osoby', x.id); }
       for (const t of terms.filter(t => t.company === firm)) await patch('terminy', t.id, { company: nv });
       for (const z of findings.filter(z => z.company === firm)) await patch('zavady', z.id, { company: nv });
+      for (const k of checks.filter(k => k.company === firm)) await patch('kontroly', k.id, { company: nv });
+      for (const k of protocols.filter(k => k.company === firm)) await patch('protokoly', k.id, { company: nv });
+      await remapKeys(k => (k.startsWith(fid + '--') ? nfid + k.slice(fid.length) : k));
       if (nfid !== fid && firms.some(x => x.id === fid)) await del('firmy', fid);
     } else if (kind === 'site') {
       const oid = fid + '--' + seg(old), nid = fid + '--' + seg(nv);
-      await put('provozovny', nid, { firmId: fid, firm, name: nv });
-      if (oid !== nid && sites.some(x => x.id === oid)) await del('provozovny', oid);
+      const od = sites.find(x => x.id === oid);
+      await put('provozovny', nid, { ...(od ? strip(od) : {}), firmId: fid, firm, name: nv });
+      if (oid !== nid && od) await del('provozovny', oid);
+      for (const k of checks.filter(k => k.company === firm && k.site === old)) await patch('kontroly', k.id, { site: nv });
+      for (const k of protocols.filter(k => k.company === firm && k.site === old)) await patch('protokoly', k.id, { site: nv });
+      if (oid !== nid) await remapKeys(k => (k === oid ? nid : k));
       for (const x of places.filter(x => x.firmId === fid && (x.site || '') === old)) { const pid = fid + '--' + seg(nv) + '--' + seg(x.name); await put('mista', pid, { ...strip(x), site: nv }); if (pid !== x.id) await del('mista', x.id); }
       for (const t of terms.filter(t => t.company === firm && t.site === old)) await patch('terminy', t.id, { site: nv });
       for (const z of findings.filter(z => z.company === firm && z.site === old)) await patch('zavady', z.id, { site: nv });
@@ -1457,6 +1705,12 @@ body.locked .app { display: none; }
       await put('osoby', nid, { firmId: fid, firm, name: nv });
       if (oid !== nid && people.some(x => x.id === oid)) await del('osoby', oid);
       for (const t of terms.filter(t => t.company === firm && t.name === old)) await patch('terminy', t.id, { name: nv });
+    }
+  }
+  async function remapKeys(fn) {
+    for (const a of accounts.filter(a => Array.isArray(a.sites) && a.sites.length)) {
+      const ns = [...new Set(a.sites.map(fn))];
+      if (ns.join('|') !== a.sites.join('|')) await patch('ucty', a.id, { sites: ns });
     }
   }
   $('#renameForm').addEventListener('submit', async e => {
@@ -1531,18 +1785,18 @@ body.locked .app { display: none; }
   }
   function exportTerms() {
     const rows = [['Osoba / zařízení', 'Firma', 'Závod / provozovna', 'Typ', 'Naposledy', 'Interval (měs.)', 'Příští termín', 'Zbývá dní', 'Poznámka']];
-    terms.filter(t => t.last && t.months).map(withDue).sort((a, b) => a.days - b.days)
+    terms.filter(t => t.last && t.months && inScope(t)).map(withDue).sort((a, b) => a.days - b.days)
       .forEach(t => rows.push([t.name, t.company, t.site, t.type, fmt(t.last), t.months, fmt(t.due), t.days, t.note]));
     offer(`terminy-bozp-${todayISO}.csv`, csv(rows));
   }
   function exportFindings() {
-    const rows = [['Firma', 'Závod / provozovna', 'Místo', 'Závada', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Odstraněno', 'Způsob odstranění', 'Fotek závady', 'Fotek po opravě']];
-    findings.forEach(f => rows.push([f.company, f.site, f.place, f.text, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'odstraněno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), f.fixText, (f.photos || []).length, (f.fixPhotos || []).length]));
+    const rows = [['Číslo', 'Firma', 'Závod / provozovna', 'Místo', 'Závada', 'Opatření', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Odstraněno', 'Způsob odstranění', 'Zdroj', 'Fotek závady', 'Fotek po opravě']];
+    findings.filter(inScope).forEach(f => rows.push([f.cislo, f.company, f.site, f.place, f.text, f.measure, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'odstraněno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), f.fixText, f.source === 'tydenni' ? 'týdenní kontrola' : 'kontrola', (f.photos || []).length, (f.fixPhotos || []).length]));
     offer(`zavady-bozp-${todayISO}.csv`, csv(rows));
   }
   async function copyProtocol() {
     const zc = $('#zCompany').value;
-    const open = findings.filter(f => f.status !== 'done' && (!zc || f.company === zc));
+    const open = findings.filter(f => f.status !== 'done' && inScope(f) && (!zc || f.company === zc));
     if (!open.length) { toast('Žádné otevřené závady k zkopírování.'); return; }
     const text = `Zjištěné nedostatky${zc ? ' – ' + zc : ''} (stav k ${fmt(todayISO)})\n\n` + open.map((f, i) =>
       `${i + 1}. ${f.text}\n   ${f.site ? 'Závod: ' + f.site + ' | ' : ''}Místo: ${f.place || '–'} | Závažnost: ${SEV[f.severity]} | Odpovídá: ${f.owner || '–'} | Termín nápravy: ${fmt(f.due)}`).join('\n\n');
@@ -1681,8 +1935,16 @@ body.locked .app { display: none; }
     $('#whoChip').hidden = !me;
     if (me) { $('#whoName').textContent = me.name; $('#whoRole').hidden = !admin; }
     $('#tab-uzivatele').hidden = !admin;
-    if (!admin && tab === 'uzivatele') setTab('prehled');
+    $('#tab-firmy').hidden = !admin;
+    if (!admin && (tab === 'uzivatele' || tab === 'firmy')) setTab('prehled');
+    if ((me ? me.id : null) !== scopeFor) {
+      scopeFor = me ? me.id : null;
+      scope = '';
+      if (me) { try { scope = localStorage.getItem('hlidac_scope_' + me.id) || ''; } catch (e) { /* */ } }
+      ['kFirm', 'fFirm'].forEach(id => { $('#' + id).value = ''; });
+    }
   }
+  let scopeFor = null;
 
   // throttle
   let fails = 0, lockUntil = 0;
@@ -1804,7 +2066,8 @@ body.locked .app { display: none; }
     const row = (a, acts) => `<div class="row user-row">
       <div class="pillcell"><span class="pill ${a.status === 'active' ? 'ok' : a.status === 'blocked' ? 'red' : 'amber'}">${a.role === 'admin' ? 'správce' : a.status === 'active' ? 'aktivní' : a.status === 'blocked' ? 'zablokovaný' : 'čeká'}</span></div>
       <div><div class="who">${esc(a.name)}<small>${esc(a.osc)}</small></div><div class="what">${esc(a.email || 'bez e-mailu')}</div>
-      <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}</div></div>
+      <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}</div>
+      ${a.role === 'admin' ? '<div class="site-chips"><span>všechny závody</span></div>' : `<div class="site-chips">${(a.sites || []).length ? a.sites.map(k => { const p = allPairs(true).find(x => x.key === k); return `<span>${esc(p ? p.label : k)}</span>`; }).join('') : '<span class="warn">bez přiřazeného závodu</span>'}</div>`}</div>
       <div class="acts">${acts}</div></div>`;
     $('#uPending').innerHTML = pend.length ? `<div class="list">${pend.map(a => row(a,
       `<button class="btn small primary" data-action="u-approve" data-id="${a.id}">${ic('check')}Schválit</button><button class="btn small danger" data-action="u-reject" data-id="${a.id}">${ic('trash')}Zamítnout</button>`)).join('')}</div>` : '<div class="empty">Žádná registrace nečeká.</div>';
@@ -1813,6 +2076,7 @@ body.locked .app { display: none; }
     const others = accounts.filter(a => a.status !== 'pending').sort((x, y) => (x.role === 'admin' ? -1 : y.role === 'admin' ? 1 : x.name.localeCompare(y.name, 'cs')));
     $('#uList').innerHTML = others.length ? `<div class="list">${others.map(a => row(a, a.role === 'admin' ? '' :
       `${a.status === 'blocked' ? `<button class="btn small" data-action="u-unblock" data-id="${a.id}">${ic('undo')}Odblokovat</button>` : `<button class="btn small" data-action="u-block" data-id="${a.id}">Zablokovat</button>`}
+       <button class="btn small primary" data-action="u-sites" data-id="${a.id}">${ic('factory')}Závody</button>
        ${a.email ? `<button class="btn small" data-action="u-code" data-id="${a.id}">${ic('mail')}Kód pro nové heslo</button>` : ''}
        <button class="btn small danger" data-action="u-delete" data-id="${a.id}">${ic('trash')}Smazat</button>`)).join('')}</div>` : '<div class="empty">Zatím žádní uživatelé.</div>';
   }
@@ -1820,12 +2084,14 @@ body.locked .app { display: none; }
     const a = accounts.find(x => x.id === id); if (!a || !me || me.role !== 'admin') return;
     if (action === 'u-approve') {
       await patch('ucty', id, { status: 'active', approvedAt: nowIso(), approvedBy: me.name });
-      toast(`${a.name} schválen(a).`);
+      toast(`${a.name} schválen(a). Vyber, které závody uvidí.`);
+      openSites(a);
       if (a.email) sendMail(a.email, 'Hlídač BOZP – účet schválen', 'Účet schválen', `<p style="margin:0 0 12px">Dobrý den, ${esc(a.name)},</p><p style="margin:0">tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlásíš se osobním číslem <b>${esc(a.osc)}</b> a svým heslem.</p>`, `Tvůj účet v aplikaci Hlídač BOZP byl schválen. Přihlas se osobním číslem ${a.osc}.`).catch(() => {});
     } else if (action === 'u-reject' || action === 'u-delete') {
       confirmTwice(btn, async () => { await del('ucty', id); toast('Účet odstraněn.'); }, action === 'u-reject' ? 'Opravdu zamítnout?' : 'Opravdu smazat?');
     } else if (action === 'u-block') { await patch('ucty', id, { status: 'blocked' }); toast('Účet zablokován.'); }
     else if (action === 'u-unblock') { await patch('ucty', id, { status: 'active' }); toast('Účet odblokován.'); }
+    else if (action === 'u-sites') openSites(a);
     else if (action === 'u-code') {
       if (!a.email) { toast('Účet nemá e-mail.'); return; }
       btn.disabled = true;
@@ -1834,6 +2100,539 @@ body.locked .app { display: none; }
       finally { btn.disabled = false; }
     }
   }
+
+  // ---------- přepínač v záložce Kontrola ----------
+  let kmode = 'zavada';
+  function setKMode(m) {
+    kmode = m;
+    document.querySelectorAll('[data-kmode]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.kmode === m)));
+    $('#weeklyView').hidden = m !== 'tydenni';
+    $('#findForm').hidden = m !== 'zavada';
+    try { localStorage.setItem('hlidac_kmode', m); } catch (e) { /* */ }
+    if (m === 'tydenni') renderWeekly();
+  }
+  document.querySelectorAll('[data-kmode]').forEach(b => b.addEventListener('click', () => setKMode(b.dataset.kmode)));
+
+  // ---------- týdenní kontrola · 08-01-SM-GŘ-Q10, Vnitřní kontroly (vedoucí pracoviště min. 1× týdně) ----------
+  const DEFAULT_Q = [
+    '# Pracoviště a pořádek',
+    'Komunikace, únikové cesty a nouzové východy jsou volné a označené',
+    'Na pracovišti je pořádek, materiál je uložen stabilně a bezpečně',
+    'Podlahy jsou bez nerovností a skluzu, otvory a jámy jsou zakryté nebo ohrazené',
+    'Osvětlení pracoviště je funkční a dostatečné',
+    '# Stroje a zařízení',
+    'Ochranné kryty a bezpečnostní prvky strojů jsou na místě a funkční',
+    'Tlačítka nouzového zastavení jsou přístupná a funkční',
+    'Elektrická zařízení, kabely a rozvaděče jsou bez poškození, rozvaděče jsou uzavřené',
+    'Zdvihací zařízení a vázací prostředky jsou nepoškozené a označené',
+    'Regály a žebříky jsou bez poškození, regály mají označenou nosnost',
+    '# Zaměstnanci a OOPP',
+    'Zaměstnanci používají předepsané OOPP',
+    'Práce probíhá podle pracovních postupů a MPBP, včetně LOTO a povolení k práci tam, kde se vyžadují',
+    'Nikdo nejeví známky ovlivnění alkoholem nebo návykovými látkami',
+    '# Doprava a manipulace',
+    'Provoz VZV a manipulační techniky je bezpečný, vozíky mají provedenou denní kontrolu',
+    'Dopravní značení a vyznačení komunikací je čitelné',
+    '# Požární ochrana, první pomoc a chemie',
+    'Hasicí přístroje a hydranty jsou přístupné, označené a s platnou kontrolou',
+    'Lékárnička je dostupná a vybavená',
+    'Chemické látky jsou označené a správně uložené, bezpečnostní listy jsou k dispozici',
+    '# Značení a dokumentace',
+    'Bezpečnostní značení a výstražné tabulky jsou na místě a čitelné',
+    'Místní provozní bezpečnostní předpisy a návody jsou na pracovišti k dispozici',
+  ].join('\n');
+  const W_START = '2026-10-05'; // od tohoto týdne aplikace eviduje týdenní kontroly; starší týdny se nepočítají jako zmeškané
+  const qText = () => (qDoc && qDoc.text) || DEFAULT_Q;
+  function parseQ(text) {
+    const groups = []; let g = null, n = 0;
+    String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
+      if (l.startsWith('#')) { g = { title: l.replace(/^#+\s*/, ''), items: [] }; groups.push(g); return; }
+      if (!g) { g = { title: 'Kontrola', items: [] }; groups.push(g); }
+      n++; g.items.push({ id: 'q' + n, n, text: l });
+    });
+    return groups.filter(x => x.items.length);
+  }
+  function weekStart(iso) { const { y, m, d } = parseISO(iso); return addDays(iso, -((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7)); }
+  function isoWeek(iso) {
+    const { y, m, d } = parseISO(iso);
+    const t = new Date(Date.UTC(y, m - 1, d)); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3);
+    const f = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    const w = 1 + Math.round(((t - f) / 864e5 - 3 + ((f.getUTCDay() + 6) % 7)) / 7);
+    return `${t.getUTCFullYear()}-T${pad(w)}`;
+  }
+  const weekNo = iso => Number(isoWeek(iso).slice(-2));
+  const keyOfCheck = k => k.key || keyOf(k.company, k.site);
+  const weeklyPairs = () => visPairs().filter(p => p.site && (!scope || p.key === scope));
+  const tracked = p => { const d = sites.find(x => x.id === p.key); return !d || d.weekly !== false; };
+
+  function renderWeekly() {
+    if (!me) return;
+    const ws = weekStart(todayISO), we = addDays(ws, 6), dow = daysUntil(ws) * -1;
+    $('#wWeekHint').textContent = `týden ${weekNo(todayISO)} · ${fmt(ws).replace(/ \d{4}$/, '')} – ${fmt(we)}`;
+    const pairs = weeklyPairs(), on = pairs.filter(tracked), off = pairs.filter(p => !tracked(p));
+    const weeks = Array.from({ length: 8 }, (_, i) => addDays(ws, -7 * (7 - i)));
+    $('#wBoard').innerHTML = on.length ? on.map(p => {
+      const ks = checks.filter(k => keyOfCheck(k) === p.key).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const thisW = ks.find(k => k.date >= ws && k.date <= we);
+      const cls = thisW ? 'ok' : dow >= 4 ? 'red' : 'amber';
+      const pill = thisW ? `<span class="pill ok">Hotovo ${fmt(thisW.date)}</span>` : dow >= 4 ? '<span class="pill red">Tento týden chybí</span>' : '<span class="pill amber">Čeká na kontrolu</span>';
+      const missed = weeks.slice(0, 7).filter(w => w >= weekStart(W_START) && !ks.some(k => k.date >= w && k.date <= addDays(w, 6))).length;
+      const openF = findings.filter(f => f.status !== 'done' && keyOf(f.company, f.site) === p.key);
+      const lateF = openF.filter(f => f.due && daysUntil(f.due) < 0);
+      const bars = weeks.map(w => {
+        const done = ks.some(k => k.date >= w && k.date <= addDays(w, 6));
+        const c = done ? 'ok' : w === ws || w < weekStart(W_START) ? '' : 'miss';
+        return `<i class="${c}${w === ws ? ' now' : ''}" title="Týden ${weekNo(w)}: ${done ? 'provedeno' : w === ws ? 'probíhá' : w < weekStart(W_START) ? 'před zavedením' : 'chybí'}"></i>`;
+      }).join('');
+      return `<article class="wk-card ${cls}">
+        <h3>${ic('factory')}${esc(p.site)} <small>${esc(p.company)}</small></h3>
+        <div>${pill}</div>
+        <div><div class="weeks">${bars}</div><div class="weeks-lbl"><span>t. ${weekNo(weeks[0])}</span><span>t. ${weekNo(ws)}</span></div></div>
+        <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím žádná kontrola'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''}</div>
+        <div class="meta">Otevřené závady ${openF.length}${lateF.length ? ` · <b style="color:var(--red)">po termínu ${lateF.length}</b>` : ''}</div>
+        <div class="form-actions"><button class="btn primary" data-action="w-start" data-id="${esc(p.key)}">${ic('check')}${thisW ? 'Další kontrola' : 'Provést kontrolu'}</button>${isAdmin() && sites.some(x => x.id === p.key) ? `<button class="btn small" data-action="w-track" data-id="${esc(p.key)}" data-on="0" title="Závod nebude v přehledu týdenních kontrol">Nesledovat</button>` : ''}</div>
+      </article>`;
+    }).join('') : `<div class="empty">${pairs.length ? 'Všechny závody jsou vypnuté ze sledování.' : isAdmin() ? 'Zatím žádný závod. Založ ho v záložce Firmy.' : 'Nemáš přiřazený žádný závod.'}</div>`;
+    $('#wHidden').innerHTML = off.length ? `<p class="small-note">Nesledované závody: ${off.map(p => `${esc(p.label)} <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="1">zapnout</button>`).join(' · ')}</p>` : '';
+    if (isAdmin()) $('#wHidden').innerHTML += `<div class="toolbar"><button class="btn small" data-action="w-q-edit">${ic('edit')}Upravit kontrolní otázky</button></div>`;
+    // historie
+    const hist = checks.filter(k => inScope(k)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30);
+    $('#wHistory').innerHTML = hist.length ? `<div class="list">${hist.map(k => `<div class="row">
+      <div class="pillcell"><span class="pill ${k.nok ? 'red' : 'ok'}">${k.nok ? `${k.nok}× nevyhovuje` : 'Bez závad'}</span></div>
+      <div><div class="who">${esc(pairLabel(k.company, k.site))}${k.place ? ' · ' + esc(k.place) : ''}</div>
+      <div class="what">Provedl ${esc(k.by || '–')} · ${k.ok || 0}× v pořádku${k.na ? ` · ${k.na}× netýká se` : ''}</div>
+      <div class="when">${fmt(k.date)} · týden ${weekNo(k.date)}</div></div>
+      <div class="acts"><button class="btn small" data-action="w-detail" data-id="${k.id}">Detail</button><button class="btn small" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol</button>${isAdmin() ? `<button class="btn small danger icon-only" data-action="w-del" data-id="${k.id}" aria-label="Smazat kontrolu" title="Smazat">${ic('trash')}</button>` : ''}</div>
+    </div>`).join('')}</div>` : '<div class="empty">Zatím žádná týdenní kontrola.</div>';
+  }
+
+  // vyplňování kontroly
+  let wq = null; // { groups, answers, fail, photos }
+  const wDraftKey = () => 'hlidac_wdraft_' + (me ? me.id : '');
+  function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ key: $('#wSite').value, place: $('#wPlace').value, answers: wq.answers, fail: wq.fail, note: $('#wNote').value, text: qText() })); } catch (e) { /* */ } }
+  function startWeekly(key) {
+    const pairs = weeklyPairs();
+    if (!pairs.length) { toast('Nemáš přiřazený žádný závod.'); return; }
+    $('#wSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
+    $('#wSite').value = pairs.some(p => p.key === key) ? key : pairs[0].key;
+    $('#wDate').value = todayISO; $('#wDate').max = todayISO;
+    $('#wBy').value = me ? me.name : '';
+    $('#wPlace').value = ''; $('#wNote').value = ''; $('#wStatus').textContent = '';
+    wq = { groups: parseQ(qText()), answers: {}, fail: {}, photos: {} };
+    try {
+      const d = JSON.parse(localStorage.getItem(wDraftKey()) || 'null');
+      if (d && d.key === $('#wSite').value && d.text === qText() && Object.keys(d.answers || {}).length) {
+        wq.answers = d.answers || {}; wq.fail = d.fail || {}; $('#wPlace').value = d.place || ''; $('#wNote').value = d.note || '';
+        $('#wStatus').textContent = 'Pokračuješ v rozpracované kontrole (bez fotek, ty přidej znovu).';
+      }
+    } catch (e) { /* */ }
+    wSiteChanged();
+    $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
+    renderQuestions();
+    window.scrollTo(0, 0);
+  }
+  function wPair() { return allPairs(true).find(p => p.key === $('#wSite').value); }
+  function wSiteChanged() {
+    const p = wPair(); if (!p) return;
+    $('#wFormTitle').textContent = 'Kontrola · ' + p.site;
+    $('#wFormHint').textContent = 'týden ' + weekNo($('#wDate').value || todayISO);
+    $('#wPlaceDl').innerHTML = placesOf(p.company, p.site).map(x => `<option value="${esc(x)}">`).join('');
+  }
+  $('#wSite').addEventListener('change', wSiteChanged);
+  $('#wDate').addEventListener('change', wSiteChanged);
+  function closeWeekly() {
+    if (wq) Object.values(wq.photos).flat().forEach(p => URL.revokeObjectURL(p.url));
+    wq = null;
+    $('#wForm').hidden = true; $('#wBoardSec').hidden = false; $('#wHistSec').hidden = false;
+    renderWeekly(); window.scrollTo(0, 0);
+  }
+  function qRow(q) {
+    const a = wq.answers[q.id], f = wq.fail[q.id] || {}, p = wPair();
+    const btn = (v, cls, label, icon) => `<button type="button" class="${cls}" data-action="w-ans" data-q="${q.id}" data-v="${v}" aria-pressed="${a === v}" aria-label="${label}" title="${label}">${icon}</button>`;
+    const fail = a === 'nok' ? `<div class="qfail">
+      <div class="field wide"><label for="wf-text-${q.id}">Co nevyhovuje</label><textarea id="wf-text-${q.id}" data-wf="text" data-q="${q.id}" placeholder="${esc(q.text)}">${esc(f.text || '')}</textarea></div>
+      <div class="field wide"><label for="wf-measure-${q.id}">Opatření</label><input type="text" id="wf-measure-${q.id}" data-wf="measure" data-q="${q.id}" value="${esc(f.measure || '')}" placeholder="nepovinné"></div>
+      <div class="field wide"><span class="label">Fotky</span><label class="photo-drop"><input type="file" accept="image/*" multiple data-wphoto="${q.id}">${ic('alert').replace('class="ic"', 'class="ic" style="color:var(--brand)"')}<span>Vyfotit závadu</span></label>
+        <div class="thumbs">${(wq.photos[q.id] || []).map((x, i) => `<button type="button" class="pending" data-action="w-drop" data-q="${q.id}" data-i="${i}" aria-label="Odebrat fotku"><img src="${x.url}" alt=""><span>×</span></button>`).join('')}</div></div>
+      <div class="field"><span class="label">Závažnost</span><div class="seg mini">${['vysoka', 'stredni', 'nizka'].map(v => `<label class="${v === 'vysoka' ? 'v' : v === 'stredni' ? 's' : ''}"><input type="radio" name="wsev-${q.id}" value="${v}" data-wf="sev" data-q="${q.id}" ${(f.sev || 'stredni') === v ? 'checked' : ''}><span>${SEV[v]}</span></label>`).join('')}</div></div>
+      <div class="field"><label for="wf-due-${q.id}">Termín nápravy</label><input type="date" id="wf-due-${q.id}" data-wf="due" data-q="${q.id}" value="${esc(f.due || addDays(todayISO, 14))}"></div>
+      <div class="field"><label for="wf-owner-${q.id}">Odpovídá</label><input type="text" id="wf-owner-${q.id}" data-wf="owner" data-q="${q.id}" list="wOwnerDl" value="${esc(f.owner || '')}" placeholder="např. mistr výroby"></div>
+      <div class="field"><label for="wf-place-${q.id}">Místo</label><input type="text" id="wf-place-${q.id}" data-wf="place" data-q="${q.id}" list="wPlaceDl" value="${esc(f.place || '')}" placeholder="${esc($('#wPlace').value || 'nepovinné')}"></div>
+    </div>` : '';
+    return `<div class="q ${a || ''}" id="row-${q.id}"><div class="qt"><b>${q.n}.</b>${esc(q.text)}</div>
+      <div class="ans" role="group" aria-label="Odpověď">${btn('ok', 'a-ok', 'V pořádku', ic('check') + '<span>OK</span>')}${btn('nok', 'a-nok', 'Nevyhovuje', '✗<span>Závada</span>')}${btn('na', 'a-na', 'Netýká se', '–')}</div>${fail}</div>`;
+  }
+  function renderQuestions() {
+    const p = wPair();
+    $('#wQuestions').innerHTML = wq.groups.map(g => `<div class="qgroup"><h4>${esc(g.title)}</h4>${g.items.map(qRow).join('')}</div>`).join('') +
+      `<datalist id="wOwnerDl">${p ? ownersOf(p.company).map(o => `<option value="${esc(o)}">`).join('') : ''}</datalist>`;
+    wProgress();
+  }
+  function wProgress() {
+    const all = wq.groups.flatMap(g => g.items), vals = all.map(q => wq.answers[q.id]);
+    const done = vals.filter(Boolean).length, ok = vals.filter(v => v === 'ok').length, nok = vals.filter(v => v === 'nok').length, na = vals.filter(v => v === 'na').length;
+    $('#wProgText').textContent = `${done} z ${all.length} otázek`;
+    $('#wProgRes').textContent = `✓ ${ok} · ✗ ${nok} · – ${na}`;
+    $('#wProgBar').style.width = (all.length ? (done / all.length) * 100 : 0) + '%';
+    const left = all.length - done;
+    $('#wSave').textContent = left ? `Zbývá ${left} ${left === 1 ? 'otázka' : left < 5 ? 'otázky' : 'otázek'}` : nok ? `Uložit kontrolu a ${nok} ${nok === 1 ? 'závadu' : nok < 5 ? 'závady' : 'závad'}` : 'Uložit kontrolu';
+  }
+  $('#wQuestions').addEventListener('input', e => {
+    const t = e.target; if (!t.dataset.wf || !wq) return;
+    (wq.fail[t.dataset.q] = wq.fail[t.dataset.q] || {})[t.dataset.wf] = t.value;
+    saveDraft();
+  });
+  $('#wQuestions').addEventListener('change', async e => {
+    const t = e.target;
+    if (t.dataset.wf === 'sev' && wq) { (wq.fail[t.dataset.q] = wq.fail[t.dataset.q] || {}).sev = t.value; saveDraft(); return; }
+    if (!t.dataset.wphoto || !wq) return;
+    const qid = t.dataset.wphoto, files = [...t.files]; t.value = '';
+    for (const f of files) { try { const blob = await compress(f); if (blob) (wq.photos[qid] = wq.photos[qid] || []).push({ blob, url: URL.createObjectURL(blob) }); } catch (err) { toast('Fotku se nepodařilo načíst.'); } }
+    const row = $('#row-' + qid); if (row) row.outerHTML = qRow(wq.groups.flatMap(g => g.items).find(q => q.id === qid));
+  });
+  $('#wNote').addEventListener('input', () => wq && saveDraft());
+  $('#wForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!wq) return;
+    const st = $('#wStatus'), btn = $('#wSave'), p = wPair();
+    const all = wq.groups.flatMap(g => g.items.map(q => ({ ...q, g: g.title })));
+    const missing = all.find(q => !wq.answers[q.id]);
+    if (missing) { const r = $('#row-' + missing.id); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); st.textContent = 'Odpověz na všechny otázky (OK, Závada nebo Netýká se).'; return; }
+    if (!p || !allowed(p)) { st.textContent = 'K tomuto závodu nemáš přístup.'; return; }
+    const date = $('#wDate').value || todayISO;
+    if (date > todayISO) { st.textContent = 'Datum kontroly nemůže být v budoucnu.'; return; }
+    const by = $('#wBy').value.trim() || (me ? me.name : '');
+    const place = $('#wPlace').value.trim();
+    btn.disabled = true; st.textContent = '';
+    const kid = newId(), items = [], fIds = [];
+    try {
+      await ensureEntities({ firm: p.company, site: p.site, place });
+      for (const q of all) {
+        const a = wq.answers[q.id], f = wq.fail[q.id] || {};
+        let fid = '';
+        if (a === 'nok') {
+          const ids = [], ph = wq.photos[q.id] || [];
+          if (assets) for (let i = 0; i < ph.length; i++) { btn.textContent = `Nahrávám fotku k otázce ${q.n}…`; ids.push((await assets.upload(ph[i].blob, { type: 'image/jpeg' })).id); }
+          fid = newId();
+          const fplace = (f.place || '').trim() || place;
+          if (fplace && fplace !== place) await ensureEntities({ firm: p.company, site: p.site, place: fplace });
+          btn.textContent = 'Ukládám závady…';
+          await put('zavady', fid, {
+            company: p.company, site: p.site, place: fplace, text: (f.text || '').trim() || 'Nevyhovuje: ' + q.text, measure: (f.measure || '').trim(),
+            severity: f.sev || 'stredni', owner: (f.owner || '').trim(), due: f.due || addDays(todayISO, 14), status: 'open', photos: ids,
+            createdAt: date, doneAt: '', source: 'tydenni', kontrolaId: kid,
+          });
+          fIds.push(fid);
+        }
+        items.push({ g: q.g, text: q.text, a, note: a === 'nok' ? (f.text || '').trim() : '', findingId: fid });
+      }
+      btn.textContent = 'Ukládám kontrolu…';
+      const cnt = v => items.filter(i => i.a === v).length;
+      await put('kontroly', kid, { company: p.company, site: p.site, key: p.key, place, date, week: isoWeek(date), by, byId: me ? me.id : '', items, ok: cnt('ok'), nok: cnt('nok'), na: cnt('na'), note: $('#wNote').value.trim(), findingIds: fIds, createdAt: nowIso() });
+      try { localStorage.removeItem(wDraftKey()); } catch (err) { /* */ }
+      toast(fIds.length ? `Kontrola uložena, ${fIds.length}× závada v záložce Závady.` : 'Kontrola uložena. Bez závad.');
+      closeWeekly();
+    } catch (err) {
+      const c = err && err.code;
+      st.textContent = c === 'too_large' ? 'Fotka je příliš velká.' : c === 'quota_or_state' ? 'Úložiště fotek je plné.' : c === 'rate_limited' ? 'Moc rychle za sebou, zkus to za chvíli.' : 'Uložení se nepovedlo. Zkus to znovu' + (fIds.length ? ` (už uložené závady: ${fIds.length}).` : '.');
+    } finally { btn.disabled = false; if (wq) wProgress(); }
+  });
+  function showCheck(k) {
+    $('#wdTitle').textContent = `Týdenní kontrola · ${pairLabel(k.company, k.site)}`;
+    $('#wdMeta').textContent = `${fmt(k.date)} · týden ${weekNo(k.date)} · provedl ${k.by || '–'}${k.place ? ' · ' + k.place : ''}${k.note ? ' · ' + k.note : ''}`;
+    let g = null;
+    $('#wdBody').innerHTML = (k.items || []).map(i => {
+      const head = i.g !== g ? `<div class="grp">${esc((g = i.g))}</div>` : '';
+      const mark = i.a === 'ok' ? '<b style="color:var(--ok)">✓</b>' : i.a === 'nok' ? '<b style="color:var(--red)">✗</b>' : '<b class="muted">–</b>';
+      return head + `<label style="cursor:default">${mark}<span>${esc(i.text)}</span>${i.note ? `<small>${esc(i.note)}</small>` : ''}</label>`;
+    }).join('');
+    $('#wdActs').innerHTML = `<button class="btn primary" data-action="w-proto" data-id="${k.id}">${ic('download')}Protokol ZQ-10-01</button><button class="btn" data-action="close-wd">Zavřít</button>`;
+    $('#wDetailModal').hidden = false;
+  }
+  $('#wQEdit').addEventListener('submit', async e => {
+    e.preventDefault();
+    const text = $('#wQText').value.trim();
+    if (!parseQ(text).length) { toast('Zadej aspoň jednu otázku.'); return; }
+    const doc = { text, updatedAt: nowIso(), by: me ? me.name : '' };
+    try { if (db) await db.doc('system/kontrolni-otazky').set(doc); else qDoc = doc; toast('Otázky uloženy.'); $('#wQEdit').hidden = true; renderWeekly(); }
+    catch (err) { handleWriteError(err); }
+  });
+
+  // ---------- protokol ZQ-10-01 (Word) ----------
+  const PROTO_WORK = 'Proběhla kontrola areálu závodu a pracovišť (výrobních hal) a provozní dokumentace při pravidelné prohlídce pracoviště a dostupnost dokumentace na jednotlivých pracovištích, včetně technických prostředků PO.';
+  let protoCtx = null;
+  const seqOf = s => Number(String(s || '').split('/')[0]) || 0;
+  function nextProtoNo(key, year) {
+    const n = Math.max(0, ...protocols.filter(p => p.key === key && Number(p.year) === year).map(p => Number(p.seq) || 0));
+    return `${pad(n + 1)}/${year}`;
+  }
+  function managersOf(key) { return accounts.filter(a => a.role !== 'admin' && a.status === 'active' && (a.sites || []).includes(key)).map(a => a.name).join(', '); }
+  function openProto(opts = {}) {
+    const pairs = visPairs();
+    if (!pairs.length) { toast('Nemáš přiřazený žádný závod.'); return; }
+    const chk = opts.checkId ? checks.find(k => k.id === opts.checkId) : null;
+    const prev = opts.protoId ? protocols.find(p => p.id === opts.protoId) : null;
+    protoCtx = { checkId: chk ? chk.id : '', protoId: prev ? prev.id : '', preset: chk ? chk.findingIds || [] : prev ? prev.findingIds || [] : null };
+    const key = chk ? keyOfCheck(chk) : prev ? prev.key : (scope || ($('#zCompany').value ? (pairs.find(p => p.company === $('#zCompany').value) || {}).key : '') || pairs.find(p => p.site) && pairs.find(p => p.site).key || pairs[0].key);
+    $('#pSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
+    $('#pSite').value = pairs.some(p => p.key === key) ? key : pairs[0].key;
+    $('#pDate').value = chk ? chk.date : prev ? prev.date : todayISO;
+    $('#pBy').value = chk ? chk.by || '' : prev ? prev.by || '' : me ? me.name : '';
+    $('#pTo').value = prev ? prev.to || '' : '';
+    $('#pWork').value = prev ? prev.work || PROTO_WORK : chk && chk.place ? `Proběhla týdenní kontrola pracoviště ${chk.place} podle kontrolních otázek.` : chk ? 'Proběhla týdenní kontrola pracovišť závodu podle kontrolních otázek.' : PROTO_WORK;
+    $('#pStatus').textContent = '';
+    protoSiteChanged(prev);
+    $('#protoModal').hidden = false;
+  }
+  function protoSiteChanged(prev) {
+    const key = $('#pSite').value, d = sites.find(x => x.id === key) || {};
+    const year = Number(($('#pDate').value || todayISO).slice(0, 4));
+    $('#pNo').value = prev ? prev.number : nextProtoNo(key, year);
+    $('#pAddr').value = prev ? prev.addr || '' : d.address || '';
+    $('#pMgr').value = prev ? prev.mgr || '' : d.manager || managersOf(key);
+    $('#pFor').value = prev ? prev.forPlant || '' : d.forPlant || '';
+    renderProtoFindings();
+  }
+  function protoFindings() {
+    const key = $('#pSite').value;
+    return findings.filter(f => keyOf(f.company, f.site) === key && allowed(f))
+      .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
+  }
+  function renderProtoFindings() {
+    const list = protoFindings(), pre = protoCtx && protoCtx.preset;
+    $('#pFindLbl').textContent = `Zjištěné nedostatky · ${list.length ? 'vyber, co dát do protokolu' : 'v závodě nejsou žádné závady'}`;
+    $('#pFindings').innerHTML = list.length ? list.map(f => `<label><input type="checkbox" value="${f.id}" ${(pre ? pre.includes(f.id) : f.status !== 'done') ? 'checked' : ''}>
+      <span>${f.cislo ? `<b>${esc(f.cislo)}</b> · ` : ''}${esc(f.text)}</span>
+      <small>${f.status === 'done' ? 'odstraněno ' + fmt(f.doneAt) : 'náprava do ' + fmt(f.due)}${f.place ? ' · ' + esc(f.place) : ''}${(f.photos || []).length ? ` · fotek ${(f.photos || []).length}` : ''}</small></label>`).join('')
+      : '<div class="grp">Protokol bude s textem „Bez zjištěných nedostatků“.</div>';
+  }
+  $('#pSite').addEventListener('change', () => { if (protoCtx) protoCtx.preset = null; protoSiteChanged(); });
+  $('#pDate').addEventListener('change', () => { if (!protoCtx || !protoCtx.protoId) $('#pNo').value = nextProtoNo($('#pSite').value, Number(($('#pDate').value || todayISO).slice(0, 4))); });
+
+  async function photoBytes(id) {
+    const r = await fetch('/_blob/' + encodeURIComponent(id));
+    if (!r.ok) throw new Error('foto');
+    const bmp = await createImageBitmap(await r.blob());
+    const s = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+    return { data: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height };
+  }
+  function logoBytes() {
+    const src = document.querySelector('.brand-logo').src;
+    return Uint8Array.from(atob(src.split(',')[1]), c => c.charCodeAt(0));
+  }
+  const ddmm = iso => { const { y, m, d } = parseISO(iso); return `${pad(d)}.${pad(m)}.${y}`; };
+
+  $('#protoForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const st = $('#pStatus'), btn = $('#pSave'), key = $('#pSite').value;
+    const pair = allPairs(true).find(p => p.key === key);
+    if (!pair || !allowed(pair)) { st.textContent = 'K tomuto závodu nemáš přístup.'; return; }
+    const date = $('#pDate').value || todayISO, year = Number(date.slice(0, 4));
+    const number = $('#pNo').value.trim() || nextProtoNo(key, year);
+    const ids = new Set([...document.querySelectorAll('#pFindings input:checked')].map(x => x.value));
+    const sel = protoFindings().filter(f => ids.has(f.id));
+    // čísla závad xx/rrrr – stálá, přidělí se při prvním zařazení do protokolu
+    let maxNo = Math.max(0, ...findings.filter(f => keyOf(f.company, f.site) === key && String(f.cislo || '').endsWith('/' + year)).map(f => seqOf(f.cislo)));
+    const nums = new Map(sel.map(f => [f.id, f.cislo || `${pad(++maxNo)}/${year}`]));
+    btn.disabled = true; st.textContent = 'Připravuji fotky…';
+    try {
+      const media = [];
+      const rows = [];
+      for (const f of sel) {
+        const pics = [], fix = [];
+        for (const pid of (f.photos || []).slice(0, 4)) { try { pics.push(await photoBytes(pid)); } catch (err) { /* chybějící fotka */ } }
+        if (f.status === 'done') for (const pid of (f.fixPhotos || []).slice(0, 2)) { try { fix.push(await photoBytes(pid)); } catch (err) { /* */ } }
+        rows.push({ f, no: nums.get(f.id), pics, fix });
+      }
+      st.textContent = 'Skládám dokument…';
+      const blob = buildProtocolDocx({
+        number, date: ddmm(date), plant: pair.site || pair.company, company: pair.company, addr: $('#pAddr').value.trim(), mgr: $('#pMgr').value.trim(),
+        by: $('#pBy').value.trim(), forPlant: $('#pFor').value.trim(), to: $('#pTo').value.trim(), work: $('#pWork').value.trim(), rows, logo: logoBytes(), author: me ? me.name : '',
+      });
+      const fname = `ZQ-10-01_Protokol_${number.replace('/', '-')}_${slug(pair.site || pair.company)}.docx`;
+      st.textContent = 'Ukládám soubor…';
+      if (downloads) {
+        try { await downloads.save({ filename: fname, data: blob }); }
+        catch (err) { if (err && err.code === 'declined') { st.textContent = 'Stažení zrušeno.'; return; } throw err; }
+      } else { st.textContent = 'Stahování souborů funguje jen v aplikaci otevřené přes claude.ai.'; return; }
+      // evidence: číslo protokolu, čísla závad, údaje závodu
+      try {
+        const rec = { key, company: pair.company, site: pair.site, number, seq: seqOf(number), year, date, by: $('#pBy').value.trim(), to: $('#pTo').value.trim(), addr: $('#pAddr').value.trim(), mgr: $('#pMgr').value.trim(), forPlant: $('#pFor').value.trim(), work: $('#pWork').value.trim(), findingIds: sel.map(f => f.id), checkId: protoCtx ? protoCtx.checkId : '', createdBy: me ? me.name : '', createdAt: nowIso() };
+        await put('protokoly', protoCtx && protoCtx.protoId ? protoCtx.protoId : newId(), rec);
+        for (const f of sel) if (!f.cislo) await patch('zavady', f.id, { cislo: nums.get(f.id) });
+        const d = sites.find(x => x.id === key);
+        if (pair.site && (!d || d.address !== rec.addr || d.manager !== rec.mgr || d.forPlant !== rec.forPlant)) await put('provozovny', key, { ...(d ? strip(d) : { firmId: slug(pair.company), firm: pair.company, name: pair.site }), address: rec.addr, manager: rec.mgr, forPlant: rec.forPlant });
+      } catch (err) { /* soubor už je stažený; evidenci lze zopakovat */ }
+      $('#protoModal').hidden = true;
+      toast(`Protokol ${number} připraven.`);
+    } catch (err) {
+      const c = err && err.code;
+      st.textContent = c === 'rejected_extension' || c === 'extension_not_enabled' ? 'Stažení Word souboru tu není povolené.' : c === 'rate_limited' ? 'Počkej chvilku a zkus to znovu.' : 'Protokol se nepodařilo vytvořit. Zkus to znovu.';
+    } finally { btn.disabled = false; }
+  });
+  function renderProtoList() {
+    const list = protocols.filter(p => inScope(p)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 6);
+    $('#protoList').innerHTML = list.length ? `<div class="list">${list.map(p => `<div class="row">
+      <div class="pillcell"><span class="pill">Protokol ${esc(p.number)}</span></div>
+      <div><div class="who">${esc(pairLabel(p.company, p.site))}</div><div class="what">Provedl ${esc(p.by || '–')} · zjištění ${(p.findingIds || []).length}</div><div class="when">${fmt(p.date)}</div></div>
+      <div class="acts"><button class="btn small" data-action="p-again" data-id="${p.id}">${ic('download')}Stáhnout znovu</button></div></div>`).join('')}</div>` : '';
+  }
+
+  // ---------- DOCX: skládání WordprocessingML + ZIP bez komprese ----------
+  const X = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  function wr(text, o = {}) {
+    const sz = o.sz || 24;
+    const rp = `<w:rPr>${o.font ? `<w:rFonts w:ascii="${o.font}" w:hAnsi="${o.font}" w:cs="${o.font}" w:eastAsia="${o.font}"/>` : ''}${o.b ? '<w:b/><w:bCs/>' : ''}${o.i ? '<w:i/><w:iCs/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr>`;
+    return String(text ?? '').split('\n').map((t, i) => `<w:r>${rp}${i ? '<w:br/>' : ''}<w:t xml:space="preserve">${X(t)}</w:t></w:r>`).join('');
+  }
+  const wp = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.tabs ? `<w:tabs>${o.tabs.map(t => `<w:tab w:val="left" w:pos="${t}"/>`).join('')}</w:tabs>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after || 0}"/>${o.jc ? `<w:jc w:val="${o.jc}"/>` : ''}</w:pPr>${runs || ''}</w:p>`;
+  function wimg(rid, n, cx, cy) {
+    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${n}" name="Obrázek ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="obrazek${n}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+  }
+  const BORDER = '<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tcBorders>';
+  const tc = (w, body, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span ? `<w:gridSpan w:val="${o.span}"/>` : ''}${BORDER}${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}</w:tcPr>${body}</w:tc>`;
+  function buildProtocolDocx(d) {
+    const A = { font: 'Aptos', sz: 22 }, files = [], rels = [];
+    let n = 10;
+    const DOTS = '……………………………………';
+    const C1 = 2950, C2 = 6122, CELL_EMU = (C2 - 216) * 635;
+    const addPic = p => { const id = 'rIdP' + (++n); files.push({ name: `word/media/foto${n}.jpeg`, data: p.data }); rels.push(`<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/foto${n}.jpeg"/>`); return id; };
+    const picsPara = (list, label) => {
+      if (!list.length) return '';
+      const two = list.length > 1, maxW = two ? Math.floor((CELL_EMU - 120000) / 2) : CELL_EMU, maxH = two ? 2500000 : 3600000;
+      const img = p => {
+        let cx = maxW, cy = Math.round(maxW * p.h / p.w);
+        if (cy > maxH) { cy = maxH; cx = Math.round(maxH * p.w / p.h); }
+        return wimg(addPic(p), n, cx, cy);
+      };
+      let out = label ? wp(wr(label, { ...A, b: true, color: '2B7355' }), { before: 120, after: 40 }) : '';
+      for (let i = 0; i < list.length; i += two ? 2 : 1) {
+        out += wp(list.slice(i, i + (two ? 2 : 1)).map((p, j) => (j ? '<w:r><w:t xml:space="preserve">  </w:t></w:r>' : '') + img(p)).join(''), { jc: 'center', before: 60, after: 60 });
+      }
+      return out;
+    };
+    const label = (t, v) => wp(wr(t, { b: true }) + wr(v || DOTS));
+    let body = '';
+    body += wp(wr(`PROTOKOL ${d.number}`, { b: true, sz: 28 }), { jc: 'center' });
+    body += wp(wr('o provedené kontrole pracoviště v oblasti BOZP a PO', { b: true }), { jc: 'center' });
+    body += wp(wr(`dne ${d.date}`, { b: true }), { jc: 'center' });
+    body += wp('') + wp('');
+    body += label('Závod: ', d.plant + (d.company && d.company !== d.plant ? ` (${d.company})` : ''));
+    body += label('Sídlo závodu: ', d.addr);
+    body += label('Zodpovědný vedoucí: ', d.mgr);
+    body += label('Kontrolu provedl: ', d.by);
+    body += label(`Za závod ${d.plant}: `, d.forPlant);
+    body += wp('');
+    body += wp(wr('Pracoviště:', { b: true }));
+    body += wp(wr(d.work), { jc: 'both' });
+    body += wp('');
+    body += wp(wr('Zjištěné nedostatky:', { b: true }), { keep: true, after: 120 });
+    let tbl = `<w:tbl><w:tblPr><w:tblW w:w="${C1 + C2}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${C1}"/><w:gridCol w:w="${C2}"/></w:tblGrid>`;
+    tbl += `<w:tr><w:trPr><w:tblHeader/></w:trPr>${tc(C1 + C2, wp(wr('Nová zjištění', { font: 'Aptos', b: true })), { span: 2, fill: 'D9D9D9' })}</w:tr>`;
+    tbl += `<w:tr><w:trPr><w:tblHeader/></w:trPr>${tc(C1, wp(wr('Popis nálezu', { ...A, b: true }), { jc: 'center' }))}${tc(C2, wp(wr('Fotodokumentace', { ...A, b: true }), { jc: 'center' }))}</w:tr>`;
+    if (!d.rows.length) tbl += `<w:tr>${tc(C1 + C2, wp(wr('Při kontrole nebyly zjištěny nedostatky.', A), { before: 120, after: 120 }), { span: 2 })}</w:tr>`;
+    d.rows.forEach(({ f, no, pics, fix }) => {
+      let left = '';
+      left += wp(wr('Místo: ', { ...A, b: true }) + wr(f.place || (f.site || ''), A));
+      left += wp(wr(`Závada ${no}`, { ...A, b: true, color: 'FF0000' }));
+      left += wp(wr(f.text, { ...A, color: 'FF0000' }));
+      left += wp('');
+      left += wp(wr('Opatření :', { ...A, b: true }));
+      left += wp(wr(f.measure || '', A));
+      left += wp('');
+      left += wp(wr('Termín odstranění:', { ...A, b: true }));
+      left += wp(wr(f.due ? ddmm(f.due) : '', A));
+      left += wp('');
+      left += wp(wr('Odpovědná osoba:', { ...A, b: true }));
+      left += wp(wr(f.owner || '', A));
+      if (f.status === 'done') {
+        left += wp('');
+        left += wp(wr(`Odstraněno: ${f.doneAt ? ddmm(f.doneAt) : ''}`, { ...A, b: true, color: '2B7355' }));
+        if (f.fixText) left += wp(wr(f.fixText, A));
+      }
+      let right = picsPara(pics) + picsPara(fix, 'Po odstranění:');
+      if (!right) right = wp(wr('bez fotodokumentace', { ...A, i: true, color: '808080' }), { jc: 'center', before: 120 });
+      tbl += `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="3288" w:hRule="atLeast"/></w:trPr>${tc(C1, left)}${tc(C2, right)}</w:tr>`;
+    });
+    tbl += '</w:tbl>';
+    body += tbl;
+    body += wp('') + wp('') + wp('');
+    body += wp(wr('Předal: ', { b: true }) + wr(d.by || '……………………') + '<w:r><w:tab/></w:r>' + wr('Převzal: ', { b: true }) + wr(d.to || '……………………'), { tabs: [4820] });
+    body += wp('');
+    body += wp(wr('Dne: ', { b: true }) + wr(d.date));
+    const sect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+    const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}${sect}</w:body></w:document>`;
+    const LW = 1512000, LH = Math.round(LW * 92 / 320);
+    const hdr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${wp(wimg('rIdL', 1, LW, LH), { jc: 'right' })}</w:hdr>`;
+    const ftr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>${wp(wr('ZQ-10-01', { sz: 20 }))}</w:ftr>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="cs-CZ" w:eastAsia="cs-CZ" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
+    const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`;
+    const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`;
+    const docRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="${R}/styles" Target="styles.xml"/><Relationship Id="rIdH" Type="${R}/header" Target="header1.xml"/><Relationship Id="rIdF" Type="${R}/footer" Target="footer1.xml"/>${rels.join('')}</Relationships>`;
+    const hdrRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdL" Type="${R}/image" Target="media/logo.png"/></Relationships>`;
+    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${X('Protokol ' + d.number)}</dc:title><dc:creator>${X(d.author || 'Hlídač BOZP')}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().slice(0, 19)}Z</dcterms:created></cp:coreProperties>`;
+    const enc = new TextEncoder();
+    return zipStore([
+      { name: '[Content_Types].xml', data: enc.encode(ct) },
+      { name: '_rels/.rels', data: enc.encode(rootRels) },
+      { name: 'docProps/core.xml', data: enc.encode(core) },
+      { name: 'word/document.xml', data: enc.encode(doc) },
+      { name: 'word/styles.xml', data: enc.encode(styles) },
+      { name: 'word/header1.xml', data: enc.encode(hdr) },
+      { name: 'word/footer1.xml', data: enc.encode(ftr) },
+      { name: 'word/_rels/document.xml.rels', data: enc.encode(docRels) },
+      { name: 'word/_rels/header1.xml.rels', data: enc.encode(hdrRels) },
+      { name: 'word/media/logo.png', data: d.logo },
+      ...files,
+    ]);
+  }
+  const CRC_T = (() => { const t = new Uint32Array(256); for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; } return t; })();
+  const crc32 = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zipStore(list) {
+    const enc = new TextEncoder(), parts = [], cent = [];
+    let off = 0;
+    for (const f of list) {
+      const nm = enc.encode(f.name), d = f.data, c = crc32(d);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, 0, true); h.setUint16(12, 0x21, true); h.setUint32(14, c, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true);
+      h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), nm, d);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+      ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      cent.push(new Uint8Array(ch.buffer), nm);
+      off += 30 + nm.length + d.length;
+    }
+    const size = cent.reduce((a, b) => a + b.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, list.length, true); e.setUint16(10, list.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+    return new Blob([...parts, ...cent, new Uint8Array(e.buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  // přiřazení závodů uživateli
+  let sitesFor = null;
+  function openSites(a) {
+    sitesFor = a.id;
+    $('#sitesWho').textContent = `${a.name} · osobní číslo ${a.osc}`;
+    const cur = new Set(a.sites || []);
+    const pairs = allPairs(true);
+    $('#sitesList').innerHTML = pairs.length ? uniq(pairs.map(p => p.company)).map(c => `<div class="grp">${esc(c)}</div>` + pairs.filter(p => p.company === c).map(p =>
+      `<label><input type="checkbox" value="${esc(p.key)}" ${cur.has(p.key) ? 'checked' : ''}><span>${esc(p.site || 'Celá firma (záznamy bez závodu)')}</span></label>`).join('')).join('')
+      : '<div class="grp">Nejdřív založ firmu a závody v záložce Firmy.</div>';
+    $('#sitesModal').hidden = false;
+  }
+  $('#sitesForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const ks = [...document.querySelectorAll('#sitesList input:checked')].map(x => x.value);
+    try { await patch('ucty', sitesFor, { sites: ks }); $('#sitesModal').hidden = true; toast(ks.length ? `Přiřazeno závodů: ${ks.length}.` : 'Uživatel teď nevidí žádný závod.'); render(); }
+    catch (err) { /* hláška už zobrazena */ }
+  });
 
   // ---------- akce ----------
   const armed = new Map();
@@ -1853,7 +2652,7 @@ body.locked .app { display: none; }
       case 'logout': logout(); break;
       case 'my-account': openAccount(); break;
       case 'close-acc': $('#accModal').hidden = true; break;
-      case 'u-approve': case 'u-reject': case 'u-delete': case 'u-block': case 'u-unblock': case 'u-code':
+      case 'u-approve': case 'u-reject': case 'u-delete': case 'u-block': case 'u-unblock': case 'u-code': case 'u-sites':
         try { await adminAction(b.dataset.action, id, b); } catch (err) { /* hláška už zobrazena */ }
         break;
       case 'save-firm': {
@@ -1920,6 +2719,8 @@ body.locked .app { display: none; }
               await del('zavady', f.id);
               if (assets) for (const pid of [...(f.photos || []), ...(f.fixPhotos || [])]) { try { await assets.delete(pid); } catch (err) { /* */ } }
             }
+            for (const k of checks.filter(k => k.company === name)) await del('kontroly', k.id);
+            for (const k of protocols.filter(k => k.company === name)) await del('protokoly', k.id);
             for (const x of sites.filter(x => x.firmId === fid)) await del('provozovny', x.id);
             for (const x of places.filter(x => x.firmId === fid)) await del('mista', x.id);
             for (const x of people.filter(x => x.firmId === fid)) await del('osoby', x.id);
@@ -1943,6 +2744,43 @@ body.locked .app { display: none; }
       case 'zoom': $('#lightboxImg').src = b.dataset.src; $('#lightbox').hidden = false; break;
       case 'goto-status': $('#tStatus').value = b.dataset.status; setTab('terminy'); render(); break;
       case 'goto-findings': $('#zStatus').value = 'open'; setTab('zavady'); render(); break;
+      case 'open-proto': openProto(); break;
+      case 'close-proto': $('#protoModal').hidden = true; break;
+      case 'p-all': document.querySelectorAll('#pFindings input').forEach(x => { const f = findings.find(z => z.id === x.value); x.checked = !!f && f.status !== 'done'; }); break;
+      case 'p-none': document.querySelectorAll('#pFindings input').forEach(x => (x.checked = false)); break;
+      case 'p-again': openProto({ protoId: id }); break;
+      case 'close-sites': $('#sitesModal').hidden = true; break;
+      case 'w-start': startWeekly(id); break;
+      case 'w-cancel': closeWeekly(); break;
+      case 'w-track': {
+        const d = sites.find(x => x.id === id);
+        if (d) { try { await put('provozovny', id, { ...strip(d), weekly: b.dataset.on === '1' }); toast(b.dataset.on === '1' ? 'Závod se znovu sleduje.' : 'Závod už se v týdenních kontrolách nesleduje.'); } catch (err) { /* */ } }
+        break;
+      }
+      case 'w-ans': {
+        if (!wq) break;
+        const q = b.dataset.q;
+        wq.answers[q] = b.dataset.v;
+        const item = wq.groups.flatMap(g => g.items).find(x => x.id === q);
+        const row = $('#row-' + q); if (row && item) row.outerHTML = qRow(item);
+        if (b.dataset.v === 'nok') { const t = $('#wf-text-' + q); if (t) t.focus(); }
+        saveDraft(); wProgress();
+        break;
+      }
+      case 'w-all-ok': {
+        if (!wq) break;
+        wq.groups.flatMap(g => g.items).forEach(q => { if (!wq.answers[q.id]) wq.answers[q.id] = 'ok'; });
+        renderQuestions(); saveDraft();
+        break;
+      }
+      case 'w-drop': { const arr = wq && wq.photos[b.dataset.q]; if (arr) { URL.revokeObjectURL(arr[+b.dataset.i].url); arr.splice(+b.dataset.i, 1); const item = wq.groups.flatMap(g => g.items).find(x => x.id === b.dataset.q); $('#row-' + b.dataset.q).outerHTML = qRow(item); } break; }
+      case 'w-detail': { const k = checks.find(x => x.id === id); if (k) showCheck(k); break; }
+      case 'close-wd': $('#wDetailModal').hidden = true; break;
+      case 'w-proto': $('#wDetailModal').hidden = true; openProto({ checkId: id }); break;
+      case 'w-del': confirmTwice(b, async () => { try { await del('kontroly', id); toast('Kontrola smazána. Její závady zůstaly v záložce Závady.'); } catch (err) { /* */ } }); break;
+      case 'w-q-edit': $('#wQText').value = qText(); $('#wQEdit').hidden = false; $('#wQEdit').scrollIntoView({ behavior: 'smooth' }); break;
+      case 'w-q-default': $('#wQText').value = DEFAULT_Q; break;
+      case 'w-q-close': $('#wQEdit').hidden = true; break;
       case 'clear-examples': {
         b.disabled = true;
         for (const t of terms.filter(x => x.example)) { try { await del('terminy', t.id); } catch (err) { break; } }
@@ -1953,9 +2791,10 @@ body.locked .app { display: none; }
     }
   });
   $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); if (!$('#renameModal').hidden) closeRename(); $('#accModal').hidden = true; } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#lightbox').hidden = true; if (!$('#resolveModal').hidden) closeResolve(); if (!$('#renameModal').hidden) closeRename(); $('#accModal').hidden = true; $('#protoModal').hidden = true; $('#sitesModal').hidden = true; $('#wDetailModal').hidden = true; } });
 
   setTab(tab);
+  try { if (localStorage.getItem('hlidac_kmode') === 'tydenni') setKMode('tydenni'); } catch (e) { /* */ }
   gate();
   render();
   connect();
