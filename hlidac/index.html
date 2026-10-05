@@ -658,6 +658,13 @@ body.locked .app { display: none; }
 
     <!-- TÝDENNÍ KONTROLA dle 08-01-SM-GŘ-Q10, čl. Vnitřní kontroly -->
     <div id="weeklyView" hidden>
+      <div class="section" id="wBoardSec">
+        <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
+        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (25 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <div class="wk-board" id="wBoard"></div>
+        <div id="wHidden"></div>
+      </div>
+
       <form class="section" id="wStart">
         <div class="section-head"><h2>Nová kontrola</h2><span class="hint">1. druh · 2. pracoviště · 3. začít</span></div>
         <div class="type-cards" id="wTypes"></div>
@@ -670,13 +677,6 @@ body.locked .app { display: none; }
           <button class="btn primary big" type="submit" id="wsGo">Začít kontrolu</button>
         </div>
       </form>
-      <div class="section" id="wBoardSec">
-        <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
-        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (25 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
-        <div class="wk-board" id="wBoard"></div>
-        <div id="wHidden"></div>
-      </div>
-
       <form class="section" id="wForm" hidden>
         <div class="section-head"><h2 id="wFormTitle">Týdenní kontrola</h2><span class="hint" id="wFormHint"></span></div>
         <div class="panel">
@@ -3073,7 +3073,7 @@ body.locked .app { display: none; }
       case 'w-pick': {
         if (!wsType) wsType = 'vedouci';
         renderStart(true, id, b.dataset.place || '');
-        $('#wStart').scrollIntoView({ behavior: 'smooth' });
+        $('#wStart').scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
       }
       case 'w-start': startWeekly(id, b.dataset.place || '', b.dataset.type || 'vedouci'); break;
