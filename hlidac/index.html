@@ -470,6 +470,14 @@ body.locked .app { display: none; }
 .site-chips span { font-size: 11.5px; font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--muted); }
 .site-chips span.warn { color: var(--amber); border-color: var(--amber-bar); background: var(--amber-soft); }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.type-card { text-align: left; border: 2px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 16px 18px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); transition: border-color .15s, background .15s, transform .15s; color: var(--ink); }
+.type-card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.type-card b { font-family: var(--display); font-stretch: 112%; text-transform: uppercase; letter-spacing: .02em; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.type-card b .ic { color: var(--brand); width: 20px; height: 20px; }
+.type-card span { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.type-card[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+.type-card[aria-pressed="true"] b::after { content: "✓ vybráno"; margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--brand); letter-spacing: .04em; }
 .wk-unit { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
 .wk-unit-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wk-unit-head b { display: inline-flex; align-items: center; gap: 6px; font-size: 14.5px; }
@@ -650,9 +658,21 @@ body.locked .app { display: none; }
 
     <!-- TÝDENNÍ KONTROLA dle 08-01-SM-GŘ-Q10, čl. Vnitřní kontroly -->
     <div id="weeklyView" hidden>
+      <form class="section" id="wStart">
+        <div class="section-head"><h2>Nová kontrola</h2><span class="hint">1. druh · 2. pracoviště · 3. začít</span></div>
+        <div class="type-cards" id="wTypes"></div>
+        <div class="panel" id="wStartPick" hidden>
+          <div class="grid-form">
+            <div class="field"><label for="wsSite">Závod</label><select id="wsSite"></select></div>
+            <div class="field"><label for="wsPlace">Pracoviště</label><div class="pick"><select id="wsPlace"></select><input type="text" id="wsPlaceNew" placeholder="Název nového pracoviště, např. Hala 2" hidden></div></div>
+          </div>
+          <p class="small-note" id="wsInfo"></p>
+          <button class="btn primary big" type="submit" id="wsGo">Začít kontrolu</button>
+        </div>
+      </form>
       <div class="section" id="wBoardSec">
         <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
-        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (12 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (25 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
         <div class="wk-board" id="wBoard"></div>
         <div id="wHidden"></div>
       </div>
@@ -707,7 +727,7 @@ body.locked .app { display: none; }
         <div class="grid-form">
           <div class="field"><label for="kFirm">Firma</label><div class="pick"><select id="kFirm"></select><input type="text" id="kFirmNew" placeholder="Název nové firmy" hidden></div></div>
           <div class="field"><label for="kSite">Závod / provozovna</label><div class="pick"><select id="kSite"></select><input type="text" id="kSiteNew" placeholder="Název nového závodu / provozovny" hidden></div></div>
-          <div class="field"><label for="kPlace">Místo</label><div class="pick"><select id="kPlace"></select><input type="text" id="kPlaceNew" placeholder="např. Hala 2, formovna" hidden></div></div>
+          <div class="field"><label for="kPlace">Pracoviště</label><div class="pick"><select id="kPlace"></select><input type="text" id="kPlaceNew" placeholder="Název nového pracoviště, např. Hala 2" hidden></div></div>
           <div class="field wide">
             <span class="label">Fotky</span>
             <label class="photo-drop" id="photoDrop">
@@ -1175,7 +1195,7 @@ body.locked .app { display: none; }
     setPick('kFirm', visCompanies(), firmOpts(fresh ? { value: sp.company } : {}));
     const firm = getPick('kFirm');
     setPick('kSite', firm ? visSitesOf(firm) : [], siteOpts(firm, fresh ? { value: sp.site } : {}));
-    setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez místa —', newLabel: 'Nové místo…' });
+    setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez pracoviště —', newLabel: 'Nové pracoviště…' });
     setPick('kOwner', firm ? ownersOf(firm) : [], { none: '— nevyplněno —', newLabel: 'Nová osoba…' });
   }
   function pickerBusy(ids) { return ids.some(id => document.activeElement === $('#' + id) || document.activeElement === $('#' + id + 'New')); }
@@ -1483,9 +1503,9 @@ body.locked .app { display: none; }
   ['#fLast', '#fMonths'].forEach(s => $(s).addEventListener('input', updateDuePreview));
   $('#fFirm').addEventListener('change', () => { $('#fFirmNew').hidden = $('#fFirm').value !== NEW; refreshTermPickers({ firm: getPick('fFirm'), site: '', person: '' }); if ($('#fFirm').value === NEW) $('#fFirmNew').focus(); });
   $('#fFirmNew').addEventListener('input', () => { setPick('fSite', [], siteOpts('')); setPick('fPerson', [], { newLabel: 'Nová osoba / zařízení…' }); });
-  ['fSite', 'fPerson', 'kSite', 'kPlace', 'kOwner'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
-  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : visSitesOf(getPick('kFirm')), siteOpts($('#kFirm').value === NEW ? '' : getPick('kFirm'), { value: '' })); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); setPick('kOwner', $('#kFirm').value === NEW ? [] : ownersOf(getPick('kFirm')), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
-  $('#kSite').addEventListener('change', () => { const firm = getPick('kFirm'); setPick('kPlace', firm && $('#kFirm').value !== NEW && $('#kSite').value !== NEW ? placesOf(firm, getPick('kSite')) : [], { value: '', none: '— bez místa —', newLabel: 'Nové místo…' }); });
+  ['fSite', 'fPerson', 'kSite', 'kPlace', 'kOwner', 'wsPlace'].forEach(id => $('#' + id).addEventListener('change', () => { $('#' + id + 'New').hidden = $('#' + id).value !== NEW; if ($('#' + id).value === NEW) $('#' + id + 'New').focus(); }));
+  $('#kFirm').addEventListener('change', () => { $('#kFirmNew').hidden = $('#kFirm').value !== NEW; setPick('kSite', $('#kFirm').value === NEW ? [] : visSitesOf(getPick('kFirm')), siteOpts($('#kFirm').value === NEW ? '' : getPick('kFirm'), { value: '' })); setPick('kPlace', $('#kFirm').value === NEW ? [] : placesOf(getPick('kFirm'), ''), { value: '', none: '— bez pracoviště —', newLabel: 'Nové pracoviště…' }); setPick('kOwner', $('#kFirm').value === NEW ? [] : ownersOf(getPick('kFirm')), { value: '', none: '— nevyplněno —', newLabel: 'Nová osoba…' }); if ($('#kFirm').value === NEW) $('#kFirmNew').focus(); });
+  $('#kSite').addEventListener('change', () => { const firm = getPick('kFirm'); setPick('kPlace', firm && $('#kFirm').value !== NEW && $('#kSite').value !== NEW ? placesOf(firm, getPick('kSite')) : [], { value: '', none: '— bez pracoviště —', newLabel: 'Nové pracoviště…' }); });
   function openTermForm(t) {
     editingId = t ? t.id : null;
     $('#termFormTitle').textContent = t ? 'Upravit termín' : 'Nový termín';
@@ -1652,7 +1672,7 @@ body.locked .app { display: none; }
     setKMode('zavada');
     setPick('kFirm', visCompanies(), firmOpts({ value: f.company }));
     setPick('kSite', visSitesOf(f.company), siteOpts(f.company, { value: f.site || '' }));
-    setPick('kPlace', placesOf(f.company, f.site || ''), { none: '— bez místa —', newLabel: 'Nové místo…', value: f.place || '' });
+    setPick('kPlace', placesOf(f.company, f.site || ''), { none: '— bez pracoviště —', newLabel: 'Nové pracoviště…', value: f.place || '' });
     setPick('kOwner', ownersOf(f.company), { none: '— nevyplněno —', newLabel: 'Nová osoba…', value: f.owner || '' });
     $('#kText').value = f.text || '';
     $('#kMeasure').value = f.measure || '';
@@ -2225,18 +2245,31 @@ body.locked .app { display: none; }
   // Týdenní kontrola vedoucího (krátká, pro vedoucí výrobních úseků a ne-OZO). Ke každému bodu výchozí zjištění a opatření,
   // které se doplní, když kontrolující u „Nevyhovuje“ nic nenapíše.
   const VED_Q = [
-    ['Pořádek a komunikace', 'Na pracovišti je pořádek, materiál a výrobky jsou uloženy stabilně na určených místech.', 'Na pracovišti je nepořádek nebo je materiál uložen nestabilně či mimo určené místo.', 'Uklidit pracoviště a materiál uložit stabilně na určené místo.'],
-    ['Pořádek a komunikace', 'Komunikace, únikové cesty a nouzové východy jsou volné a označené.', 'Komunikace nebo úniková cesta je zastavěná či neoznačená.', 'Komunikaci a únikovou cestu ihned uvolnit a obnovit značení.'],
-    ['Lidé a OOPP', 'Zaměstnanci používají předepsané OOPP (přilba, obuv, rukavice, brýle, reflexní vesta, chrániče sluchu).', 'Zaměstnanec nepoužívá předepsané OOPP.', 'Zjednat okamžitou nápravu a zaměstnance prokazatelně poučit o používání OOPP.'],
-    ['Lidé a OOPP', 'Práce probíhá podle pracovních postupů a MPBP, u údržby a čištění strojů se dodržuje LOTO.', 'Práce neprobíhá podle pracovního postupu nebo nebylo použito LOTO.', 'Práci přerušit, zaměstnance poučit a dodržování postupu a LOTO ověřit.'],
-    ['Stroje a zařízení', 'Ochranné kryty, zábrany a bezpečnostní prvky strojů jsou na místě a funkční, nouzové zastavení je přístupné.', 'Chybí nebo nefunguje ochranný kryt či bezpečnostní prvek stroje.', 'Stroj odstavit z provozu, kryt nebo bezpečnostní prvek doplnit a ověřit jeho funkci.'],
-    ['Stroje a zařízení', 'Elektrická zařízení, kabely, prodlužovací přívody a rozvaděče jsou nepoškozené, rozvaděče uzavřené.', 'Elektrické zařízení nebo kabel je poškozený, případně je rozvaděč otevřený.', 'Zařízení vyřadit z provozu a zajistit opravu osobou s elektrotechnickou kvalifikací.'],
-    ['Manipulace a práce ve výšce', 'Jeřáby a vázací prostředky jsou nepoškozené a označené, vázání provádí jen vazači s oprávněním.', 'Vázací prostředek je poškozený nebo neoznačený, případně váže osoba bez oprávnění.', 'Vázací prostředek vyřadit a nahradit, vázání svěřit jen proškolenému vazači.'],
-    ['Manipulace a práce ve výšce', 'VZV a manipulační technika mají provedenou denní kontrolu a jezdí se bezpečně.', 'U VZV chybí denní kontrola nebo jízda není bezpečná.', 'Provést denní kontrolu VZV a řidiče poučit o bezpečné jízdě.'],
-    ['Manipulace a práce ve výšce', 'Formy, stojany, palety a skladované výrobky jsou stabilní, nepoškozené a nepřetížené.', 'Forma, stojan nebo uložení výrobků je nestabilní, poškozené či přetížené.', 'Uložení stabilizovat, poškozený stojan nebo formu vyřadit z používání.'],
-    ['Manipulace a práce ve výšce', 'Práce ve výšce je zajištěna (zábradlí, kolektivní nebo osobní zajištění), žebříky jsou nepoškozené.', 'Okraj ve výšce není zajištěn nebo je žebřík poškozený.', 'Okraj zajistit zábradlím nebo jiným zajištěním, poškozený žebřík vyřadit.'],
-    ['PO, první pomoc a chemie', 'Hasicí přístroje a hydranty jsou přístupné, označené a s platnou kontrolou.', 'Hasicí přístroj nebo hydrant je nepřístupný, neoznačený či bez platné kontroly.', 'Uvolnit přístup, doplnit označení a zajistit kontrolu hasicího přístroje.'],
-    ['PO, první pomoc a chemie', 'Lékárnička je dostupná a vybavená, chemické látky (oleje, přísady) jsou označené a správně uložené.', 'Lékárnička není kompletní nebo je chemická látka neoznačená či špatně uložená.', 'Doplnit lékárničku, chemickou látku označit a uložit do záchytné vany.'],
+    ['Pořádek a komunikace', 'Na pracovišti je pořádek a čisto.', 'Na pracovišti je nepořádek.', 'Pracoviště uklidit a pořádek udržovat.'],
+    ['Pořádek a komunikace', 'Materiál a výrobky jsou uloženy stabilně na určených místech.', 'Materiál nebo výrobky jsou uloženy nestabilně nebo mimo určené místo.', 'Materiál uložit stabilně na určené místo.'],
+    ['Pořádek a komunikace', 'Komunikace a průchody jsou volné.', 'Komunikace nebo průchod je zastavěný.', 'Komunikaci ihned uvolnit a udržovat volnou.'],
+    ['Pořádek a komunikace', 'Únikové cesty a nouzové východy jsou volné a označené.', 'Úniková cesta nebo nouzový východ je zastavěný či neoznačený.', 'Únikovou cestu uvolnit a obnovit její označení.'],
+    ['Lidé a pracovní postupy', 'Zaměstnanci používají předepsané OOPP (přilba, obuv, rukavice, brýle, reflexní vesta, chrániče sluchu).', 'Zaměstnanec nepoužívá předepsané OOPP.', 'Zjednat okamžitou nápravu a zaměstnance prokazatelně poučit o používání OOPP.'],
+    ['Lidé a pracovní postupy', 'Práce probíhá podle pracovních postupů a místních provozních bezpečnostních předpisů (MPBP).', 'Práce neprobíhá podle pracovního postupu nebo MPBP.', 'Práci přerušit a zaměstnance poučit o správném postupu.'],
+    ['Lidé a pracovní postupy', 'Při údržbě a čištění strojů se dodržuje postup LOTO.', 'Při údržbě nebo čištění stroje nebyl dodržen postup LOTO.', 'Práci zastavit, stroj zajistit podle LOTO a zaměstnance poučit.'],
+    ['Stroje a zařízení', 'Ochranné kryty a zábrany strojů jsou na místě a nepoškozené.', 'Ochranný kryt nebo zábrana stroje chybí nebo je poškozená.', 'Stroj odstavit z provozu, kryt nebo zábranu doplnit či opravit.'],
+    ['Stroje a zařízení', 'Bezpečnostní prvky strojů (koncové spínače, světelné závory) jsou funkční.', 'Bezpečnostní prvek stroje nefunguje.', 'Stroj odstavit z provozu a zajistit opravu a ověření funkce.'],
+    ['Stroje a zařízení', 'Tlačítka nouzového zastavení jsou přístupná a funkční.', 'Tlačítko nouzového zastavení je nepřístupné nebo nefunkční.', 'Uvolnit přístup k tlačítku nouzového zastavení, případně zajistit jeho opravu.'],
+    ['Stroje a zařízení', 'Elektrická zařízení, kabely a prodlužovací přívody jsou nepoškozené.', 'Elektrické zařízení, kabel nebo prodlužovací přívod je poškozený.', 'Zařízení vyřadit z provozu a zajistit opravu osobou s elektrotechnickou kvalifikací.'],
+    ['Stroje a zařízení', 'Elektrické rozvaděče jsou uzavřené a přístup k nim je volný.', 'Elektrický rozvaděč je otevřený nebo zastavěný.', 'Rozvaděč uzavřít a uvolnit přístup k němu.'],
+    ['Manipulace s břemeny a doprava', 'Jeřáby a zdvihací zařízení jsou bez viditelného poškození.', 'Jeřáb nebo zdvihací zařízení je viditelně poškozené.', 'Zařízení odstavit a zajistit jeho prohlídku a opravu.'],
+    ['Manipulace s břemeny a doprava', 'Vázací prostředky jsou nepoškozené a označené nosností.', 'Vázací prostředek je poškozený nebo neoznačený.', 'Vázací prostředek vyřadit z používání a nahradit.'],
+    ['Manipulace s břemeny a doprava', 'Břemena váží jen vazači s platným oprávněním.', 'Břemeno váže osoba bez platného oprávnění.', 'Vázání svěřit jen vazači s platným oprávněním.'],
+    ['Manipulace s břemeny a doprava', 'VZV a manipulační technika mají provedenou denní kontrolu.', 'U VZV nebo manipulační techniky chybí záznam o denní kontrole.', 'Provést denní kontrolu a zapsat ji.'],
+    ['Manipulace s břemeny a doprava', 'Řidiči VZV jezdí bezpečně a dodržují pravidla provozu.', 'Řidič VZV jezdí nebezpečně nebo nedodržuje pravidla provozu.', 'Řidiče poučit o pravidlech bezpečné jízdy.'],
+    ['Manipulace s břemeny a doprava', 'Formy, stojany, palety a skladované výrobky jsou stabilní, nepoškozené a nepřetížené.', 'Forma, stojan nebo uložení výrobků je nestabilní, poškozené či přetížené.', 'Uložení stabilizovat, poškozený stojan nebo formu vyřadit z používání.'],
+    ['Práce ve výšce', 'Okraje a otvory, odkud hrozí pád, jsou zajištěny zábradlím nebo jiným zajištěním.', 'Okraj nebo otvor, odkud hrozí pád, není zajištěn.', 'Okraj nebo otvor zajistit zábradlím, poklopem nebo jiným zajištěním.'],
+    ['Práce ve výšce', 'Žebříky jsou nepoškozené a správně používané.', 'Žebřík je poškozený nebo nesprávně používaný.', 'Poškozený žebřík vyřadit, zaměstnance poučit o správném používání.'],
+    ['Požární ochrana', 'Hasicí přístroje jsou přístupné, označené a s platnou kontrolou.', 'Hasicí přístroj je nepřístupný, neoznačený nebo bez platné kontroly.', 'Uvolnit přístup k hasicímu přístroji, doplnit označení a zajistit kontrolu.'],
+    ['Požární ochrana', 'Požární hydranty jsou přístupné a označené.', 'Požární hydrant je nepřístupný nebo neoznačený.', 'Uvolnit přístup k hydrantu a doplnit označení.'],
+    ['První pomoc', 'Lékárnička je dostupná a úplně vybavená.', 'Lékárnička je nedostupná nebo neúplně vybavená.', 'Lékárničku zpřístupnit a doplnit její vybavení.'],
+    ['Chemické látky', 'Chemické látky (odbedňovací oleje, přísady) jsou v označených obalech.', 'Chemická látka je v neoznačeném obalu.', 'Obal označit podle bezpečnostního listu.'],
+    ['Chemické látky', 'Chemické látky jsou správně uložené (záchytné vany) a bezpečnostní listy jsou k dispozici.', 'Chemická látka je nesprávně uložená nebo chybí bezpečnostní list.', 'Chemickou látku uložit do záchytné vany a doplnit bezpečnostní list.'],
   ].map(([g, text, f, m], i) => ({ id: 'v' + (i + 1), no: String(i + 1), g, text, f, m }));
   const DUE_BY_SEV = { vysoka: 3, stredni: 14, nizka: 30 };
   const typeLabel = k => (k.type === 'vedouci' ? 'Kontrola vedoucího' : 'Kontrola ZQ-10-02');
@@ -2255,6 +2288,7 @@ body.locked .app { display: none; }
 
   function renderWeekly() {
     if (!me) return;
+    renderStart(false);
     const ws = weekStart(todayISO), we = addDays(ws, 6), dow = daysUntil(ws) * -1, WS0 = weekStart(W_START);
     $('#wWeekHint').textContent = `týden ${weekNo(todayISO)} · ${fmt(ws).replace(/ \d{4}$/, '')} – ${fmt(we)}`;
     const pairs = weeklyPairs(), on = pairs.filter(tracked), off = pairs.filter(p => !tracked(p));
@@ -2280,7 +2314,7 @@ body.locked .app { display: none; }
           <div class="meta">Zodpovědný vedoucí: ${mgr ? `<b>${esc(mgr)}</b>` : '<span style="color:var(--amber)">nezadán</span>'} · <button class="link" data-action="w-mgr" data-id="${esc(p.key)}" data-place="${esc(u)}">${mgr ? 'změnit' : 'zadat'}</button></div>
           <div class="weeks">${bars}</div>
           <div class="meta">${ks[0] ? `Poslední ${fmt(ks[0].date)} · ${esc(ks[0].by || '')}` : 'Zatím bez kontroly'}${missed ? ` · <b style="color:var(--red)">zmeškáno ${missed}×</b>` : ''} </div>
-          <div class="form-actions"><button class="btn primary small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}" data-type="vedouci">${ic('check')}${thisW ? 'Další kontrola vedoucího' : 'Kontrola vedoucího'}</button>${isAdmin() ? `<button class="btn small" data-action="w-start" data-id="${esc(p.key)}" data-place="${esc(u)}" data-type="zq">Kontrola ZQ-10-02 (${rot.sel.length} ${plural(rot.sel.length, 'otázka', 'otázky', 'otázek')})</button>` : ''}</div>
+          <div class="form-actions"><button class="btn small" data-action="w-pick" data-id="${esc(p.key)}" data-place="${esc(u)}">${ic('check')}Vybrat pro kontrolu</button></div>
         </div>`;
       }).join('');
       const openF = findings.filter(f => f.status !== 'done' && keyOf(f.company, f.site) === p.key);
@@ -2290,7 +2324,6 @@ body.locked .app { display: none; }
         <h3>${ic('factory')}${esc(p.site)} <small>${esc(p.company)}</small></h3>
         <div class="meta">Sídlo závodu: ${addr ? esc(addr) : `<span style="color:var(--amber)">nezadáno${isAdmin() ? ' (doplň v záložce Firmy)' : ' (doplní správce)'}</span>`}</div>
         ${rows}
-        <div class="add-row"><input type="text" id="wap-${esc(p.key)}" placeholder="Nové pracoviště, např. Hala 2" aria-label="Nové pracoviště"><button class="btn small" data-action="w-add-place" data-id="${esc(p.key)}">${ic('plus')}Přidat pracoviště</button></div>
         <div class="meta">Otevřené závady ${openF.length}${lateF.length ? ` · <b style="color:var(--red)">po termínu ${lateF.length}</b>` : ''}${isAdmin() && sites.some(x => x.id === p.key) ? ` · <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="0">nesledovat závod</button>` : ''}</div>
       </article>`;
     }).join('') : `<div class="empty">${pairs.length ? 'Všechny závody jsou vypnuté ze sledování.' : isAdmin() ? 'Zatím žádný závod. Založ ho v záložce Firmy.' : 'Nemáš přiřazený žádný závod.'}</div>`;
@@ -2310,6 +2343,54 @@ body.locked .app { display: none; }
   let wq = null; // { pk, rot, groups, answers, fail, photos }
   const wDraftKey = () => 'hlidac_wdraft_' + (me ? me.id : '');
   function saveDraft() { try { localStorage.setItem(wDraftKey(), JSON.stringify({ pk: wq.pk + '|' + wq.type, ids: wq.groups.flatMap(g => g.items).map(q => q.id), answers: wq.answers, fail: wq.fail, note: $('#wNote').value })); } catch (e) { /* */ } }
+  // výběr druhu kontroly a pracoviště → „Začít kontrolu“
+  let wsType = null;
+  function renderStart(force, key, place) {
+    if (!me) return;
+    const types = [['vedouci', 'Kontrola vedoucího', `${VED_Q.length} krátkých bodů pro vedoucí úseků. Výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností.`, 'user']];
+    if (isAdmin()) types.push(['zq', 'Kontrola ZQ-10-02', 'Kontrolní otázky ZQ-10-02 s obměnou po pracovištích. Výstup: protokol ZQ-10-01.', 'table']);
+    if (wsType && !types.some(t => t[0] === wsType)) wsType = null;
+    $('#wTypes').innerHTML = types.map(([t, title, desc, icn]) => `<button type="button" class="type-card" data-action="w-type" data-type="${t}" aria-pressed="${wsType === t}"><b>${ic(icn)}${title}</b><span>${desc}</span></button>`).join('');
+    $('#wStartPick').hidden = !wsType;
+    if (!wsType) return;
+    if (!force && $('#wStartPick').contains(document.activeElement)) { wsInfo(); return; }
+    const pairs = weeklyPairs(), cur = key || $('#wsSite').value;
+    $('#wsSite').innerHTML = pairs.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join('');
+    if (!pairs.length) { $('#wsInfo').textContent = 'Nemáš přiřazený žádný závod.'; $('#wsGo').disabled = true; return; }
+    $('#wsSite').value = pairs.some(p => p.key === cur) ? cur : pairs[0].key;
+    wsFillPlaces(key ? place : undefined);
+    wsInfo();
+  }
+  function wsPair() { return allPairs(true).find(p => p.key === $('#wsSite').value); }
+  function wsFillPlaces(place) {
+    const p = wsPair(); if (!p) return;
+    const list = placesOf(p.company, p.site), sel = $('#wsPlace').value;
+    const value = place !== undefined ? place : sel === NEW ? NEW : list.includes(sel) ? sel : (list[0] || '');
+    setPick('wsPlace', list, { none: '— celý závod —', newLabel: 'Nové pracoviště…', value });
+  }
+  function wsInfo() {
+    const p = wsPair(); if (!p) return;
+    const pl = $('#wsPlace').value === NEW ? $('#wsPlaceNew').value.trim() : $('#wsPlace').value;
+    const mgr = mgrOf(p.company, p.site, pl), ws = weekStart(todayISO), k = checksOf(p.key, pl).find(x => x.date >= ws);
+    const n = wsType === 'zq' ? rotationFor(placeKey(p.company, p.site, pl)).sel.length : VED_Q.length;
+    $('#wsInfo').innerHTML = `${n} ${plural(n, 'bod', 'body', 'bodů')} · zodpovědný vedoucí: ${mgr ? `<b>${esc(mgr)}</b>` : 'nezadán'} · tento týden ${k ? `už proběhla (${fmt(k.date)})` : 'zatím neproběhla'}`;
+    $('#wsGo').disabled = false;
+    $('#wsGo').textContent = wsType === 'zq' ? 'Začít kontrolu ZQ-10-02' : 'Začít kontrolu vedoucího';
+  }
+  $('#wsSite').addEventListener('change', () => { $('#wsPlace').value = ''; wsFillPlaces(); wsInfo(); });
+  $('#wsPlace').addEventListener('change', wsInfo);
+  $('#wsPlaceNew').addEventListener('input', wsInfo);
+  $('#wStart').addEventListener('submit', async e => {
+    e.preventDefault();
+    const p = wsPair(); if (!wsType || !p) return;
+    const pl = getPick('wsPlace');
+    if ($('#wsPlace').value === NEW) {
+      if (!pl) { toast('Napiš název pracoviště.'); $('#wsPlaceNew').focus(); return; }
+      try { await ensureEntities({ firm: p.company, site: p.site, place: pl }); } catch (err) { return; }
+      $('#wsPlaceNew').value = ''; wsFillPlaces(pl); toast('Pracoviště uloženo, příště ho vybereš ze seznamu.');
+    }
+    startWeekly(p.key, pl, wsType);
+  });
   let wType = 'vedouci';
   function startWeekly(key, place = '', type = 'vedouci') {
     wType = type === 'zq' && isAdmin() ? 'zq' : 'vedouci';
@@ -2321,7 +2402,7 @@ body.locked .app { display: none; }
     $('#wDate').value = todayISO; $('#wDate').max = todayISO;
     $('#wBy').value = me ? me.name : '';
     $('#wNote').value = ''; $('#wStatus').textContent = '';
-    $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
+    $('#wStart').hidden = true; $('#wBoardSec').hidden = true; $('#wHistSec').hidden = true; $('#wQEdit').hidden = true; $('#wForm').hidden = false;
     prepareQuestions(true);
     window.scrollTo(0, 0);
   }
@@ -2360,7 +2441,7 @@ body.locked .app { display: none; }
   function closeWeekly() {
     if (wq) Object.values(wq.photos).flat().forEach(p => URL.revokeObjectURL(p.url));
     wq = null;
-    $('#wForm').hidden = true; $('#wBoardSec').hidden = false; $('#wHistSec').hidden = false;
+    $('#wForm').hidden = true; $('#wStart').hidden = false; $('#wBoardSec').hidden = false; $('#wHistSec').hidden = false;
     renderWeekly(); window.scrollTo(0, 0);
   }
   function qRow(q) {
@@ -2988,6 +3069,13 @@ body.locked .app { display: none; }
       case 'p-none': document.querySelectorAll('#pFindings input').forEach(x => (x.checked = false)); break;
       case 'p-again': openProto({ protoId: id }); break;
       case 'close-sites': $('#sitesModal').hidden = true; break;
+      case 'w-type': wsType = b.dataset.type; renderStart(true); setTimeout(() => $('#wStartPick').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 30); break;
+      case 'w-pick': {
+        if (!wsType) wsType = 'vedouci';
+        renderStart(true, id, b.dataset.place || '');
+        $('#wStart').scrollIntoView({ behavior: 'smooth' });
+        break;
+      }
       case 'w-start': startWeekly(id, b.dataset.place || '', b.dataset.type || 'vedouci'); break;
       case 'w-rep': { $('#wDetailModal').hidden = true; const k = checks.find(x => x.id === id); if (k) leaderReport(k); break; }
       case 'w-mgr': {
