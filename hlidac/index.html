@@ -576,11 +576,37 @@ a.btn { text-decoration: none; }
   .tabs .tab svg { width: 21px; height: 21px; }
   .wk-foot .btn { padding: 8px 6px; font-size: 13.5px; }
 }
+
+/* ——— dvě verze: ŽPSV / živnost ——— */
+.brand-text { display: none; font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 20px; color: var(--graphite); letter-spacing: -.01em; white-space: nowrap; }
+:root[data-brand="osvc"] .brand-logo { display: none !important; }
+:root[data-brand="osvc"] .brand-text { display: inline-block; }
+:root[data-brand="osvc"] {
+  --brand: var(--osvc-brand, #0f766e);
+  --brand-hover: color-mix(in srgb, var(--osvc-brand, #0f766e) 82%, #000);
+  --brand-soft: color-mix(in srgb, var(--osvc-brand, #0f766e) 12%, #fff);
+  --graphite: var(--osvc-ink, #1e293b);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-brand="osvc"]:not([data-theme="light"]) { --graphite: #d9d6d0; --brand-soft: color-mix(in srgb, var(--osvc-brand, #0f766e) 28%, #171615); --brand: color-mix(in srgb, var(--osvc-brand, #0f766e) 75%, #fff); }
+}
+:root[data-brand="osvc"][data-theme="dark"] { --graphite: #d9d6d0; --brand-soft: color-mix(in srgb, var(--osvc-brand, #0f766e) 28%, #171615); --brand: color-mix(in srgb, var(--osvc-brand, #0f766e) 75%, #fff); }
+:root[data-brand="osvc"] .tab[aria-selected="true"] svg { color: color-mix(in srgb, var(--brand) 45%, #fff); }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 24px 2px; padding: 3px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
+.mode-switch button { border: 0; background: none; border-radius: 4px; padding: 7px 8px; font-weight: 700; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.mode-switch button[aria-pressed="true"] { background: var(--surface); color: var(--brand); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.user-row { grid-template-columns: 150px minmax(0, 1fr); }
+.user-row .acts { grid-column: 2; justify-content: flex-start; }
+@media (max-width: 680px) { .user-row { grid-template-columns: minmax(0, 1fr) auto; } .user-row .acts { grid-column: 1 / -1; } }
+.role-pick { display: inline-flex; align-items: center; gap: 6px; }
+.role-pick select { width: auto; min-height: 32px; padding: 4px 8px; font-size: 13px; }
+input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); }
 </style>
 
 <div class="auth" id="auth">
   <div class="auth-card">
-    <div class="auth-brand"><img class="brand-logo" src="data:image/png;base64,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" alt="ŽPSV"><span class="brand-sep" aria-hidden="true"></span><h1>Hlídač <em>BOZP</em></h1></div>
+    <div class="auth-brand"><img class="brand-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAABcBAMAAADt3XHNAAAAMFBMVEWuDwo9PTz////9/PxBQUAyMjGqBAHYzc20tLTt5uZkZGObm5q9PDjenJqAgH/ObGkl+/wDAAAACXBIWXMAAKD8AACg/AGu7+95AAAIw0lEQVR42s2bQYgURxSG57TBY0M3ewjk0HUYR6NCzSFxk0uTGXQ3EGiYJssKi6d4SVBHk9UVAllYdteAxMnC7noIqDtodkGIIEkM5BAhp0DAQ245qFk0Bjx48JzqrldVr6qre3qm150phKS7Znq+flX1/vde1VZ83yd1rfnDarUKtE+pulnxR6aRQycB8DTRAOnlLa11hkX4tgB8wwC850W4dehw+Og3wDf2m28ABqg13KEB/iUAH1IT0EFtaIDkd7FIOiMJSKpyEfv+SAIeEWvkMzKSgP77AnDfaFpQrZGX1ARs4DY0wFcCsJ0CjEbADxKr0HHAS79orTNCQjdKWmwVOg44EtGMXehGyIJ2oSsImGdYsktWtwsdA6zbmvaRuvFfjc5PdRLbI9K3xE14OyR0ROvsaUFC/drc8vLy3LdsGMw+3z+6xvqWLtL4c69B6JgFl21tATHUvt5sMu8YTj3rGITEP3ol6YvcrR+pIFznj2jjD/JbK/q3/xaNYqEbS4SuJjsrka3dkCS0+k8UOg4TQy/66BzRbbu+GffFzQu329B5FR6B4xR+a1IPXj6BljhmXejIIdF5utKwtOYN9ZhHoQsi3fBm2tq6e7cZNoSCB95bfHKTw63kGePqZcjB5FbzMbU65mRMDaGTTnFfxbE0T1iQkB9CFUm43ixaYaTWdXGM4R1PkMj+xKjuCWTtCW5nTWNR8EJSGR09I51iPiC9FgYaxC31s/R8S/uS693l4N3kckbR0LPmnfjmF5KBpoRO2fNhLiAzUqBDtKQVSDUIjK9xo4noTdmL7gSmTTUGmhI65BTzLXitZfQ0j8lfSfU5zQWq7NW8KwHJ9eTOuAZYEwwnOymhw/bMB9wxjeTKcaKpPseZRDPOuyn5+Kz0buQEL7rQYaeYB0j2p4zkiKVIapKvIZayO0v4mk0uPhYGY+ta2TftmE+RtNBJez7wcy24KhCcxBPigQKM2L8wJ+6KbEGhc1r0GLdjD14epDM67BQzAH083Z2IIUauo/0uuA6vtfXixaaHJ6Hf1YHoYnI9S7IzEFPopD3bVHfUgTaOMLmdcPvixtoVT8up6FV+ObPCLmtfwosl3wMgTw7pTnI9rWssYjAzOi36r2yg9l6IVwKpgpFuJU/8LsRWEhRPWODBbpznfTfRkHrGbJ3MydJNoUP2xNEMOAin+b02zWbjOIBR3MPzE4Z/hibBUp0vVA4Bi0IQwVLrR+iwyFTwW8EIu+BjD4C/4GNTP4wgBKBwviRQKwjcihzTAz2FjmQKnRZRU+F6hUeFoWrrQzWO9UJOrC7qg7k7kyd0Z7Icsyky2IKga2J20/O6a+aT3Z0mFguCS9fgYRnzqwGFTrMgTB35KHh16R7glzRAmINipQIg/6LHxY50LUKnMeQIHQYUXk/OZlio8tXpIjKaWMX/8ryErM3F7Rz2kdybkqpTQugQoJjaSG0XAwMQxyyw4ls/U+5o8M/D8h9Hyjeg0CFA+pXwMSQTEF+DkgStO0sdM5UDseOf5B8sKHQk5RQrWT6mB6DS4jiduphkeKqhmJV+zhXSH0joFCBdNXxMLwvKaMZl6ZS7vYIJYTIkro/2IXRj+9JlrkqGj5FAbgagXvaMWs8oQlhVMWs5oVOApo/paUF/Qg8Wo22qQujDMmaFtTeo0EnAlI/pDWjkK653mygL8RXEYlYhzAMKnQBM+5jegEbG57jREyRKMnZczc3oXtJ8oROAysf4hQEJ2dEHOVAUSuz4ehlY6ABQ+ZhOcQuyqkhXt2HziRG4xSuu2zujywscOCBdDZ30c3oBstrH9UgbZNUFkdrjOl/EAwndKQVo8TFFAIn/zv0mKx8pM4qlINz4JPyPN6jQAaDFxxQBjH3z2q+bUeTouYzK7KbJgT6E7rRtP6eS4WMKASZVy6OXnntipCeJIXb+2TIZHQBafUxPQIgO4gIuWb/PUz532oh83I4RePeT0amNHJuP6RVu6TVsMh8algKxW+iWE7oY0O5jFOCs1YI1vivFK5p1KmpuRrnDe2oTuiPFhS4GtMQxGtCMbwn5RVVX5L5mZiSmzZQzuNBRYUGrj1GAagV2HQTo6lVdU9FEVaKk0MWAdh+jAEWhD5ILCOSrWvUgDYijsRJCxwDFk5jXNzZyANA5xjcY6ASuHlR1vyKGOFWlKCl0DPAgqNxsaiNGALrt2KdQsoPTM4hDZ5MtJlKHRYL8HbxOSaFjgOBjnOMX5pbEvwttDOi8mZT9Loe4tAtELO1ElSU0ljJnKSd0DFBOFbSPwwtEEtCb+mlp+XkU4BUpKsCtZxv1+tqVpiMiVDmQaA7mCt3J7IwuAUTxnGxNHdD1olBsKcmKy6JI6tytrQCqm84HCGRHPriE0Pl5JWAJ6LhB/E9XswnxWk4YOsCHKvvyDcpkdIUBcddNrepn7AHgsVw1iv8DCV3/gCrk66Z6NX8HmV1JoesbEDGspjdyHmuWCs136jujGwBQMZBqM8ja5MF7duWErl/AALlzOm+knd4T3c+DRJUSugxAzc24ntoUDhfwduwjTNjwjhtCdHYXhK6IBU/Miz2cILqFf6tefRRJ7+NEH5pHqqB4XkroCgGSy82IF4ieUm090mqS1MVfiFq3O0Y0JMSulNAxwDlb6+gR9PpzNsqNOyt6EZBdsWxkM+6a+s/siwcTHkazhc4n8iezTujlHEuRgOzDG3NzGzTFkCR1rDq90fHTfOo5BU4JWkUGDvYQmvqnxYPMgvyaWE72iKJvnWYdWDJPJRkM+HRPKqMrakF+nIhmn42iZU/SWsuGfQG+5pO01oMgQwG0Mlj2x+iwABWDZY1YhG7vAV/ZTwla9seGA6gLXcE/19hDwKyTtDaRGQ6glUE0i9DtNSC1MuSKzB4D9it0e75IrAypo+j+sIa4f6Hba8C+hW6vh7ig0PU1xO4uAvYvdD0A4z9nC3cT8BWc7bUJXW0MOnWRyQOcT/4O8PYuzsE/RLMIXVX0/an9NcT/DbK1iaAXeq4AAAAASUVORK5CYII=" alt="ŽPSV"><span class="brand-text" aria-hidden="true"></span><span class="brand-sep" aria-hidden="true"></span><h1>Hlídač <em>BOZP</em></h1></div>
+    <div class="mode-switch" role="group" aria-label="Verze aplikace"><button type="button" data-mode="zpsv">ŽPSV</button><button type="button" data-mode="osvc">Živnost</button></div>
     <div class="auth-tabs" id="authTabs" role="tablist">
       <button type="button" class="auth-tab" data-auth="login" aria-selected="true">Přihlášení</button>
       <button type="button" class="auth-tab" data-auth="register" aria-selected="false">Registrace</button>
@@ -619,7 +645,7 @@ a.btn { text-decoration: none; }
     <form class="auth-pane" data-pane="setup" id="fSetup" hidden>
       <h2>První spuštění</h2>
       <p class="small-note">Nastav heslo správce. Přihlašovací jméno správce je <b>admin</b>.</p>
-      <div class="field"><label for="sMail">E-mail správce (pro obnovu hesla)</label><input type="email" id="sMail" autocomplete="email" required></div>
+      <div class="field"><label for="sMail">E-mail hlavního správce</label><input type="email" id="sMail" autocomplete="email" required readonly></div>
       <div class="field"><label for="sPass">Heslo (min. 8 znaků)</label><input type="password" id="sPass" autocomplete="new-password" minlength="8" required></div>
       <div class="field"><label for="sPass2">Heslo znovu</label><input type="password" id="sPass2" autocomplete="new-password" minlength="8" required></div>
       <button class="btn primary big" type="submit">Uložit a přihlásit</button>
@@ -633,12 +659,14 @@ a.btn { text-decoration: none; }
   <header class="top">
     <div class="brand">
       <img class="brand-logo" src="data:image/png;base64,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" alt="ŽPSV">
+      <span class="brand-text"></span>
       <span class="brand-sep" aria-hidden="true"></span>
       <div><h1>Hlídač <em>BOZP</em></h1><small id="today"></small></div>
     </div>
     <div class="sync" id="sync"><i></i><span>Připojuji…</span></div>
     <div class="who-chip" id="whoChip" hidden>
       <span class="name"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg><span id="whoName"></span><span class="role" id="whoRole" hidden>správce</span></span>
+      <button class="btn small" data-action="switch-mode" id="modeBtn" hidden></button>
       <button class="btn small" data-action="my-account">Můj účet</button>
       <button class="btn small" data-action="logout">Odhlásit</button>
     </div>
@@ -899,6 +927,18 @@ a.btn { text-decoration: none; }
 
   <!-- UŽIVATELÉ (jen správce) -->
   <main id="view-uzivatele" data-view hidden>
+    <div class="section" id="brandSec" hidden>
+      <div class="section-head"><h2>Vzhled verze Živnost</h2><span class="hint">název a barvy</span></div>
+      <form class="panel" id="brandForm">
+        <div class="grid-form">
+          <div class="field"><label for="bName">Název (místo loga)</label><input type="text" id="bName" maxlength="60" placeholder="Technik BOZP a PO"></div>
+          <div class="field"><label for="bBrand">Hlavní barva</label><input type="color" id="bBrand" value="#0f766e"></div>
+          <div class="field"><label for="bInk">Tmavá barva (nadpisy, lišty)</label><input type="color" id="bInk" value="#1e293b"></div>
+        </div>
+        <div class="form-actions"><button class="btn primary" type="submit">Uložit vzhled</button><button class="btn" type="button" data-action="brand-reset">Výchozí barvy</button></div>
+        <p class="small-note">Barvy jsou zatím prozatímní. Zadej je podle svého webu, uvidí je všichni ve verzi Živnost a použijí se i v e-mailech a ve Wordu.</p>
+      </form>
+    </div>
     <div class="section">
       <div class="section-head"><h2>Čekající registrace</h2><span class="hint">schval nebo zamítni</span></div>
       <div id="uPending"></div>
@@ -1017,10 +1057,10 @@ a.btn { text-decoration: none; }
 </div>
 <div class="modal" id="sitesModal" hidden>
   <form class="panel" id="sitesForm">
-    <h3>Přístup k závodům</h3>
+    <h3 id="sitesTitle">Přístup k závodům</h3>
     <p class="small-note" id="sitesWho"></p>
     <div class="pick-list" id="sitesList"></div>
-    <p class="small-note">Uživatel uvidí a vyexportuje jen termíny, závady, kontroly a protokoly vybraných závodů. Správce vidí vše.</p>
+    <p class="small-note" id="sitesHelp">Uživatel uvidí a vyexportuje jen termíny, závady, kontroly a protokoly vybraných závodů.</p>
     <div class="form-actions">
       <button class="btn primary" type="submit">Uložit přístup</button>
       <button class="btn" type="button" data-action="close-sites">Zrušit</button>
@@ -1041,6 +1081,33 @@ a.btn { text-decoration: none; }
 <script>
 (() => {
   'use strict';
+
+  // ---------- verze aplikace: ŽPSV / živnost (oddělená data, vlastní vzhled, vlastní hlavní správce) ----------
+  const MODES = {
+    zpsv: { admin: 'rakos@zpsv.cz', label: 'ŽPSV', name: 'ŽPSV' },
+    osvc: { admin: 'rakos.bozp@gmail.com', label: 'Živnost', name: 'Technik BOZP a PO' },
+  };
+  const MODE = (() => { try { const m = localStorage.getItem('hlidac_mode'); return MODES[m] ? m : 'zpsv'; } catch (e) { return 'zpsv'; } })();
+  const OSVC = MODE === 'osvc';
+  const PFX = OSVC ? 'osvc_' : '';
+  document.documentElement.dataset.brand = MODE;
+  const wrapDb = raw => (!raw || !PFX ? raw : { collection: c => raw.collection(PFX + c), doc: path => raw.doc(PFX + path) });
+  function switchMode(m) {
+    if (!MODES[m] || m === MODE) return;
+    try { localStorage.setItem('hlidac_mode', m); } catch (e) { toast('Přepnutí verze potřebuje povolené úložiště prohlížeče.'); return; }
+    location.reload();
+  }
+  const brandName = () => (OSVC ? (String(settings.osvcName || '').trim() || MODES.osvc.name) : 'ŽPSV');
+  function applyBrand() {
+    const r = document.documentElement.style;
+    const ok = c => /^#[0-9a-f]{6}$/i.test(String(c || ''));
+    if (OSVC && ok(settings.osvcBrand)) r.setProperty('--osvc-brand', settings.osvcBrand); else r.removeProperty('--osvc-brand');
+    if (OSVC && ok(settings.osvcInk)) r.setProperty('--osvc-ink', settings.osvcInk); else r.removeProperty('--osvc-ink');
+    document.querySelectorAll('.brand-text').forEach(el => (el.textContent = brandName()));
+    document.querySelectorAll('.auth-foot').forEach(el => (el.textContent = brandName() + ' · Hlídač BOZP'));
+    document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === MODE)));
+    document.title = 'Hlídač BOZP' + (OSVC ? ' · ' + brandName() : '');
+  }
 
   // ---------- předvolby ----------
   const PRESETS = [
@@ -1154,14 +1221,32 @@ a.btn { text-decoration: none; }
     }
   }
 
+  function renderBrandForm() {
+    $('#brandSec').hidden = !(OSVC && isAdmin());
+    if ($('#brandSec').hidden || $('#brandForm').contains(document.activeElement)) return;
+    $('#bName').value = settings.osvcName || '';
+    $('#bBrand').value = /^#[0-9a-f]{6}$/i.test(settings.osvcBrand || '') ? settings.osvcBrand : OSVC_BRAND;
+    $('#bInk').value = /^#[0-9a-f]{6}$/i.test(settings.osvcInk || '') ? settings.osvcInk : OSVC_INK;
+  }
+  async function saveBrand(reset) {
+    if (!OSVC || !isAdmin()) return;
+    settings = reset ? { ...settings, osvcBrand: '', osvcInk: '' } : { ...settings, osvcName: $('#bName').value.trim(), osvcBrand: $('#bBrand').value, osvcInk: $('#bInk').value };
+    try { if (db) await db.doc('system/nastaveni').set(settings); toast(reset ? 'Barvy vráceny na výchozí.' : 'Vzhled uložen.'); } catch (err) { toast('Vzhled se nepodařilo uložit.'); }
+    applyBrand(); if (reset) { $('#bBrand').value = OSVC_BRAND; $('#bInk').value = OSVC_INK; }
+  }
+  $('#brandForm').addEventListener('submit', e => { e.preventDefault(); saveBrand(false); });
+  $('#sMail').value = MODES[MODE].admin;
+  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => switchMode(b.dataset.mode)));
+
   async function connect() {
+    applyBrand();
     const use = window.claude && window.claude.use;
     if (!use) { setSync('off', 'Jen v tomto okně'); accountsLoaded = true; gate(); showNotice(); render(); return; }
     const [dbNs, asNs, dlNs, user, mcpNs] = await Promise.all([
       use('db').catch(() => null), use('assets').catch(() => null),
       use('downloads').catch(() => null), use('user').catch(() => null), use('mcp').catch(() => null),
     ]);
-    db = dbNs; assets = asNs; downloads = dlNs; mcp = mcpNs;
+    db = wrapDb(dbNs); assets = asNs; downloads = dlNs; mcp = mcpNs;
     if (!mcp) { $('#testMailBtn').disabled = true; $('#testMailStatus').textContent = 'Odesílání e-mailu funguje jen v aplikaci otevřené přes claude.ai.'; }
     if (user) {
       try { const c = await user.can('data.write'); if (c === false) readOnly = true; } catch (e) { /* neznámé */ }
@@ -1189,7 +1274,7 @@ a.btn { text-decoration: none; }
       settings = s.exists ? s.data() : {};
       const el = $('#ownerEmail');
       if (document.activeElement !== el && settings.ownerEmail && !el.value) el.value = settings.ownerEmail;
-      renderTraining();
+      renderTraining(); applyBrand(); if (typeof renderBrandForm === 'function') renderBrandForm();
     }, () => {});
     db.collection('kontroly').onSnapshot(s => { checks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     db.collection('protokoly').onSnapshot(s => { protocols = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
@@ -1246,8 +1331,16 @@ a.btn { text-decoration: none; }
   // ---------- přístup po závodech ----------
   // Uživatel vidí jen závody, které mu správce přiřadil (ucty.sites = klíče firma--závod). Správce vidí vše.
   const keyOf = (company, site) => slug(company) + '--' + seg(site || '');
-  const isAdmin = () => !!(me && me.role === 'admin');
-  const myKeys = () => (isAdmin() ? null : (me && Array.isArray(me.sites) ? me.sites : []));
+  const ADMIN_MAIL = MODES[MODE].admin;
+  const isAdmin = () => !!(me && me.role === 'admin' && String(me.email || '').trim().toLowerCase() === ADMIN_MAIL);
+  const isMainAdminAcc = a => a.role === 'admin' && String(a.email || '').trim().toLowerCase() === ADMIN_MAIL;
+  // správce firmy (role 'firma') vidí všechny závody svých firem, správce závodu (role 'user') jen přidělené závody
+  const myKeys = () => {
+    if (isAdmin()) return null;
+    if (!me) return [];
+    if (me.role === 'firma') { const fs = new Set(me.firms || []); return allPairs(true).filter(p => fs.has(p.company)).map(p => p.key); }
+    return Array.isArray(me.sites) ? me.sites : [];
+  };
   const allowed = x => { const k = myKeys(); return !k || k.includes(keyOf(x.company, x.site)); };
   let scope = '';
   const inScope = x => allowed(x) && (!scope || keyOf(x.company, x.site) === scope);
@@ -1500,6 +1593,7 @@ a.btn { text-decoration: none; }
 
     renderProtoList();
     renderTraining();
+    renderBrandForm();
     renderWeekly();
     renderUsers();
     showNotice();
@@ -2045,14 +2139,19 @@ a.btn { text-decoration: none; }
 
 
   // ---------- e-maily ve firemním vzhledu ----------
+  const OSVC_BRAND = '#0f766e', OSVC_INK = '#1e293b';
+  const mailBrand = () => (OSVC ? (/^#[0-9a-f]{6}$/i.test(settings.osvcBrand || '') ? settings.osvcBrand : OSVC_BRAND) : '#ae0f0a');
+  const mailInk = () => (OSVC ? (/^#[0-9a-f]{6}$/i.test(settings.osvcInk || '') ? settings.osvcInk : OSVC_INK) : '#3d3c3b');
   function mailHtml(title, inner) {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eeede9"><tr><td align="center" style="padding:24px 12px">`
       + `<table role="presentation" width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:600px;border:1px solid #dcd9d3;font-family:Arial,Helvetica,sans-serif;color:#1f1e1d">`
-      + `<tr><td style="padding:18px 24px 14px"><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;color:#3d3c3b;letter-spacing:-1px">žpsv</span><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;font-style:italic;color:#ae0f0a;letter-spacing:-4px">&nbsp;///</span>`
-      + `<span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#3d3c3b;letter-spacing:1px;padding-left:14px">HLÍDAČ <span style="color:#ae0f0a">BOZP</span></span></td></tr>`
-      + `<tr><td bgcolor="#ae0f0a" height="4" style="font-size:0;line-height:0">&nbsp;</td></tr>`
-      + `<tr><td style="padding:22px 24px;font-size:15px;line-height:1.5"><h1 style="margin:0 0 14px;font-size:18px;text-transform:uppercase;color:#3d3c3b">${esc(title)}</h1>${inner}</td></tr>`
-      + `<tr><td style="padding:14px 24px;border-top:1px solid #dcd9d3;font-size:12px;color:#6b6864">Hlídač BOZP · ŽPSV · automatická zpráva</td></tr></table></td></tr></table>`;
+      + (OSVC
+        ? `<tr><td style="padding:18px 24px 14px"><span style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;color:${mailInk()}">${esc(brandName())}</span><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${mailInk()};letter-spacing:1px;padding-left:14px">HLÍDAČ <span style="color:${mailBrand()}">BOZP</span></span></td></tr>`
+        : `<tr><td style="padding:18px 24px 14px"><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;color:#3d3c3b;letter-spacing:-1px">žpsv</span><span style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;font-style:italic;color:#ae0f0a;letter-spacing:-4px">&nbsp;///</span>`
+          + `<span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#3d3c3b;letter-spacing:1px;padding-left:14px">HLÍDAČ <span style="color:#ae0f0a">BOZP</span></span></td></tr>`)
+      + `<tr><td bgcolor="${mailBrand()}" height="4" style="font-size:0;line-height:0">&nbsp;</td></tr>`
+      + `<tr><td style="padding:22px 24px;font-size:15px;line-height:1.5"><h1 style="margin:0 0 14px;font-size:18px;text-transform:uppercase;color:${mailInk()}">${esc(title)}</h1>${inner}</td></tr>`
+      + `<tr><td style="padding:14px 24px;border-top:1px solid #dcd9d3;font-size:12px;color:#6b6864">Hlídač BOZP · ${esc(brandName())} · automatická zpráva</td></tr></table></td></tr></table>`;
   }
   async function sendMail(to, subject, title, inner, text) {
     if (!mcp) throw { code: 'no_mcp' };
@@ -2060,7 +2159,7 @@ a.btn { text-decoration: none; }
   }
 
   // ---------- účty a přihlášení ----------
-  const SESS = 'hlidac_sess_v1';
+  const SESS = 'hlidac_sess_v1' + (OSVC ? '_osvc' : '');
   const b64 = u8 => btoa(String.fromCharCode(...u8));
   const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const randB64 = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return b64(a); };
@@ -2120,9 +2219,11 @@ a.btn { text-decoration: none; }
         if (pane !== 'setup') showPane('setup', isOwner === false ? 'Aplikaci musí nejdřív nastavit její vlastník.' : '', isOwner === false ? 'err' : '');
       } else if (pane === 'loading' || pane === 'setup') showPane('login');
     }
-    const admin = !!(me && me.role === 'admin');
+    const admin = isAdmin();
     $('#whoChip').hidden = !me;
-    if (me) { $('#whoName').textContent = me.name; $('#whoRole').hidden = !admin; }
+    if (me) { $('#whoName').textContent = me.name; $('#whoRole').hidden = !(admin || me.role === 'firma'); $('#whoRole').textContent = admin ? 'hlavní správce' : 'správce firmy'; }
+    $('#modeBtn').hidden = !admin;
+    $('#modeBtn').textContent = OSVC ? '⇄ Verze ŽPSV' : '⇄ Verze Živnost';
     $('#tab-uzivatele').hidden = !admin;
     $('#tab-firmy').hidden = !admin;
     document.querySelectorAll('[data-action="open-proto"]').forEach(x => (x.hidden = !admin));
@@ -2154,8 +2255,8 @@ a.btn { text-decoration: none; }
   $('#fSetup').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
     if (isOwner === false) { authMsg('Aplikaci musí nejdřív nastavit její vlastník.', 'err'); return; }
     if (accounts.some(a => a.id === 'admin')) { showPane('login', 'Správce už je nastavený. Přihlas se.'); return; }
-    const mail = $('#sMail').value.trim(), p1 = $('#sPass').value, p2 = $('#sPass2').value;
-    if (!isMail(mail)) { authMsg('Zadej platný e-mail.', 'err'); return; }
+    const mail = $('#sMail').value.trim().toLowerCase(), p1 = $('#sPass').value, p2 = $('#sPass2').value;
+    if (mail !== ADMIN_MAIL) { authMsg(`Hlavním správcem této verze může být jen ${ADMIN_MAIL}.`, 'err'); return; }
     if (p1.length < 8) { authMsg('Heslo musí mít aspoň 8 znaků.', 'err'); return; }
     if (p1 !== p2) { authMsg('Hesla se neshodují.', 'err'); return; }
     const salt = randB64(16), hash = await hashPw(p1, salt);
@@ -2228,14 +2329,14 @@ a.btn { text-decoration: none; }
   function openAccount() {
     if (!me) return;
     $('#accWho').textContent = `${me.name} · osobní číslo ${me.osc}`;
-    $('#aMail').value = me.email || ''; $('#aCur').value = ''; $('#aNew').value = ''; $('#aNew2').value = ''; $('#accStatus').textContent = '';
+    $('#aMail').value = me.email || ''; $('#aMail').readOnly = me.role === 'admin'; $('#aCur').value = ''; $('#aNew').value = ''; $('#aNew2').value = ''; $('#accStatus').textContent = '';
     $('#accModal').hidden = false; $('#aMail').focus();
   }
   $('#accForm').addEventListener('submit', e => { e.preventDefault(); busy(e.target, async () => {
     const st = $('#accStatus'), mail = $('#aMail').value.trim(), cur = $('#aCur').value, n1 = $('#aNew').value, n2 = $('#aNew2').value;
     if ((await hashPw(cur, me.salt)) !== me.hash) { st.textContent = 'Současné heslo nesouhlasí.'; return; }
     if (mail && !isMail(mail)) { st.textContent = 'Zadej platný e-mail.'; return; }
-    const upd = { email: mail };
+    const upd = { email: me.role === 'admin' ? me.email : mail };
     if (n1 || n2) {
       if (n1.length < 8) { st.textContent = 'Nové heslo musí mít aspoň 8 znaků.'; return; }
       if (n1 !== n2) { st.textContent = 'Nová hesla se neshodují.'; return; }
@@ -2248,30 +2349,31 @@ a.btn { text-decoration: none; }
 
   // správa uživatelů (správce)
   function renderUsers() {
-    const admin = !!(me && me.role === 'admin');
+    const admin = isAdmin();
     const pend = accounts.filter(a => a.status === 'pending');
     const resets = accounts.filter(a => a.resetReq);
     const c = $('#cnt-uzivatele'); c.textContent = pend.length + resets.length; c.hidden = !admin || !(pend.length + resets.length);
     if (!admin) return;
     const row = (a, acts) => `<div class="row user-row">
-      <div class="pillcell"><span class="pill ${a.status === 'active' ? 'ok' : a.status === 'blocked' ? 'red' : 'amber'}">${a.role === 'admin' ? 'správce' : a.status === 'active' ? 'aktivní' : a.status === 'blocked' ? 'zablokovaný' : 'čeká'}</span></div>
+      <div class="pillcell"><span class="pill ${a.status === 'active' ? 'ok' : a.status === 'blocked' ? 'red' : 'amber'}">${isMainAdminAcc(a) ? 'hlavní správce' : a.status === 'active' ? (a.role === 'firma' ? 'správce firmy' : 'správce závodu') : a.status === 'blocked' ? 'zablokovaný' : 'čeká'}</span></div>
       <div><div class="who">${esc(a.name)}<small>${esc(a.osc)}</small></div><div class="what">${esc(a.email || 'bez e-mailu')}</div>
       <div class="when">registrace ${a.createdAt ? fmt(a.createdAt.slice(0, 10)) : '–'}${a.resetSentAt ? ' · kód odeslán ' + fmt(a.resetSentAt.slice(0, 10)) : ''}${a.testMailAt ? ' · zkušební e-mail ' + fmt(a.testMailAt.slice(0, 10)) : ''}</div>
-      ${a.role === 'admin' ? '<div class="site-chips"><span>všechny závody</span></div>' : `<div class="site-chips">${(a.sites || []).length ? a.sites.map(k => { const p = allPairs(true).find(x => x.key === k); return `<span>${esc(p ? p.label : k)}</span>`; }).join('') : '<span class="warn">bez přiřazeného závodu</span>'}</div>`}</div>
+      ${isMainAdminAcc(a) ? '<div class="site-chips"><span>všechny firmy a závody</span></div>' : a.role === 'firma' ? `<div class="site-chips">${(a.firms || []).length ? a.firms.map(f => `<span>${esc(f)} · celá firma</span>`).join('') : '<span class="warn">bez přiřazené firmy</span>'}</div>` : `<div class="site-chips">${(a.sites || []).length ? a.sites.map(k => { const p = allPairs(true).find(x => x.key === k); return `<span>${esc(p ? p.label : k)}</span>`; }).join('') : '<span class="warn">bez přiřazeného závodu</span>'}</div>`}</div>
       <div class="acts">${acts}</div></div>`;
     $('#uPending').innerHTML = pend.length ? `<div class="list">${pend.map(a => row(a,
       `<button class="btn small primary" data-action="u-approve" data-id="${a.id}">${ic('check')}Schválit</button><button class="btn small danger" data-action="u-reject" data-id="${a.id}">${ic('trash')}Zamítnout</button>`)).join('')}</div>` : '<div class="empty">Žádná registrace nečeká.</div>';
     $('#uResets').innerHTML = resets.length ? `<div class="list">${resets.map(a => row(a,
       `<button class="btn small primary" data-action="u-code" data-id="${a.id}">${ic('mail')}Odeslat kód</button>`)).join('')}</div>` : '<div class="empty">Žádné žádosti.</div>';
-    const others = accounts.filter(a => a.status !== 'pending').sort((x, y) => (x.role === 'admin' ? -1 : y.role === 'admin' ? 1 : x.name.localeCompare(y.name, 'cs')));
-    $('#uList').innerHTML = others.length ? `<div class="list">${others.map(a => row(a, a.role === 'admin' ? '' :
-      `${a.status === 'blocked' ? `<button class="btn small" data-action="u-unblock" data-id="${a.id}">${ic('undo')}Odblokovat</button>` : `<button class="btn small" data-action="u-block" data-id="${a.id}">Zablokovat</button>`}
-       <button class="btn small primary" data-action="u-sites" data-id="${a.id}">${ic('factory')}Závody</button>
+    const others = accounts.filter(a => a.status !== 'pending').sort((x, y) => (isMainAdminAcc(x) ? -1 : isMainAdminAcc(y) ? 1 : x.name.localeCompare(y.name, 'cs')));
+    $('#uList').innerHTML = others.length ? `<div class="list">${others.map(a => row(a, isMainAdminAcc(a) ? '' :
+      `<label class="role-pick"><span class="label">Role</span><select data-urole="${a.id}" aria-label="Role uživatele ${esc(a.name)}"><option value="user" ${a.role !== 'firma' ? 'selected' : ''}>Správce závodu</option><option value="firma" ${a.role === 'firma' ? 'selected' : ''}>Správce firmy</option></select></label>
+       ${a.status === 'blocked' ? `<button class="btn small" data-action="u-unblock" data-id="${a.id}">${ic('undo')}Odblokovat</button>` : `<button class="btn small" data-action="u-block" data-id="${a.id}">Zablokovat</button>`}
+       <button class="btn small primary" data-action="u-sites" data-id="${a.id}">${ic(a.role === 'firma' ? 'building' : 'factory')}${a.role === 'firma' ? 'Firmy' : 'Závody'}</button>
        ${a.email ? `<button class="btn small" data-action="u-test" data-id="${a.id}">${ic('mail')}Zkušební e-mail</button>` : ''}
        ${a.email ? `<button class="btn small" data-action="u-code" data-id="${a.id}">${ic('mail')}Kód pro nové heslo</button>` : ''}
        <button class="btn small danger" data-action="u-delete" data-id="${a.id}">${ic('trash')}Smazat</button>`)).join('')}</div>` : '<div class="empty">Zatím žádní uživatelé.</div>';
   }
-  const CONFIRM_MAIL = 'rakos@zpsv.cz';
+  const CONFIRM_MAIL = MODES[MODE].admin;
   const CONFIRM_HTML = `<p style="margin:0 0 12px;padding:10px 12px;background:#fff4e0;border-left:4px solid #e8a33d"><b>Prosíme o potvrzení:</b> napište krátce na <a href="mailto:${CONFIRM_MAIL}">${CONFIRM_MAIL}</a>, že vám tento e-mail došel.</p>`;
   const CONFIRM_TXT = `Prosíme o potvrzení: napište krátce na ${CONFIRM_MAIL}, že vám tento e-mail došel.`;
   function mailErr(err) {
@@ -2285,7 +2387,7 @@ a.btn { text-decoration: none; }
     await patch('ucty', a.id, { testMailAt: nowIso() });
   }
   async function sendTestAll(btn) {
-    if (!me || me.role !== 'admin') return;
+    if (!isAdmin()) return;
     const list = accounts.filter(a => a.status === 'active' && a.role !== 'admin' && a.email);
     if (!list.length) { toast('Žádný aktivní uživatel s e-mailem.'); return; }
     confirmTwice(btn, async () => {
@@ -2299,7 +2401,7 @@ a.btn { text-decoration: none; }
     }, `Opravdu poslat? (${list.length} ${list.length === 1 ? "uživatel" : list.length < 5 ? "uživatelé" : "uživatelů"})`);
   }
   async function adminAction(action, id, btn) {
-    const a = accounts.find(x => x.id === id); if (!a || !me || me.role !== 'admin') return;
+    const a = accounts.find(x => x.id === id); if (!a || !isAdmin() || isMainAdminAcc(a)) return;
     if (action === 'u-approve') {
       await patch('ucty', id, { status: 'active', approvedAt: nowIso(), approvedBy: me.name });
       toast(`${a.name} schválen(a). Vyber, které závody uvidí.`);
@@ -2919,6 +3021,14 @@ a.btn { text-decoration: none; }
     return { data: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height };
   }
   function logoBytes() {
+    if (OSVC) {
+      const c = document.createElement('canvas'); c.width = 640; c.height = 184; const g = c.getContext('2d');
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, 640, 184);
+      g.fillStyle = mailInk(); g.font = 'bold 64px Arial, Helvetica, sans-serif'; g.textBaseline = 'middle';
+      let size = 64; while (g.measureText(brandName()).width > 620 && size > 24) { size -= 4; g.font = `bold ${size}px Arial, Helvetica, sans-serif`; }
+      g.fillText(brandName(), 8, 80); g.fillStyle = mailBrand(); g.fillRect(8, 140, 200, 10);
+      return Uint8Array.from(atob(c.toDataURL('image/png').split(',')[1]), x => x.charCodeAt(0));
+    }
     const src = document.querySelector('.brand-logo').src;
     return Uint8Array.from(atob(src.split(',')[1]), c => c.charCodeAt(0));
   }
@@ -3180,10 +3290,27 @@ a.btn { text-decoration: none; }
   }
 
   // přiřazení závodů uživateli
-  let sitesFor = null;
+  let sitesRole = 'user', sitesFor = null;
+  document.addEventListener('change', async e => {
+    const t = e.target; if (!t.dataset || !t.dataset.urole || !isAdmin()) return;
+    const a = accounts.find(x => x.id === t.dataset.urole); if (!a || isMainAdminAcc(a)) return;
+    const role = t.value === 'firma' ? 'firma' : 'user';
+    try {
+      await patch('ucty', a.id, { role });
+      toast(role === 'firma' ? `${a.name} je teď správce firmy. Vyber, kterých firem.` : `${a.name} je teď správce závodu. Vyber, kterých závodů.`);
+      openSites({ ...a, role });
+    } catch (err) { /* hláška už zobrazena */ }
+  });
   function openSites(a) {
-    sitesFor = a.id;
-    $('#sitesWho').textContent = `${a.name} · osobní číslo ${a.osc}`;
+    sitesFor = a.id; sitesRole = a.role === 'firma' ? 'firma' : 'user';
+    $('#sitesWho').textContent = `${a.name} · osobní číslo ${a.osc} · ${sitesRole === 'firma' ? 'správce firmy' : 'správce závodu'}`;
+    $('#sitesTitle').textContent = sitesRole === 'firma' ? 'Přístup k firmám' : 'Přístup k závodům';
+    $('#sitesHelp').textContent = sitesRole === 'firma' ? 'Správce firmy uvidí všechny závody vybraných firem, i ty přidané později.' : 'Správce závodu uvidí a vyexportuje jen termíny, závady, kontroly a protokoly vybraných závodů.';
+    if (sitesRole === 'firma') {
+      const cur = new Set(a.firms || []), comps = companiesOf();
+      $('#sitesList').innerHTML = comps.length ? comps.map(c => `<label><input type="checkbox" value="${esc(c)}" ${cur.has(c) ? 'checked' : ''}><span>${esc(c)}</span><small>${sitesOf(c).length} ${plural(sitesOf(c).length, 'závod', 'závody', 'závodů')}</small></label>`).join('') : '<div class="grp">Nejdřív založ firmu v záložce Firmy.</div>';
+      $('#sitesModal').hidden = false; return;
+    }
     const cur = new Set(a.sites || []);
     const pairs = allPairs(true);
     $('#sitesList').innerHTML = pairs.length ? uniq(pairs.map(p => p.company)).map(c => `<div class="grp">${esc(c)}</div>` + pairs.filter(p => p.company === c).map(p =>
@@ -3194,6 +3321,10 @@ a.btn { text-decoration: none; }
   $('#sitesForm').addEventListener('submit', async e => {
     e.preventDefault();
     const ks = [...document.querySelectorAll('#sitesList input:checked')].map(x => x.value);
+    if (sitesRole === 'firma') {
+      try { await patch('ucty', sitesFor, { firms: ks }); $('#sitesModal').hidden = true; toast(ks.length ? `Přiřazeno firem: ${ks.length}.` : 'Uživatel teď nevidí žádnou firmu.'); render(); } catch (err) { /* */ }
+      return;
+    }
     try { await patch('ucty', sitesFor, { sites: ks }); $('#sitesModal').hidden = true; toast(ks.length ? `Přiřazeno závodů: ${ks.length}.` : 'Uživatel teď nevidí žádný závod.'); render(); }
     catch (err) { /* hláška už zobrazena */ }
   });
@@ -3213,6 +3344,8 @@ a.btn { text-decoration: none; }
     const id = b.dataset.id;
     switch (b.dataset.action) {
       case 'new-term': openTermForm(null); break;
+      case 'switch-mode': switchMode(OSVC ? 'zpsv' : 'osvc'); break;
+      case 'brand-reset': saveBrand(true); break;
       case 'u-test-all': sendTestAll(b); break;
       case 'logout': logout(); break;
       case 'my-account': openAccount(); break;
