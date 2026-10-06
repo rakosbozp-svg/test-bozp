@@ -15,6 +15,19 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 - schválená DZP FVE 2025 a plánek areálu Litice
 - ukázka požadovaného výstupu
 
+## Hotovo
+- **Značky** (`znacky/`): všech 109 značek z katalogu ČAHD 11/2011 jako PNG (600 dpi, průhledné pozadí) a SVG,
+  `katalog.json` (id `DZP-001`…`DZP-109`, název, zdroj, strana/řádek/sloupec). Generuje `npm run znacky`.
+  **Pozor:** zdrojové značky v PDF jsou bitmapy, ne vektory. SVG je jen obálka kolem PNG a při velkém zvětšení
+  je vidět pixelace. Skutečné vektory jsou možné až z dodaných PNG E001–E019/F001–F006 nebo z CAD zdroje ČAHD.
+  Názvy jsou text z PDF; `overeno: false` u všech, dokud je nepotvrdíš.
+- **Datový model** (`js/model.js`): projekt → listy (karta, situace, půdorys, schéma, text), pole karty dle vzoru HZS SCK
+  (pravidlo „NE“), výkres s měřítkem/severkou/vrstvami/legendou, revize, migrace starších souborů, velikost prvků 1–500 (krok 0,1).
+- **Kontrola úplnosti** (`js/uplnost.js`): povinná pole, hasivo u nebezpečí, výkon FVE v kWp, ověřený průtok hydrantu,
+  měřítko, severka, legenda, revize, existence značek.
+- **Litice** (`data/litice.projekt.json`): jen potvrzené údaje o FVE a poznámky o rozsahu a polohách.
+- Testy: `npm test` (10 testů, Node ≥ 22).
+
 ## Plán práce
 1. datový model karty podle vzoru
 2. převod 109 značek do SVG (název + zdroj)

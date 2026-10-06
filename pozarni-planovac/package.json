@@ -1,0 +1,10 @@
+{
+  "name": "pozarni-planovac",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/model.test.mjs",
+    "znacky": "python3 tools/build_znacky.py",
+    "litice": "node tools/vytvor_litice.mjs"
+  }
+}

@@ -1,0 +1,181 @@
+{
+ "schemaVersion": 1,
+ "id": "proj_954cqxow",
+ "nazev": "DZP Litice",
+ "typ": "operativni_karta",
+ "vytvoreno": "2026-10-06T20:28:29.248Z",
+ "zmeneno": "2026-10-06T20:28:29.248Z",
+ "zdrojMetodiky": "Vzor OK HZS Středočeského kraje; ověřit podle aktuální legislativy a s příslušným HZS",
+ "listy": [
+  {
+   "id": "list_yy4hpgx4",
+   "typ": "karta",
+   "nazev": "Operativní karta",
+   "poradi": 0,
+   "karta": {
+    "stupenPoplachu": "",
+    "uzemniOdbor": "",
+    "objekt": {
+     "nazev": "",
+     "provozovatel": "",
+     "ic": "",
+     "adresa": "",
+     "gps": {
+      "sirka": null,
+      "delka": null
+     },
+     "provoz": {
+      "pracovniDoba": "",
+      "kontaktTelefon": "",
+      "kontaktJmeno": ""
+     },
+     "obsazeniOsobami": "",
+     "prijezdZ": "",
+     "omezeni": ""
+    },
+    "charakter": {
+     "ucelStavby": "",
+     "podlazi": "",
+     "pudorysM": "",
+     "konstrukce": "",
+     "unikoveCesty": "",
+     "celkovaVyskaM": "",
+     "steny": "",
+     "priccky": "",
+     "vytahy": "",
+     "zastavenaPlochaM2": "",
+     "stropy": "",
+     "strecha": "",
+     "typUnikoveCesty": "",
+     "pozarniUseky": ""
+    },
+    "nebezpeci": [],
+    "fve": {
+     "pritomna": true,
+     "popis": "FVE na hale PREFA 1; výkonové optimizéry 2:1; střídače na obvodové stěně; STOP FVE před vstupem do rozvodny NN. DC část může být zásahově relevantní i po odpojení.",
+     "vykonKWp": 460,
+     "pocetPanelu": 488,
+     "baterie": false,
+     "vypinacSilovaCast": "",
+     "hasivo": ""
+    },
+    "media": {
+     "hlavniUzaverVody": "",
+     "vedlejsiUzaverVody": "",
+     "hlavniUzaverPlynu": "",
+     "vedlejsiUzaverPlynu": "",
+     "hlavniUzaverTopeni": "",
+     "vedlejsiUzaverTopeni": "",
+     "hlavniVypinacEl": "",
+     "vedlejsiVypinacEl": ""
+    },
+    "pbz": {
+     "eps": "",
+     "zdhpp": "",
+     "apz": "",
+     "zdp": "",
+     "shz": "",
+     "pshz": "",
+     "zokt": "",
+     "pk": "",
+     "vytahEvakuacni": "",
+     "vytahPozarni": ""
+    },
+    "vodniZdroje": [],
+    "doporuceni": "",
+    "znalostObjektu": {
+     "jmeno": "",
+     "mobil": ""
+    },
+    "zpracoval": {
+     "jmeno": "",
+     "cisloOsvedceni": "",
+     "datum": ""
+    },
+    "schvalil": {
+     "jmeno": "",
+     "funkce": "",
+     "datum": ""
+    }
+   }
+  },
+  {
+   "id": "list_ipwnbdqt",
+   "typ": "situace",
+   "nazev": "Situace",
+   "poradi": 1,
+   "vykres": {
+    "format": "A4",
+    "orientace": "na_sirku",
+    "pozadi": null,
+    "meritko": {
+     "pomer": 1000,
+     "overeno": false,
+     "kalibrace": null
+    },
+    "severka": {
+     "uhel": null
+    },
+    "sit10m": false,
+    "vrstvy": [
+     {
+      "id": "zaklad",
+      "nazev": "Podklad",
+      "viditelna": true,
+      "zamcena": false
+     }
+    ],
+    "prvky": [],
+    "legenda": [],
+    "razitko": {
+     "nazev": "",
+     "zpracoval": "",
+     "datum": "",
+     "schvalil": ""
+    }
+   }
+  }
+ ],
+ "revize": [],
+ "kontakty": [],
+ "nastaveni": {
+  "velikostPrvku": 10
+ },
+ "poznamkyKOvereni": [
+  {
+   "tema": "Rozsah",
+   "text": "Navazuje na schválenou DZP FVE z roku 2025 (podklad zatím nedodán).",
+   "stav": "uzivatel_potvrdil"
+  },
+  {
+   "tema": "Rozsah",
+   "text": "VN zařízení, hořlavé kapaliny a výdejní místo olejů a nafty nejsou samostatným důvodem pro DZP; lze zakreslit, má-li zásahový význam.",
+   "stav": "uzivatel_potvrdil"
+  },
+  {
+   "tema": "Rozsah",
+   "text": "PB klece a sklad technických plynů neposuzovat automaticky jako samostatný předmět DZP; vždy posoudit zásahový význam.",
+   "stav": "uzivatel_potvrdil"
+  },
+  {
+   "tema": "Poloha",
+   "text": "Sklad PB Primagas u budovy 2 na straně do areálu; dvě klece vedle sebe, každá cca 2 × 1 m.",
+   "stav": "uzivatel_potvrdil_priblizne"
+  },
+  {
+   "tema": "Poloha",
+   "text": "Sklad technických plynů za strojními dílnami, cca 5 m od pravého horního rohu plánku, v úrovni přístřešku kameniva.",
+   "stav": "uzivatel_potvrdil_priblizne"
+  },
+  {
+   "tema": "Poloha",
+   "text": "Výdejní místo separačních olejů a nafty mezi objekty 6 a 12, přibližně uprostřed, cca 6 × 4 m.",
+   "stav": "uzivatel_potvrdil_priblizne"
+  },
+  {
+   "tema": "Chybí",
+   "text": "Plánek areálu, adresa, GPS, kontakty, příjezdy, hydranty a zdroje vody, uzávěry a vypínače – dodá uživatel.",
+   "stav": "chybi"
+  }
+ ]
+}
