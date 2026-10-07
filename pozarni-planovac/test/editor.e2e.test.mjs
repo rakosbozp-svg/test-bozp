@@ -12,6 +12,12 @@ const require = createRequire(import.meta.url);
 let chromium;
 for (const m of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { ({ chromium } = require(m)); break; } catch { /* další */ } }
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const dlg = async (page, text) => {
+  await page.waitForSelector('.dlg[open]');
+  if (text !== undefined) await page.fill('.dlg input[name=hodnota]', text);
+  await page.click('.dlg [data-vysledek=ok]');
+  await page.waitForSelector('.dlg', { state: 'detached' });
+};
 const PORT = 8792, URL_ = `http://localhost:${PORT}/index.html`;
 const tmp = mkdtempSync(join(tmpdir(), 'pp-ed-'));
 
@@ -26,14 +32,14 @@ test.after(async () => { await browser?.close(); srv?.kill(); });
 
 async function nova({ touch = false } = {}) {
   const ctx = await browser.newContext({ acceptDownloads: true, hasTouch: touch, viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const page = await ctx.newPage();
   page.chyby = []; page.on('pageerror', (e) => page.chyby.push(e.message)); page.on('console', (m) => m.type() === 'error' && page.chyby.push(m.text()));
-  page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? (page.odpoved ?? 'Text') : undefined));
   await page.goto(URL_);
   await page.fill('#d-novy [name=nazev]', 'Editor test'); await page.click('#d-novy button'); await page.waitForSelector('.editor');
-  page.odpoved = 'Půdorys test';
-  await page.selectOption('#l-typ', 'pudorys'); await page.click('#l-pridej'); await page.waitForSelector('.ed-scena');
-  await page.waitForSelector('#svet'); page.odpoved = undefined;
+  await page.selectOption('#l-typ', 'pudorys'); await page.click('#l-pridej'); await dlg(page, 'Půdorys test'); await page.waitForSelector('.ed-scena');
+  await page.waitForSelector('#svet');
+  page.dlg = (t) => dlg(page, t);
   const W = (x, y) => page.evaluate(([a, b]) => { const m = document.querySelector('#svet').getScreenCTM(), p = new DOMPoint(a, b).matrixTransform(m); return [p.x, p.y]; }, [x, y]);
   page.W = W;
   page.klik = async (x, y, o = {}) => { const [sx, sy] = await W(x, y); await page.mouse.click(sx, sy, o); };
@@ -159,8 +165,7 @@ test('vrstvy: skrytí, zamčení a aktivní vrstva', skip, async () => {
   await p.locator('.vrstvy li', { has: p.locator('input[value="Stavby"]') }).locator('button[title="Odemknout"]').click();
   await p.klik(7, 3); assert.match(await p.txt('[data-st=vyber]'), /vybráno: 1/);
   // nová vrstva + aktivní vrstva pro nové prvky
-  p.odpoved = 'Hasební';
-  await p.getByRole('button', { name: '+ Nová vrstva' }).click();
+  await p.getByRole('button', { name: '+ Nová vrstva' }).click(); await p.dlg('Hasební');
   await p.locator('.vrstvy li', { has: p.locator('input[value="Hasební"]') }).locator('input[type=radio]').check();
   await p.nastroj('cara'); await p.klik(2, 8); await p.klik(10, 8); await p.keyboard.press('Enter'); await p.klid();
   assert.equal(await p.locator('#svet g[data-vrstva] [data-druh=cara]').count(), 1);
@@ -223,9 +228,8 @@ test('import podkladu PNG, upozornění na neověřené měřítko a kalibrace p
   // kalibrace: dva body na černém pruhu (v pixelech obrázku 50 → 350 = 300 px = 30 m)
   const bb = await p.locator('#svet [data-pozadi]').boundingBox();
   const px = (ix, iy) => [bb.x + (ix / 400) * bb.width, bb.y + (iy / 200) * bb.height];
-  p.odpoved = '30';
   const [a, b] = [px(50, 100), px(350, 100)];
-  await p.mouse.click(...a); await p.mouse.click(...b);
+  await p.mouse.click(...a); await p.mouse.click(...b); await p.dlg('30');
   await p.waitForFunction(() => !/NEOVĚŘENO/.test(document.querySelector('[data-st=meritko]').textContent));
   const [sx0, sy0] = await p.W(0, 0);
   void sx0; void sy0;
@@ -273,7 +277,7 @@ test('úchyty: změna velikosti a otočení tažením', skip, async () => {
   assert.equal(await hodnota('Šířka (m)'), '8'); assert.equal(await hodnota('Výška (m)'), '3');
   // otočení: úchyt nad horním okrajem, táhnout doprava od středu = +90 °
   await p.klid();
-  const h = await p.evaluate(() => { const k = [...document.querySelectorAll('.ed-svg svg > g[pointer-events=none] circle')].map((c) => ({ r: Number(c.getAttribute('r')), b: c.getBoundingClientRect() })).sort((a, b) => b.r - a.r)[0]; return { x: k.b.x + k.b.width / 2, y: k.b.y + k.b.height / 2 }; });
+  const h = await p.evaluate(() => { const k = [...document.querySelectorAll('.ed-svg svg > g[pointer-events=none] circle[fill="#fff"]')].map((c) => ({ r: Number(c.getAttribute('r')), b: c.getBoundingClientRect() })).sort((a, b) => b.r - a.r)[0]; return { x: k.b.x + k.b.width / 2, y: k.b.y + k.b.height / 2 }; });
   const [cx, cy] = await p.W(7, 4.5);
   await p.mouse.move(h.x, h.y); await p.keyboard.down('Shift'); await p.mouse.down(); await p.mouse.move(cx + 120, cy, { steps: 10 }); await p.mouse.up(); await p.keyboard.up('Shift');
   await p.waitForFunction(() => [...document.querySelectorAll('#panel-obsah label.f')].some((l) => l.textContent.includes('Otočení') && l.querySelector('input').value === '90'));

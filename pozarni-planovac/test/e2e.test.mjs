@@ -12,6 +12,12 @@ const require = createRequire(import.meta.url);
 let chromium;
 for (const m of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { ({ chromium } = require(m)); break; } catch { /* další */ } }
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const dlg = async (page, text) => {
+  await page.waitForSelector('.dlg[open]');
+  if (text !== undefined) await page.fill('.dlg input[name=hodnota]', text);
+  await page.click('.dlg [data-vysledek=ok]');
+  await page.waitForSelector('.dlg', { state: 'detached' });
+};
 const PORT = 8791, URL_ = `http://localhost:${PORT}/index.html`;
 
 test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha', { skip: !chromium && 'Playwright není dostupný' }, async () => {
@@ -20,9 +26,9 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
   const browser = await chromium.launch();
   try {
     const ctx = await browser.newContext({ acceptDownloads: true });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));   // písma Google v testu nepotřebujeme
     const page = await ctx.newPage();
     const chyby = []; page.on('pageerror', (e) => chyby.push(e.message)); page.on('console', (m) => m.type() === 'error' && chyby.push(m.text()));
-    page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Přejmenovaný list' : undefined));
 
     await page.goto(URL_);
     await page.fill('#d-novy [name=nazev]', 'DZP Test');
@@ -72,14 +78,14 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
     // listy: přidat, přejmenovat, kopie, smazat
     const pocetListu = () => page.locator('#listy li').count();
     const n0 = await pocetListu();
-    await page.selectOption('#l-typ', 'text'); await page.click('#l-pridej');
+    await page.selectOption('#l-typ', 'text'); await page.click('#l-pridej'); await dlg(page, 'Poznámky');
     await page.waitForSelector('#t-text');
     assert.equal(await pocetListu(), n0 + 1);
-    await page.click('#l-prejm');
+    await page.click('#l-prejm'); await dlg(page, 'Přejmenovaný list');
     await page.waitForFunction(() => document.querySelector('#listy li.akt')?.textContent.includes('Přejmenovaný list'));
     const cekejListy = (n) => page.waitForFunction((x) => document.querySelectorAll('#listy li').length === x, n);
     await page.click('#l-kopie'); await cekejListy(n0 + 2);
-    await page.click('#l-smaz'); await cekejListy(n0 + 1);
+    await page.click('#l-smaz'); await dlg(page); await cekejListy(n0 + 1);
 
     // metodika a revize
     await page.click('[data-p=metodika]'); assert.ok((await page.textContent('#panel-obsah')).includes('Operativní karta'));

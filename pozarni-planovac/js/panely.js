@@ -2,12 +2,13 @@
 import { zkontrolujUplnost, souhrn, HLADINY } from './uplnost.js';
 import { esc } from './formular.js';
 import { pridejRevizi } from './model.js';
+import { ikona } from './ikony.js';
 
 export function panelUplnosti(projekt, katalog, host) {
   const n = zkontrolujUplnost(projekt, katalog);
   const s = souhrn(n);
-  const radek = (x) => `<li class="n-${x.hladina}"><button type="button" data-cesta="${esc(x.cesta)}"><b>${x.hladina === HLADINY.CHYBA ? 'Chybí' : 'Pozor'}</b> ${esc(x.text)}</button></li>`;
-  const html = `<h3>Kontrola úplnosti</h3><p class="souhrn"><span class="odz cer">${s.chyby} chyb</span> <span class="odz zl">${s.upozorneni} upozornění</span></p>
+  const radek = (x) => `<li class="n-${x.hladina}"><button type="button" data-cesta="${esc(x.cesta)}"><span><b>${ikona(x.hladina === HLADINY.CHYBA ? 'chyba' : 'pozor', 15)}${x.hladina === HLADINY.CHYBA ? 'Chybí' : 'Pozor'}</b> ${esc(x.text)}</span></button></li>`;
+  const html = `<h3>Kontrola úplnosti</h3><p class="souhrn"><span class="odz cer rk-badge rk-badge--danger"><span class="rk-badge__dot"></span>${s.chyby} chyb</span> <span class="odz zl rk-badge rk-badge--warn"><span class="rk-badge__dot"></span>${s.upozorneni} upozornění</span></p>
   <p class="napoveda">Kontrola vychází z vzoru a návodu HZS SCK. Neověřuje právní správnost.</p>
   <ul class="nalezy">${n.filter((x) => x.hladina === HLADINY.CHYBA).map(radek).join('')}${n.filter((x) => x.hladina === HLADINY.UPOZORNENI).map(radek).join('')}</ul>`;
   if (host._html !== html) { host.innerHTML = html; host._html = html; }   // beze změny nepřekreslovat (neztratí se klik)

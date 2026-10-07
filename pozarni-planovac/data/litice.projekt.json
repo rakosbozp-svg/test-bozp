@@ -1,14 +1,14 @@
 {
  "schemaVersion": 1,
- "id": "proj_954cqxow",
+ "id": "proj_v72cmhur",
  "nazev": "DZP Litice",
  "typ": "operativni_karta",
- "vytvoreno": "2026-10-06T20:28:29.248Z",
- "zmeneno": "2026-10-06T20:28:29.248Z",
+ "vytvoreno": "2026-10-07T12:22:15.647Z",
+ "zmeneno": "2026-10-07T12:22:15.647Z",
  "zdrojMetodiky": "Vzor OK HZS Středočeského kraje; ověřit podle aktuální legislativy a s příslušným HZS",
  "listy": [
   {
-   "id": "list_yy4hpgx4",
+   "id": "list_xvuj1v6a",
    "typ": "karta",
    "nazev": "Operativní karta",
    "poradi": 0,
@@ -100,7 +100,7 @@
    }
   },
   {
-   "id": "list_ipwnbdqt",
+   "id": "list_nuafw26g",
    "typ": "situace",
    "nazev": "Situace",
    "poradi": 1,
@@ -109,24 +109,51 @@
     "orientace": "na_sirku",
     "pozadi": null,
     "meritko": {
-     "pomer": 1000,
-     "overeno": false,
-     "kalibrace": null
+     "pomer": 1000
+    },
+    "okno": {
+     "x": 0,
+     "y": 0
     },
     "severka": {
      "uhel": null
     },
-    "sit10m": false,
+    "sit10m": true,
     "vrstvy": [
      {
       "id": "zaklad",
-      "nazev": "Podklad",
+      "nazev": "Stavby",
+      "viditelna": true,
+      "zamcena": false
+     },
+     {
+      "id": "komunikace",
+      "nazev": "Komunikace a plochy",
+      "viditelna": true,
+      "zamcena": false
+     },
+     {
+      "id": "znacky",
+      "nazev": "Značky",
+      "viditelna": true,
+      "zamcena": false
+     },
+     {
+      "id": "trasy",
+      "nazev": "Trasy",
+      "viditelna": true,
+      "zamcena": false
+     },
+     {
+      "id": "popisky",
+      "nazev": "Popisky",
       "viditelna": true,
       "zamcena": false
      }
     ],
     "prvky": [],
     "legenda": [],
+    "legendaZobrazit": true,
     "razitko": {
      "nazev": "",
      "zpracoval": "",
@@ -138,8 +165,10 @@
  ],
  "revize": [],
  "kontakty": [],
+ "prilohy": {},
  "nastaveni": {
-  "velikostPrvku": 10
+  "velikostZnacky": 8,
+  "velikostTextu": 3
  },
  "poznamkyKOvereni": [
   {

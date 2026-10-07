@@ -4,6 +4,8 @@ import * as G from './geom.js';
 import { renderListu, esc } from './render.js';
 import { najdiZnacku, vyberZnacku } from '../znacky.js';
 import { naCislo } from '../formular.js';
+import { zeptejSe, oznam } from '../dialogy.js';
+import { ikona } from '../ikony.js';
 import { nactiObrazek, vlozPodklad } from './podklad.js';
 
 const NASTROJE = [
@@ -13,6 +15,7 @@ const NASTROJE = [
   ['obdelnik', 'Obdélník', 'Obdélník tažením'], ['elipsa', 'Elipsa', 'Elipsa tažením'], ['volna', 'Volně', 'Volná kresba'],
   ['text', 'Text', 'Textový popisek'], ['znacka', 'Značka', 'Vložení značky z katalogu'], ['dvere', 'Dveře', 'Dveře – klik na stěnu je připojí'], ['kalibrace', 'Kalibrace', 'Kalibrace měřítka podkladu podle známé délky'],
 ];
+const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', dvere: 'dvere', kalibrace: 'kalibrace' };
 const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
 const KROKY = [0.1, 0.5, 1, 5, 10];
 const bezCarky = (n, d = 2) => String(Math.round(n * 10 ** d) / 10 ** d).replace('.', ',');
@@ -33,21 +36,25 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   const volne = (p) => vrstvaViditelna(p.vrstva) && !vrstvaZamcena(p.vrstva);
   const vybrane = () => v.prvky.filter((p) => S.vyber.has(p.id));
 
+  const tl = (k) => { const [id, n, t] = NASTROJE.find((x) => x[0] === k); return `<button type="button" class="nast" data-nastroj="${id}" title="${esc(t)}" aria-label="${esc(n)}">${ikona(IK[id] || id, 18)}<span class="nast__txt">${n}</span></button>`; };
+  const ak = (a, ik, t) => `<button type="button" class="nast nast--ik" data-akce="${a}" title="${esc(t)}" aria-label="${esc(t)}">${ikona(ik, 18)}</button>`;
   host.innerHTML = `<div class="ed">
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
-      ${NASTROJE.map(([k, n, t]) => `<button type="button" class="nast" data-nastroj="${k}" title="${esc(t)}">${n}</button>`).join('')}
-      <span class="sep"></span>
-      <button type="button" class="nast" data-akce="zpet" title="Zpět (Ctrl+Z)">↶</button><button type="button" class="nast" data-akce="vpred" title="Znovu (Ctrl+Y)">↷</button>
-      <span class="sep"></span>
-      <button type="button" class="nast" data-akce="priblizit" title="Přiblížit">+</button><button type="button" class="nast" data-akce="oddalit" title="Oddálit">−</button><button type="button" class="nast" data-akce="cely" title="Zobrazit celý list">List</button><button type="button" class="nast" data-akce="obsah" title="Přiblížit na obsah výkresu">Obsah</button>
-      <span class="sep"></span>
-      <label class="prep" title="Přichytávání k bodům prvků"><input type="checkbox" data-prep="snapBody" checked> Body</label>
-      <label class="prep" title="Přichytávání k mřížce"><input type="checkbox" data-prep="snapMriz"> Mřížka</label>
-      <select data-krok title="Krok mřížky (m)" aria-label="Krok mřížky">${KROKY.map((k) => `<option value="${k}" ${k === S.krok ? 'selected' : ''}>${bezCarky(k, 1)} m</option>`).join('')}</select>
-      <label class="prep" title="Vodorovně / svisle / 45° (nebo držte Shift)"><input type="checkbox" data-prep="ortho"> Ortho</label>
-      <span class="sep"></span>
-      <label class="nast" title="Import podkladu – PNG nebo JPG">Podklad…<input type="file" data-podklad accept="image/png,image/jpeg" hidden></label>
-      <button type="button" class="nast" data-akce="export-svg" title="Stáhnout list jako SVG">SVG</button><button type="button" class="nast" data-akce="export-png" title="Stáhnout list jako PNG (300 dpi)">PNG</button>
+      <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
+      <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].map(tl).join('')}</div>
+      <div class="nast-skupina">${['text', 'znacka', 'dvere', 'kalibrace'].map(tl).join('')}</div>
+      <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
+      <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
+      <div class="nast-skupina">
+        <label class="prep" title="Přichytávání k bodům prvků"><input type="checkbox" data-prep="snapBody" checked> Body</label>
+        <label class="prep" title="Přichytávání k mřížce"><input type="checkbox" data-prep="snapMriz"> Mřížka</label>
+        <select data-krok title="Krok mřížky (m)" aria-label="Krok mřížky">${KROKY.map((k) => `<option value="${k}" ${k === S.krok ? 'selected' : ''}>${bezCarky(k, 1)} m</option>`).join('')}</select>
+        <label class="prep" title="Vodorovně / svisle / 45° (nebo držte Shift)"><input type="checkbox" data-prep="ortho"> Ortho</label>
+      </div>
+      <div class="nast-skupina">
+        <label class="nast" title="Import podkladu: DXF, SVG, PDF, PNG, JPG">${ikona('import', 18)}<span class="nast__txt">Import…</span><input type="file" class="sr-only" data-podklad accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
+        <button type="button" class="nast" data-akce="export-svg" title="Stáhnout list jako SVG">${ikona('stahnout', 18)}<span class="nast__txt">SVG</span></button><button type="button" class="nast" data-akce="export-png" title="Stáhnout list jako PNG (300 dpi)">${ikona('stahnout', 18)}<span class="nast__txt">PNG</span></button>
+      </div>
     </div>
     <div class="ed-scena" tabindex="0"><div class="ed-svg"></div>
       <div class="ed-plovouci" hidden><button type="button" class="btn pri" data-akce="dokoncit">Dokončit</button><button type="button" class="btn" data-akce="zrusit">Zrušit</button></div>
@@ -125,7 +132,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (!S.vb) { wrap.innerHTML = renderListu(v, mkO()); celyList(); }
     wrap.innerHTML = renderListu(v, mkO());
     const el = svgEl(); el.removeAttribute('width'); el.removeAttribute('height'); el.setAttribute('viewBox', `${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}`);
-    el.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;background:#8d8b86';
+    el.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;background:var(--bg-300)';
     const ov = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ov.setAttribute('pointer-events', 'none'); ov.innerHTML = overlay(); el.appendChild(ov);
     host.querySelectorAll('[data-nastroj]').forEach((b) => b.classList.toggle('akt', b.dataset.nastroj === S.nastroj));
     host.querySelector('[data-akce=zpet]').disabled = !H.lzeZpet; host.querySelector('[data-akce=vpred]').disabled = !H.lzeVpred;
@@ -135,7 +142,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     stav('vyber', S.vyber.size ? `vybráno: ${S.vyber.size}` : '');
     plovouci.hidden = !(S.kresleni && S.kresleni.body.length >= 1);
     const n = { vyber: 'Klik vybere prvek, tažení vybere oblast, Shift přidá. Táhněte úchyty pro změnu velikosti a otočení.', stena: 'Klik přidá bod stěny. Dvojklik nebo Enter dokončí, Esc zruší.', trasa: 'Klik přidá bod trasy. Dvojklik / Enter dokončí. Délka se počítá v metrech.', cara: 'Klik přidá bod. Dvojklik / Enter dokončí.', plocha: 'Klik přidá vrchol plochy. Dvojklik / Enter dokončí (min. 3 body).', obdelnik: 'Táhněte z rohu do rohu.', elipsa: 'Táhněte z rohu do rohu.', volna: 'Táhněte pro volnou kresbu.', text: 'Klik umístí text.', znacka: S.zvolenaZnacka ? `Klik vloží značku ${S.zvolenaZnacka}. Esc ukončí.` : 'Vyberte značku…', dvere: 'Klik na stěnu připojí dveře; mimo stěnu je vloží volně (jdou pak přesunout ke stěně).', kalibrace: v.pozadi ? (S.kalibrace?.a ? 'Klikněte na druhý bod známé vzdálenosti.' : 'Klikněte na první bod známé vzdálenosti na podkladu.') : 'Nejdřív naimportujte podklad (tlačítko Podklad…).', posun: 'Táhněte plátno. Kolečko myši přibližuje k ukazateli.' };
-    napoveda.textContent = n[S.nastroj] || '';
+    napoveda.innerHTML = n[S.nastroj] ? `<span>${esc(n[S.nastroj])}</span>` : '';
   }
 
   // ---------- úchyty a overlay ----------
@@ -153,7 +160,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       const xs = [b.x0, (b.x0 + b.x1) / 2, b.x1], ys = [b.y0, (b.y0 + b.y1) / 2, b.y1];
       for (let a = 0; a < 3; a++) for (let c = 0; c < 3; c++) if (!(a === 1 && c === 1)) out.push({ typ: 'meritko', ix: a, iy: c, w: [xs[a], ys[c]] });
     }
-    const [cx, cy] = [(b.x0 + b.x1) / 2, b.y0 - 9 * mmNaPx() / s()];
+    const [cx, cy] = [(b.x0 + b.x1) / 2, b.y0 - 24 * mmNaPx() / s()];
     out.push({ typ: 'otoceni', w: [cx, cy] });
     return out;
   }
@@ -189,7 +196,9 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   function zasahNaBodu(w) { const tol = tolM(8); for (let i = v.prvky.length - 1; i >= 0; i--) { const p = v.prvky[i]; if (volne(p) && P.zasah(p, w, tol, v.meritko.pomer, v.prvky)) return p; } return null; }
   function uchytNaBodu(e) {
     const mp = mmNaPx(), pt = e.pointerType === 'touch' ? 16 : 9, pap = klientNaPapir(e);
-    return uchyty().find((h) => { const q = svetNaPapir(h.w); return Math.hypot(q[0] - pap[0], q[1] - pap[1]) <= pt * mp; }) || null;
+    const blizko = (h) => { const q = svetNaPapir(h.w); return Math.hypot(q[0] - pap[0], q[1] - pap[1]) <= pt * mp; };
+    const vse = uchyty();
+    return vse.find((h) => h.typ === 'otoceni' && blizko(h)) || vse.find(blizko) || null;   // otočení má přednost
   }
   const vrstvaPro = (druh) => (S.aktVrstva && v.vrstvy.some((l) => l.id === S.aktVrstva) ? S.aktVrstva : (v.vrstvy.some((l) => l.id === VYCHOZI_VRSTVA[druh]) ? VYCHOZI_VRSTVA[druh] : v.vrstvy[0].id));
   const velikost = () => projekt.nastaveni.velikostZnacky ?? 8;
@@ -240,7 +249,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (t === 'obdelnik' || t === 'elipsa') { const b = snap(w0); S.tah = { typ: 'tvar', nastroj: t, od: b, do: b }; return; }
     if (t === 'volna') { S.tah = { typ: 'volna', body: [w0] }; return; }
     if (t === 'text') {
-      const txt = window.prompt('Text popisku:'); if (txt) pridej(P.novyPrvek('text', { x: snap(w0)[0], y: snap(w0)[1], text: txt, vyska: velikostTextu(), vrstva: vrstvaPro('text') })); return;
+      zeptejSe('Text popisku', '', { popisek: 'Text popisku (víc řádků upravíte ve vlastnostech)' }).then((txt) => { if (txt) pridej(P.novyPrvek('text', { x: snap(w0)[0], y: snap(w0)[1], text: txt, vyska: velikostTextu(), vrstva: vrstvaPro('text') })); }); return;
     }
     if (t === 'znacka') { if (!S.zvolenaZnacka) return; const b = snap(w0); pridej(P.novyPrvek('znacka', { x: b[0], y: b[1], znackaId: S.zvolenaZnacka, velikost: velikost(), vrstva: vrstvaPro('znacka') })); return; }
     if (t === 'dvere') {
@@ -252,10 +261,12 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       if (!S.kalibrace) { S.kalibrace = { a: null }; }
       const pz = v.pozadi, px = [(w0[0] - pz.x) / pz.mNaPx, (w0[1] - pz.y) / pz.mNaPx];
       if (!S.kalibrace.a) { S.kalibrace = { a: px, aSvet: w0 }; vykresli(); return; }
-      const zad = window.prompt('Skutečná vzdálenost mezi oběma body (v metrech):');
-      const m = zad === null ? NaN : naCislo(zad), a = S.kalibrace.a, aSvet = S.kalibrace.aSvet; S.kalibrace = null;
-      if (!(m > 0)) { vykresli(); return; }
-      try { P.kalibruj(pz, a, px, m); pz.x = aSvet[0] - a[0] * pz.mNaPx; pz.y = aSvet[1] - a[1] * pz.mNaPx; S.nastroj = 'vyber'; commit(); } catch (err) { window.alert(err.message); vykresli(); }
+      const a = S.kalibrace.a, aSvet = S.kalibrace.aSvet; S.kalibrace = null; vykresli();
+      zeptejSe('Skutečná vzdálenost mezi oběma body', '', { popisek: 'Vzdálenost v metrech (např. 12,5)' }).then((zad) => {
+        const m = zad === null ? NaN : naCislo(zad);
+        if (!(m > 0)) return;
+        try { P.kalibruj(pz, a, px, m); pz.x = aSvet[0] - a[0] * pz.mNaPx; pz.y = aSvet[1] - a[1] * pz.mNaPx; S.nastroj = 'vyber'; commit(); } catch (err) { oznam(err.message); }
+      });
     }
   }
 
@@ -312,7 +323,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   function nahoru(e) {
     S.ukazatele.delete(e.pointerId);
     if (pinch) { if (S.ukazatele.size < 2) pinch = null; return; }
-    const t = S.tah; S.tah = null;
+    const t = S.tah; S.tah = null; S.snapIndikator = null;
     if (!t) return;
     if (t.typ === 'pan') { vykresli(); return; }
     if (t.typ === 'oblast') {
@@ -390,7 +401,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   // ---------- podklad (PNG / JPG) ----------
   async function importPodkladu(soubor) {
     if (!soubor) return;
-    try { vlozPodklad(projekt, v, await nactiObrazek(soubor)); } catch (err) { window.alert(err.message); return; }
+    try { vlozPodklad(projekt, v, await nactiObrazek(soubor)); } catch (err) { oznam(err.message); return; }
     S.nastroj = 'kalibrace'; S.kalibrace = null; commit();
   }
 

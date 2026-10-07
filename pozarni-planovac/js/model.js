@@ -6,6 +6,7 @@ export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
 
 export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text'];
+export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text' };
 export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan'];
 export const STAV_OVERENI = ['neoveren', 'overeno'];
 

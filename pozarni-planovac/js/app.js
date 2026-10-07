@@ -6,6 +6,8 @@ import { nahledKarty } from './nahled.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
 import { zkontrolujUplnost } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
+import { zeptejSe, potvrd, oznam } from './dialogy.js';
+import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
 import { nactiObrazek, vlozPodklad } from './kresleni/podklad.js';
 
@@ -60,24 +62,36 @@ function dashboard() {
   const sez = U.seznam(), posl = U.posledni();
   const poslProj = sez.find((x) => x.id === posl);
   app.innerHTML = `<section class="dash">
-    <h1>Dokumentace zdolávání požárů</h1>
-    ${U.dostupne() ? '' : '<p class="varovani">Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data). Projekt se neuloží – po úpravách použijte Stáhnout → Editovatelný projekt.</p>'}
+    <header class="dash__hero rk-sh">
+      <div class="rk-eyebrow">Dokumentace zdolávání požárů</div>
+      <h1 class="rk-sh__title dash__nadpis">Operativní karty a plány, které velitel zásahu přečte za minutu</h1>
+      <p class="rk-sh__lead">Vyplníte kartu podle vzoru HZS, nakreslíte situaci a půdorys a aplikace pohlídá úplnost. Odborné údaje i právní soulad vždy ověřuje zpracovatel s HZS.</p>
+    </header>
+    ${U.dostupne() ? '' : `<div class="varovani" role="alert">${ikona('pozor', 20)}<span>Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data). Projekt se neuloží – po úpravách použijte Stáhnout → Editovatelný projekt.</span></div>`}
+    <section class="rk-callout">
+      <div class="rk-callout__main">
+        <header class="rk-sh rk-sh--dark"><div class="rk-eyebrow">Nový plán</div>
+          <h2 class="rk-sh__title rk-sh__title--sm">Založte operativní kartu podle vzoru HZS</h2>
+          <p class="rk-sh__lead">Pojmenujte projekt a vyberte, zda vytváříte kartu, nebo složitější plán.</p></header>
+        <form id="d-novy">
+          <label class="rk-field"><span class="rk-field__label">Název projektu</span><input class="rk-field__control" type="text" name="nazev" placeholder="např. DZP Litice" required></label>
+          <label class="rk-field"><span class="rk-field__label">Druh dokumentace</span><select class="rk-field__control" name="typ"><option value="operativni_karta">Operativní karta</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select></label>
+          <div class="rk-callout__action"><button class="rk-btn rk-btn--primary" type="submit"><span>Založit plán</span><span class="rk-btn__arrow">→</span></button></div>
+        </form>
+      </div>
+    </section>
     <div class="dlazdice">
-      ${poslProj ? `<a class="dlazdice-polozka hlavni" href="#/p/${poslProj.id}" id="d-pokracovat"><b>Pokračovat v projektu</b><span>${esc(poslProj.nazev)}</span><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></a>` : ''}
-      <form class="dlazdice-polozka" id="d-novy"><b>Založit nový plán</b>
-        <input type="text" name="nazev" placeholder="Název (např. DZP Litice)" required>
-        <select name="typ"><option value="operativni_karta">Operativní karta</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select>
-        <button class="btn pri">Založit</button></form>
-      <div class="dlazdice-polozka"><b>Importovat projekt</b><span>Soubor .pplan.json ze zálohy.</span>
-        <label class="btn">Vybrat soubor…<input type="file" id="d-import" accept=".json,application/json" hidden></label></div>
-      <div class="dlazdice-polozka"><b>Importovat podklad</b><span>Obrázek PNG/JPG (situace, plánek) – založí nový plán s podkladem.</span>
-        <label class="btn">Vybrat obrázek…<input type="file" id="d-podklad" accept="image/png,image/jpeg" hidden></label></div>
-      <div class="dlazdice-polozka"><b>Referenční projekt Litice</b><span>Jen potvrzené údaje o FVE a poznámky; ostatní pole prázdná.</span><button class="btn" id="d-litice">Založit z Litic</button></div>
+      ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${poslProj.id}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
+      <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json ze zálohy (Stáhnout → Editovatelný projekt).</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
+      <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. Vektorové podklady se převedou na upravitelné prvky.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
+      <button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>
     </div>
-    <h2>Uložené projekty</h2>
-    <ul class="projekty">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${x.typ === 'operativni_karta' ? 'operativní karta' : 'operativní plán'} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
-      <button class="btn mal" data-akce="kopie" data-id="${x.id}">Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">Smazat</button></li>`).join('') || '<li class="prazdno">Zatím žádný uložený projekt.</li>'}</ul>
-    <p class="napoveda">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
+    <section>
+      <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">Vaše projekty</h2></header>
+      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${x.typ === 'operativni_karta' ? 'operativní karta' : 'operativní plán'} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
+        <button class="btn mal" data-akce="kopie" data-id="${x.id}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || '<li class="prazdno">Zatím žádný uložený projekt.</li>'}</ul>
+      <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
+    </section>
   </section>`;
   $('#d-novy').onsubmit = (e) => {
     e.preventDefault(); const d = new FormData(e.target);
@@ -109,10 +123,10 @@ function dashboard() {
       U.uloz(p); location.hash = `#/p/${p.id}`;
     } catch (err) { ohlas(`Referenční projekt se nepodařilo načíst (${err.message}). Aplikaci je potřeba spustit přes webový server, ne z file://.`); }
   };
-  app.querySelector('.projekty').onclick = (e) => {
+  app.querySelector('.projekty').onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const id = b.dataset.id, p = U.nacti(id);
-    if (b.dataset.akce === 'smaz' && confirm(`Smazat projekt „${p.nazev}“ z tohoto prohlížeče? Nelze vrátit – nejdřív si ho případně stáhněte.`)) { U.smaz(id); dashboard(); }
+    if (b.dataset.akce === 'smaz' && await potvrd(`Smazat projekt „${p.nazev}“?`, { ano: 'Smazat', nebezpecne: true, popis: 'Projekt se odstraní z tohoto prohlížeče a nejde vrátit. Nejdřív si ho případně stáhněte.' })) { U.smaz(id); dashboard(); }
     if (b.dataset.akce === 'stahnout') U.stahni(p);
     if (b.dataset.akce === 'kopie') { p.id = `proj_${Math.random().toString(36).slice(2, 10)}`; p.nazev += ' (kopie)'; U.uloz(p); dashboard(); }
   };
@@ -127,28 +141,28 @@ function editor() {
   const p = S.p, list = p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
   topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span><span id="stav" class="stav">${esc(S.stav)}</span>
-    ${list?.typ === 'karta' ? '<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">Tisk / PDF</button>' : ''}
-    <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json">Stáhnout → Editovatelný projekt</button>`;
+    ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">${ikona('tisk', 16)}Tisk / PDF</button>` : ''}
+    <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json">${ikona('stahnout', 16)}Stáhnout → Editovatelný projekt</button>`;
   $('#a-stahnout').onclick = () => U.stahni(p);
   if ($('#a-tisk')) $('#a-tisk').onclick = () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); window.print(); };
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">
-    <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${p.id}/${l.id}">${esc(l.nazev)}<small>${l.typ}</small></a></li>`).join('')}</ol>
-      <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${M.TYPY_LISTU.map((t) => `<option>${t}</option>`).join('')}</select><button class="btn mal" id="l-pridej">+ List</button>
-      ${list ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru">↑</button><button class="btn mal" id="l-dolu" title="Posunout dolů">↓</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
+    <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${p.id}/${l.id}">${esc(l.nazev)}<small>${M.TYPY_LISTU_NAZVY[l.typ] || l.typ}</small></a></li>`).join('')}</ol>
+      <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${M.TYPY_LISTU.map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
+      ${list ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
     <section class="stred">
       <div class="zalozky" id="zalozky-formular" role="tablist"></div>
       <div id="obsah"></div></section>
     <aside class="panel"><div class="zalozky" id="zalozky-panel" role="tablist">${dostupne.map((k) => `<button role="tab" data-p="${k}" class="${S.panel === k ? 'akt' : ''}">${PANELY[k]}</button>`).join('')}</div><div id="panel-obsah"></div></aside>
   </div>`;
 
-  $('#l-pridej').onclick = () => { const l = M.pridejList(p, $('#l-typ').value, prompt('Název listu:') || undefined); uloz(true); location.hash = `#/p/${p.id}/${l.id}`; };
+  $('#l-pridej').onclick = async () => { const typ = $('#l-typ').value, n = await zeptejSe('Název nového listu', M.TYPY_LISTU_NAZVY[typ] || typ); if (n === null) return; const l = M.pridejList(p, typ, n.trim() || undefined); uloz(true); location.hash = `#/p/${p.id}/${l.id}`; };
   if (list) {
-    $('#l-prejm').onclick = () => { const n = prompt('Nový název listu:', list.nazev); if (n) { M.prejmenujList(p, list.id, n); uloz(true); editor(); } };
+    $('#l-prejm').onclick = async () => { const n = await zeptejSe('Nový název listu', list.nazev); if (n?.trim()) { M.prejmenujList(p, list.id, n.trim()); uloz(true); editor(); } };
     $('#l-kopie').onclick = () => { const k = M.kopirujList(p, list.id); uloz(true); location.hash = `#/p/${p.id}/${k.id}`; };
     $('#l-nahoru').onclick = () => { M.presunList(p, list.id, list.poradi - 1); uloz(true); editor(); };
     $('#l-dolu').onclick = () => { M.presunList(p, list.id, list.poradi + 1); uloz(true); editor(); };
-    $('#l-smaz').onclick = () => { if (confirm(`Smazat list „${list.nazev}“?`)) { M.smazList(p, list.id); M.uklidPrilohy(p); uloz(true); location.hash = `#/p/${p.id}`; } };
+    $('#l-smaz').onclick = async () => { if (await potvrd(`Smazat list „${list.nazev}“?`, { ano: 'Smazat', nebezpecne: true })) { M.smazList(p, list.id); M.uklidPrilohy(p); uloz(true); location.hash = `#/p/${p.id}`; } };
   }
   // přepnutí záložek nepřekresluje editor (zachová pohled, výběr a historii)
   app.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { S.panel = b.dataset.p; app.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('akt', x === b)); panel(); }; });
