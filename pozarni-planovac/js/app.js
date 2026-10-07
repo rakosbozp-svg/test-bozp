@@ -3,7 +3,9 @@ import * as U from './ulozeni.js';
 import { nactiKatalog } from './znacky.js';
 import { vykresliKartu, pripoj, esc } from './formular.js';
 import { nahledKarty } from './nahled.js';
+import { vykresliEvak, pripojEvak, nahledEvak } from './evakuace.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
+import { METODIKA_EVAK } from './evakuace.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
@@ -77,7 +79,7 @@ function dashboard() {
           <p class="rk-sh__lead">Pojmenujte projekt a vyberte, zda vytváříte kartu, nebo složitější plán.</p></header>
         <form id="d-novy">
           <label class="rk-field"><span class="rk-field__label">Název projektu</span><input class="rk-field__control" type="text" name="nazev" placeholder="např. DZP Litice" required></label>
-          <label class="rk-field"><span class="rk-field__label">Druh dokumentace</span><select class="rk-field__control" name="typ"><option value="operativni_karta">Operativní karta</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select></label>
+          <label class="rk-field"><span class="rk-field__label">Druh dokumentace</span><select class="rk-field__control" name="typ"><option value="operativni_karta">Operativní karta</option><option value="evakuacni_plan">Požární evakuační plán (není DZP)</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select></label>
           <div class="rk-callout__action"><button class="rk-btn rk-btn--primary" type="submit"><span>Založit plán</span><span class="rk-btn__arrow">→</span></button></div>
         </form>
       </div>
@@ -90,7 +92,7 @@ function dashboard() {
     </div>
     <section>
       <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">Vaše projekty</h2></header>
-      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${x.typ === 'operativni_karta' ? 'operativní karta' : 'operativní plán'} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
+      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
         <button class="btn mal" data-akce="kopie" data-id="${x.id}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || '<li class="prazdno">Zatím žádný uložený projekt.</li>'}</ul>
       <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
     </section>
@@ -142,7 +144,7 @@ function dashboard() {
 async function exportPdfDialog() {
   const p = S.p, katMapa = new Map(katalog.map((z) => [z.id, z]));
   const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
-  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text' };
+  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text' };
   const dlg = await formular({
     titul: 'Export do PDF',
     html: `<p class="dlg__text">Vyberte listy, které se zahrnou do jednoho PDF (v pořadí, v jakém jsou v projektu). Karty a texty se vykreslí s vloženým písmem, výkresy jako vektory.</p>
@@ -161,14 +163,14 @@ async function exportPdfDialog() {
 }
 
 // ---------- editor ----------
-const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', uplnost: 'Úplnost', metodika: 'Metodika DZP', projekt: 'Projekt' };
+const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', uplnost: 'Úplnost', metodika: 'Metodika', projekt: 'Projekt' };
 const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
 
 function editor() {
   S.ed?.zrusit(); S.ed = null;
   const p = S.p, list = p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
-  topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span><span id="stav" class="stav">${esc(S.stav)}</span>
+  topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span>${M.jeEvakuace(p) ? '<span class="rk-badge rk-badge--warning" title="Evakuační plán není DZP">Evakuační plán · ne DZP</span>' : ''}<span id="stav" class="stav">${esc(S.stav)}</span>
     ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">${ikona('tisk', 16)}Tisk / PDF</button>` : ''}
     <button class="btn" id="a-pdf" title="Vytvoří PDF z karet, výkresů a textů projektu">${ikona('soubor', 16)}Export PDF</button>
     <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json">${ikona('stahnout', 16)}Stáhnout → Editovatelný projekt</button>`;
@@ -178,7 +180,7 @@ function editor() {
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">
     <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${p.id}/${l.id}">${esc(l.nazev)}<small>${M.TYPY_LISTU_NAZVY[l.typ] || l.typ}</small></a></li>`).join('')}</ol>
-      <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${M.TYPY_LISTU.map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
+      <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${(M.LISTY_PRO_DOKUMENT[p.typ] || M.TYPY_LISTU).map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
       ${list ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
     <section class="stred">
       <div class="zalozky" id="zalozky-formular" role="tablist"></div>
@@ -201,7 +203,7 @@ function editor() {
 
 function zalozky(list) {
   const host = $('#zalozky-formular'); if (!host) return;
-  if (list?.typ !== 'karta') { host.innerHTML = ''; host.hidden = true; return; }
+  if (list?.typ !== 'karta' && list?.typ !== 'evak_text') { host.innerHTML = ''; host.hidden = true; return; }
   host.hidden = false;
   host.innerHTML = `<button role="tab" data-z="formular" class="${S.zalozka === 'formular' ? 'akt' : ''}">Formulář</button><button role="tab" data-z="nahled" class="${S.zalozka === 'nahled' ? 'akt' : ''}">Náhled A4</button>`;
   host.querySelectorAll('[data-z]').forEach((b) => { b.onclick = () => { S.zalozka = b.dataset.z; zalozky(list); obsah(list); panel(); }; });
@@ -218,6 +220,10 @@ function obsah(list) {
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
     };
     vykresliKartu(list, host); pripoj(list, host, naZmenu);
+  } else if (list.typ === 'evak_text') {
+    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledEvak(list, S.p)}</div>`; return; }
+    const naZmenu = (prekreslit) => { uloz(); if (prekreslit) { const y = window.scrollY; vykresliEvak(list, host); pripojEvak(list, host, naZmenu); window.scrollTo(0, y); } panel(true); };
+    vykresliEvak(list, host); pripojEvak(list, host, naZmenu);
   } else if (list.typ === 'text') {
     host.innerHTML = `<label class="f"><span>Text listu „${esc(list.nazev)}“</span><textarea rows="24" id="t-text">${esc(list.text)}</textarea></label>`;
     $('#t-text').oninput = (e) => { list.text = e.target.value; uloz(); };
@@ -239,7 +245,7 @@ function panel(jenUplnost = false) {
     host.onclick = (e) => { const b = e.target.closest('[data-cesta]'); if (b) skoc(b.dataset.cesta); };
   } else {
     if (!jenUplnost) {
-      if (S.panel === 'metodika') host.innerHTML = METODIKA;
+      if (S.panel === 'metodika') host.innerHTML = M.jeEvakuace(S.p) ? METODIKA_EVAK : METODIKA;
       if (S.panel === 'projekt') panelProjektu(S.p, host, (prekreslit) => { uloz(true); if (prekreslit) editor(); else $('.nazev-projektu').textContent = S.p.nazev; });
     }
     označ(zkontrolujUplnost(S.p, katalog));

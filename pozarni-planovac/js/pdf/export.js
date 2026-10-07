@@ -1,5 +1,6 @@
 // Export dokumentace do PDF: karty, texty a výkresy (vektorově) do jednoho souboru. Vloží písmo Roboto, takže diakritika je správně.
 import { vykresliKartu, vykresliTextovyList } from './karta.js';
+import { evakJakoText } from '../evakuace.js';
 import { vykresliSvgDoPdf } from './svg2pdf.js';
 import { renderListu } from '../kresleni/render.js';
 import { rozlozeniListu, pouziteZnacky } from '../kresleni/prvky.js';
@@ -63,6 +64,7 @@ export async function exportujPdf(projekt, volby = {}) {
   for (const l of vybrane) {
     if (l.typ === 'karta') await vykresliKartu(ctxZaklad, l, projekt);
     else if (l.typ === 'text') await vykresliTextovyList(ctxZaklad, l);
+    else if (l.typ === 'evak_text') await vykresliTextovyList(ctxZaklad, { nazev: 'Požární evakuační plán – textová část', text: evakJakoText(l.evak, projekt) });
     else if (l.vykres) {
       const v = l.vykres, { W, H } = rozlozeniListu(v), page = pdfDoc.addPage([W * MM, H * MM]);
       const svg = renderListu(v, { objektNazev: objekt, nazevListu: l.nazev, znacky: katalog, symbolHref: (id) => uri.get(id) || '', prilohy: projekt.prilohy });

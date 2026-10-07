@@ -440,3 +440,23 @@ test('export PDF: tlačítko v editoru i dialog celého projektu stáhnou platn�
   const g = join(tmp, 'projekt.pdf'); await d2.saveAs(g); assert.equal(readFileSync(g).subarray(0, 5).toString(), '%PDF-');
   assert.deepEqual(p.chyby, []);
 });
+
+test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez nástroje Značka a bez DZP listů', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'Evakuace test'); await p.selectOption('#d-novy [name=typ]', 'evakuacni_plan'); await p.click('#d-novy button');
+  await p.waitForSelector('.editor');
+  assert.ok((await p.locator('.nazev-projektu + .rk-badge').textContent()).includes('ne DZP'));
+  assert.deepEqual(await p.locator('#l-typ option').evaluateAll((o) => o.map((x) => x.value)), ['evak_text', 'pudorys', 'schema', 'text']);
+  await p.fill('[data-pole="organizator.jmeno"]', 'A. Novák');
+  await p.click('#sek-osoby [data-akce=pridej]'); await p.fill('#sek-osoby [data-klic=jmeno]', 'B. Dvořák');
+  await p.click('[data-p=uplnost]');
+  const txt = await p.locator('#panel-obsah').textContent();
+  assert.ok(txt.includes('§ 33/2/b') && txt.includes('§ 33/2/c') && !txt.includes('Operativní karta'));
+  await p.click('[data-z=nahled]'); assert.ok((await p.locator('#nahled-a4').textContent()).includes('A. Novák'));
+  await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('.ed-scena');
+  assert.equal(await p.locator('[data-nastroj=znacka]').count(), 0);
+  assert.deepEqual(chyby, []); await ctx.close();
+});

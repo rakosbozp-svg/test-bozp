@@ -68,3 +68,9 @@ Odborné údaje je nutné před vydáním DZP ověřit podle aktuální legislat
 - Výchozí vzor operativní karty: `podklady/VZOR_operativni_karta_list_A4.docx` (finální). Starší `VZOR_OPERATIVNI_KARTA.docx` je delší varianta.
 - Metodika Hanuška 1996 je pro uživatele závazný základ; legislativní platnost se i tak ověřuje u každé DZP.
 - Přiložené PNG značky (zatím 10 ks) jsou v `podklady/znacky_E_F/`, kódy E/F zatím nepřiřazeny.
+
+## Požární evakuační plán (samostatný druh dokumentace, není DZP)
+Při zakládání projektu lze zvolit „Požární evakuační plán“. Má vlastní listy (Evakuační plán – text, Půdorys/Schéma/Text), vlastní kontrolu úplnosti a vlastní panel Metodika; DZP listy (karta, situace) do něj nelze vložit a naopak. V evakuačním plánu není nástroj Značka (knihovna značek je určena pro DZP) a neplatí DZP kontroly (síť 10 × 10 m, severka, stupeň poplachu).
+- **Textová část a kontrola** podle vyhlášky č. 246/2001 Sb., § 33 odst. 2 písm. a)–f), odst. 4 (ověření cvičným poplachem) a odst. 5 (uložení). Zdroj: `podklady/evakuace/` (vyhlášky 246/2001 a 23/2008, `NALEZITOSTI.md`).
+- **Grafická část** (f) se kreslí na listech Půdorys nástrojem Úniková cesta. **Vzhled podle ČSN ISO 23601 (nezávazná) zatím není implementován ani kontrolován** – text normy chybí. Značky pro evakuaci (ISO 7010) rovněž čekají na podklady.
+- Export PDF zahrnuje textovou část plánu.

@@ -1,6 +1,8 @@
 // Kontrola úplnosti DZP. Kontroluje jen to, co je doložené ve vzoru a návodu HZS SCK
 // (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
 
+import { kontrolaEvak } from './evakuace.js';
+
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const vyplneno = (v) => !prazdne(v);
 
@@ -16,12 +18,15 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
 
   if (!projekt.listy.length) chyba('PROJ_BEZ_LISTU', 'listy', 'Projekt nemá žádný list.');
   if (!projekt.revize.length) upoz('REVIZE_CHYBI', 'revize', 'Chybí záznam o revizi dokumentace.');
-  upoz('LEGISLATIVA', 'projekt', 'Před vydáním ověřte DZP podle aktuální legislativy, PBŘ, skutečného stavu objektu a požadavků HZS.');
+  const evak = projekt.typ === 'evakuacni_plan';
+  if (!evak) upoz('LEGISLATIVA', 'projekt', 'Před vydáním ověřte DZP podle aktuální legislativy, PBŘ, skutečného stavu objektu a požadavků HZS.');
+  else if (!projekt.listy.some((l) => l.typ === 'evak_text')) chyba('EVAK_BEZ_TEXTU', 'listy', 'Chybí textová část evakuačního plánu (přidejte list Evakuační plán – text).');
 
   for (const list of projekt.listy) {
     const p = `listy[${list.id}]`;
     if (list.typ === 'karta') kontrolaKarty(list.karta, p, chyba, upoz);
-    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, katalogZnacek !== null);
+    if (list.typ === 'evak_text') kontrolaEvak(list, projekt, chyba, upoz);
+    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, katalogZnacek !== null, evak);
   }
   return n;
 }
@@ -71,13 +76,13 @@ function kontrolaKarty(k, p, chyba, upoz) {
   if (prazdne(k.doporuceni)) chyba('DOPORUCENI', `${p}.karta.doporuceni`, 'Chybí doporučení pro velitele zásahu (uveďte i co se stane při vypnutí energií).');
 }
 
-function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog) {
+function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false) {
   const v = list.vykres;
   if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
   if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: měřítko importovaného výkresu není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
-  if (v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
+  if (!evak && v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
   if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
-  if (!v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
+  if (!evak && !v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
   if (prazdne(v.razitko.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: razítko bez zpracovatele.`);
   if (!v.prvky.length) upoz('VYKRES_PRAZDNY', `${p}.vykres.prvky`, `List „${list.nazev}“: výkres je prázdný.`);
   for (const pr of v.prvky) {

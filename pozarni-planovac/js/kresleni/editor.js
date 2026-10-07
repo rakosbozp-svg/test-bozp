@@ -55,7 +55,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
       <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
       <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].map(tl).join('')}</div>
-      <div class="nast-skupina">${['text', 'znacka', 'dvere', 'kalibrace'].map(tl).join('')}</div>
+      <div class="nast-skupina">${['text', ...(projekt.typ === 'evakuacni_plan' ? [] : ['znacka']), 'dvere', 'kalibrace'].map(tl).join('')}</div>
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
       <div class="nast-skupina">

@@ -2,12 +2,22 @@
 // Pole karty kopírují vzor operativní karty HZS Středočeského kraje (podklady/VZOR_OPERATIVNI_KARTA.docx).
 // Pravidlo vzoru: pole se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
 
+import { prazdnaEvak } from './evakuace.js';
+
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
 
-export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text'];
-export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text' };
-export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan'];
+export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'evak_text'];
+export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text' };
+export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan', 'evakuacni_plan'];
+export const TYPY_DOKUMENTU_NAZVY = { operativni_karta: 'Operativní karta (DZP)', operativni_plan: 'Operativní plán (DZP)', evakuacni_plan: 'Požární evakuační plán' };
+// Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (půdorys a text jsou společné).
+export const LISTY_PRO_DOKUMENT = {
+  operativni_karta: ['karta', 'situace', 'pudorys', 'schema', 'text'],
+  operativni_plan: ['karta', 'situace', 'pudorys', 'schema', 'text'],
+  evakuacni_plan: ['evak_text', 'pudorys', 'schema', 'text'],
+};
+export const jeEvakuace = (p) => p?.typ === 'evakuacni_plan';
 export const STAV_OVERENI = ['neoveren', 'overeno'];
 
 const uid = (p) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
@@ -46,6 +56,7 @@ export const novyList = (typ, nazev) => {
   const list = { id: uid('list'), typ, nazev: nazev || typ, poradi: 0 };
   if (typ === 'karta') list.karta = prazdnaKarta();
   if (typ === 'text') list.text = '';
+  if (typ === 'evak_text') list.evak = prazdnaEvak();
   if (typ === 'situace' || typ === 'pudorys' || typ === 'schema') {
     list.vykres = {
       format: 'A4', orientace: 'na_sirku',
@@ -59,7 +70,7 @@ export const novyList = (typ, nazev) => {
         { id: 'zaklad', nazev: 'Stavby', viditelna: true, zamcena: false },
         { id: 'komunikace', nazev: 'Komunikace a plochy', viditelna: true, zamcena: false },
         { id: 'znacky', nazev: 'Značky', viditelna: true, zamcena: false },
-        { id: 'trasy', nazev: 'Trasy', viditelna: true, zamcena: false },
+        { id: 'trasy', nazev: 'Únikové cesty', viditelna: true, zamcena: false },
         { id: 'popisky', nazev: 'Popisky', viditelna: true, zamcena: false },
       ],
       prvky: [],                    // viz js/kresleni/prvky.js
@@ -87,10 +98,17 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     p.listy.push(novyList('karta', 'Operativní karta'), novyList('situace', 'Situace'));
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
+  if (typ === 'evakuacni_plan') {
+    p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 (požární evakuační plán); vzhled plánu ČSN ISO 23601 zatím neověřen';
+    const pud = novyList('pudorys', 'Únikové cesty – 1. podlaží'); pud.vykres.sit10m = false;   // síť 10 × 10 m je pravidlo metodiky DZP
+    p.listy.push(novyList('evak_text', 'Evakuační plán – text'), pud);
+    p.listy.forEach((l, i) => { l.poradi = i; });
+  }
   return p;
 }
 
 export const pridejList = (p, typ, nazev) => {
+  if (!(LISTY_PRO_DOKUMENT[p.typ] || TYPY_LISTU).includes(typ)) throw new Error(`List „${TYPY_LISTU_NAZVY[typ] || typ}“ nepatří do dokumentace „${TYPY_DOKUMENTU_NAZVY[p.typ] || p.typ}“ (DZP a evakuační plán se nemíchají).`);
   const l = novyList(typ, nazev);
   l.poradi = p.listy.length;
   p.listy.push(l);
@@ -116,6 +134,7 @@ export const kopirujList = (p, id) => {
   kopie.nazev = `${orig.nazev} (kopie)`;
   const prefix = (it) => { if (it && it.id) it.id = uid('p'); };
   if (kopie.vykres) kopie.vykres.prvky.forEach(prefix);
+  if (kopie.evak) { kopie.evak.osoby.forEach(prefix); kopie.evak.shromazdiste.forEach(prefix); }
   if (kopie.karta) { kopie.karta.nebezpeci.forEach(prefix); kopie.karta.vodniZdroje.forEach(prefix); }
   p.listy.splice(orig.poradi + 1, 0, kopie);
   p.listy.forEach((l, i) => { l.poradi = i; });
@@ -163,6 +182,7 @@ export function migruj(data) {
   p.listy ||= [];
   for (const l of p.listy) {
     if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});
+    if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
     if (['situace', 'pudorys', 'schema'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
   return p;
