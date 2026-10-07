@@ -404,8 +404,10 @@
 
   const yardMat = M(0xffffff, { map: yardTex, r: 0.95 });
   const sideRails = { '-1': [], '1': [] }; // obrubník a zábradlí – na straně odbočky se skryjí
+  const yardMeshes = [];
   [-1, 1].forEach(side => {
     const y = new THREE.Mesh(new THREE.PlaneGeometry(40, TRACK_L), yardMat);
+    yardMeshes.push(y);
     y.rotation.x = -Math.PI / 2;
     y.position.set(side * (TRACK_W / 2 + 20), -0.01, 20 - TRACK_L / 2);
     y.receiveShadow = true;
@@ -1655,6 +1657,8 @@
   function show(el, on) { el.hidden = !on; }
 
   function resetWorld(withRows) {
+    if (turn.active && turn.active.old) dropOldTurn(turn.active);
+    world.position.y = 0;
     clearList(obstacles); clearList(pickups); clearList(decor);
     speed = START_SPEED; distance = 0; score = 0; helmets = 0;
     Object.assign(player, { lane: 1, x: 0, y: 0, vy: 0, ground: 0, jumped: false, turnDir: 0, slide: 0, slideQueued: false, dead: false, deadT: 0, fall: false });
@@ -2099,26 +2103,52 @@
   let shake = 0;
   let t = 0;
   function startTurn(dir) {
-    turn.active = { dir, t: 0 };
+    // 1) dosavadní úsek (včetně křižovatky) se přesune do vlastní skupiny a při zatáčení odjede stranou
+    const old = new THREE.Group();
+    scene.add(old);
+    for (const list of [obstacles, pickups, decor]) for (const e of list) old.add(e.obj);
+    const clones = [];
+    [trackMesh, ...yardMeshes, ...sideRails['-1'], ...sideRails['1']].forEach(m => {
+      const c = m.clone();
+      clones.push(c);
+      c.visible = m.visible;
+      c.material = m.material.clone();
+      if (c.material.map) { c.material.map = c.material.map.clone(); c.material.map.needsUpdate = true; } // zamrzlý posun textury
+      old.add(c);
+    });
+    obstacles.length = 0; pickups.length = 0; decor.length = 0;
+    // 2) nový úsek se postaví hned – leží ve směru odbočky a otočí se do směru jízdy
+    resetStreams(true);
+    streams.rows.cursor = -(12 + speed * 0.6);          // překážky přijdou brzy, žádný „nový start“
+    streams.rows.untilFeature = 12 + Math.floor(Math.random() * 10);
+    streams.gantry.cursor = -70 - Math.random() * 60;
+    [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = true)));
+    runStreams();
+    world.rotation.y = -dir * Math.PI / 2;
+    world.position.y = 0.004;   // nová trať leží nad starou, žádné blikání
+    turn.active = { dir, t: 0, old, clones };
     player.lane = 1;
+    player.turnDir = 0;
     sfx.lane();
   }
-  function updateTurn(dt) {
+  function dropOldTurn(a) {
+    scene.remove(a.old);
+    a.clones.forEach(c => { if (c.material.map) c.material.map.dispose(); c.material.dispose(); }); // geometrie jsou sdílené
+  }
+  function updateTurn(dt, dz) {
     const a = turn.active;
     a.t += dt;
     const k = Math.min(1, a.t / TURN_TIME);
     const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    world.rotation.y = a.dir * (Math.PI / 2) * e;
+    world.rotation.y = -a.dir * (Math.PI / 2) * (1 - e);
+    a.old.rotation.y = a.dir * (Math.PI / 2) * e;
+    // běží se dál: nový úsek se rozjíždí, jak se dotáčí
+    moveWorld(dz * e, dt);
+    runStreams();
     if (k >= 1) {
-      // nový rovný úsek: svět zpět do osy a nové okolí
       world.rotation.y = 0;
-      clearList(obstacles); clearList(pickups); clearList(decor);
-      trackTex.offset.set(0, 0); yardTex.offset.set(0, 0); railTex.offset.set(0, 0);
-      const untilFeature = 12 + Math.floor(Math.random() * 10);
-      resetStreams(true);
-      streams.rows.untilFeature = untilFeature;
-      runStreams();
-      player.turnDir = 0;
+      world.position.y = 0;
+      dropOldTurn(a);
       turn.active = null;
       score += 50;
       toast('ODBOČENO! +50');
@@ -2198,13 +2228,11 @@
       idleDog(dt);
     } else if (state === 'play') {
       speed = Math.min(MAX_SPEED, START_SPEED + distance / 85);
+      const dz = speed * dt;
       if (turn.active) {
-        updateTurn(dt);
+        updateTurn(dt, dz);
         player.x += (0 - player.x) * Math.min(1, dt * 15);
-        animateDog(dt);
-        updateHud();
       }
-      const dz = turn.active ? 0 : speed * dt;
       distance += dz;
       score += dz * (power.goggles > 0 ? 2 : 1);
       for (const k in power) power[k] = Math.max(0, power[k] - dt);
@@ -2226,7 +2254,7 @@
       }
       if (player.slide > 0) player.slide -= dt;
 
-      const openSide = turn.active ? turn.active.dir : (turn.pending && turn.pending.z > -45 ? turn.pending.junction : 0);
+      const openSide = !turn.active && turn.pending && turn.pending.z > -45 ? turn.pending.junction : 0;
       [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = sd !== openSide)));
       if (!turn.active) {
         moveWorld(dz, dt);
