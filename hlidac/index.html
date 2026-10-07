@@ -970,10 +970,10 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
       <div id="firmList" class="firm-list"></div>
       <form class="panel" id="testMailForm">
         <h3>Zkušební e-mail</h3>
-        <p class="small-note">Pošle tvým Gmailem na tvou adresu přehled všeho, co je prošlé nebo propadá do 30 dní. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
+        <p class="small-note">Pošle na zadanou adresu přehled všeho, co je prošlé nebo propadá do 30 dní. Pro ukázku v něm budou i ukázková data. Firmám se nic neposílá.</p>
         <div class="toolbar">
-          <input type="text" id="ownerEmail" class="grow" inputmode="email" autocomplete="email" placeholder="tvuj@email.cz" aria-label="Tvůj e-mail">
-          <button class="btn primary" type="submit" id="testMailBtn">Poslat zkušební e-mail mně</button>
+          <input type="text" id="ownerEmail" class="grow" inputmode="email" autocomplete="email" placeholder="adresa@firma.cz" aria-label="Adresa pro zkušební e-mail">
+          <button class="btn primary" type="submit" id="testMailBtn">Poslat zkušební e-mail</button>
         </div>
         <p class="small-note" id="testMailStatus"></p>
       </form>
@@ -2133,7 +2133,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
         c === 'server_unavailable' || c === 'upstream_error' ? 'Gmail teď neodpověděl. Než to zkusíš znovu, zkontroluj složku Odeslané, jestli e-mail neodešel.' :
         'Odeslání se nepovedlo (' + (c || 'neznámá chyba') + ').';
     } finally {
-      btn.disabled = !mcp; btn.textContent = 'Poslat zkušební e-mail mně';
+      btn.disabled = !mcp; btn.textContent = 'Poslat zkušební e-mail';
     }
   });
 
