@@ -1368,8 +1368,13 @@
   }
 
   // ---------------------------------------------------------------- odbočka doleva / doprava
-  const turn = { pending: null, active: null };
-  const TURN_TIME = 0.5;
+  const turn = { pending: null, active: null, old: null };
+  const TURN_TIME = 0.8;
+  // tvar oblouku: natočení s pozvolným náběhem i doběhem, rychlost běhu se nemění
+  const turnEase = u => u * u * (3 - 2 * u);
+  const TURN_C = (() => { let c = 0; const n = 200; for (let i = 0; i < n; i++) c += Math.cos(Math.PI / 2 * turnEase((i + 0.5) / n)) / n; return c; })();
+  const turnLead = () => speed * TURN_TIME * TURN_C;   // kolik metrů před středem křižovatky začne oblouk
+  const TURN_LEAD_MAX = MAX_SPEED * TURN_TIME * TURN_C;
   const arrowTex = {
     '-1': textTex(['◄  ODBOČ VLEVO'], '#ffc410', '#16181b', true),
     '1': textTex(['ODBOČ VPRAVO  ►'], '#ffc410', '#16181b', true),
@@ -1416,8 +1421,8 @@
       if (near && side === dir) { world.remove(d.obj); decor.splice(i, 1); }
       else if (d.z < z - 4) { world.remove(d.obj); decor.splice(i, 1); } // za zdí nic nebude vidět
     }
-    for (let i = obstacles.length - 1; i >= 0; i--) if (obstacles[i].z < z + 8) { world.remove(obstacles[i].obj); obstacles.splice(i, 1); }
-    for (let i = pickups.length - 1; i >= 0; i--) if (pickups[i].z < z + 6) { world.remove(pickups[i].obj); pickups.splice(i, 1); }
+    for (let i = obstacles.length - 1; i >= 0; i--) if (obstacles[i].z < z + 8 + TURN_LEAD_MAX) { world.remove(obstacles[i].obj); obstacles.splice(i, 1); }
+    for (let i = pickups.length - 1; i >= 0; i--) if (pickups[i].z < z + 6 + TURN_LEAD_MAX) { world.remove(pickups[i].obj); pickups.splice(i, 1); }
     streams.hallL.cursor = Math.min(streams.hallL.cursor, z - 40); streams.hallR.cursor = Math.min(streams.hallR.cursor, z - 40);
     streams.propsL.cursor = Math.min(streams.propsL.cursor, z - 40); streams.propsR.cursor = Math.min(streams.propsR.cursor, z - 40);
     streams.gantry.cursor = Math.min(streams.gantry.cursor, z - 60);
@@ -1658,6 +1663,7 @@
 
   function resetWorld(withRows) {
     if (turn.active && turn.active.old) dropOldTurn(turn.active);
+    if (turn.old) { dropOldTurn(turn.old); turn.old = null; }
     world.position.y = 0;
     clearList(obstacles); clearList(pickups); clearList(decor);
     speed = START_SPEED; distance = 0; score = 0; helmets = 0;
@@ -1730,7 +1736,7 @@
   function moveLane(dir) {
     if (state !== 'play' || turn.active) return;
     const j = turn.pending;
-    if (j && j.z > -22) { if (!player.turnDir) { player.turnDir = dir; sfx.lane(); toast(dir < 0 ? '◄' : '►'); } return; }
+    if (j && j.z > -(turnLead() + 25)) { if (!player.turnDir) { player.turnDir = dir; sfx.lane(); toast(dir < 0 ? '◄' : '►'); } return; }
     const nl = Math.max(0, Math.min(2, player.lane + dir));
     if (nl !== player.lane) { player.lane = nl; sfx.lane(); }
   }
@@ -2046,8 +2052,8 @@
     const top = player.y + (player.slide > 0 ? 0.6 : 1.25);
     // odbočka: hráč dorazil na křižovatku
     const j = turn.pending;
-    if (j && !turn.active && j.z >= -0.4) {
-      if (player.turnDir === j.junction) { startTurn(j.junction); return; }
+    if (j && !turn.active && j.z >= -turnLead()) {
+      if (player.turnDir === j.junction) { startTurn(j.junction, Math.max(0.6, -j.z)); return; }
       if (j.z >= TRACK_W / 2 - 0.6) { gameOver(player.turnDir ? 'Špatný směr!' : 'Narazil jsi do zdi – odboč!'); return; }
     }
     for (const o of obstacles) {
@@ -2102,9 +2108,12 @@
   // ---------------------------------------------------------------- update
   let shake = 0;
   let t = 0;
-  function startTurn(dir) {
-    // 1) dosavadní úsek (včetně křižovatky) se přesune do vlastní skupiny a při zatáčení odjede stranou
+  function startTurn(dir, F) {
+    // Hráč jede po oblouku: za F metrů dopředu a F metrů do strany je na středu příčné chodby.
+    // Stará i nová chodba tvoří po celou dobu jeden pevný celek – nic se nezastaví ani neposkočí.
+    if (turn.old) dropOldTurn(turn.old);
     const old = new THREE.Group();
+    old.position.y = -0.004;   // stará trať leží o chlup níž, žádné blikání
     scene.add(old);
     for (const list of [obstacles, pickups, decor]) for (const e of list) old.add(e.obj);
     const clones = [];
@@ -2117,42 +2126,95 @@
       old.add(c);
     });
     obstacles.length = 0; pickups.length = 0; decor.length = 0;
-    // 2) nový úsek se postaví hned – leží ve směru odbočky a otočí se do směru jízdy
+    // nová chodba vede ve směru odbočky, její osa je osa křižovatky
     resetStreams(true);
-    streams.rows.cursor = -(12 + speed * 0.6);          // překážky přijdou brzy, žádný „nový start“
+    streams.rows.cursor = -(F + 14 + speed * 0.6);
     streams.rows.untilFeature = 12 + Math.floor(Math.random() * 10);
-    streams.gantry.cursor = -70 - Math.random() * 60;
-    [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = true)));
+    streams.gantry.cursor = -(F + 70) - Math.random() * 60;
+    // zábradlí na straně, odkud hráč přijíždí, začne až za nárožím (kopie jede se světem, pak ji vystřídá původní)
+    const gap = Math.ceil((F + TRACK_W / 2 + 2) / RAIL_REP) * RAIL_REP;   // násobek opakování textury = sloupky sedí
+    const railG = new THREE.Group();
+    sideRails[dir].forEach(m => {
+      const c = m.clone();
+      c.visible = true;
+      c.material = m.material.clone();
+      if (c.material.map) { c.material.map = c.material.map.clone(); c.material.map.needsUpdate = true; }
+      clones.push(c);
+      railG.add(c);
+    });
+    [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = sd !== dir)));
     runStreams();
-    world.rotation.y = -dir * Math.PI / 2;
-    world.position.y = 0.004;   // nová trať leží nad starou, žádné blikání
-    turn.active = { dir, t: 0, old, clones };
+    const railE = addEntity(decor, railG, -(gap + 20), { len: 4 * TRACK_L });   // dlouhá → moveWorld ji sám neodklidí
+    // u nároží, kudy hráč přijíždí, nesmí nic stát
+    for (let i = decor.length - 1; i >= 0; i--) {
+      const d = decor[i];
+      if (Math.sign(d.obj.position.x) === dir && d.z - d.len / 2 < 0 && d.z + d.len / 2 > -(F + 14)) { world.remove(d.obj); decor.splice(i, 1); }
+    }
+    const v = Math.max(speed, 1);
+    let T = F / (v * TURN_C);
+    T = Math.min(1.2, Math.max(0.35, T));
+    turn.active = { dir, t: 0, T, F, old, clones, railE, gap };
+    placeTurn(turn.active, 0);
     player.lane = 1;
     player.turnDir = 0;
     sfx.lane();
   }
+  // poloha hráče na oblouku (ve výchozím souřadném systému) pro u ∈ <0,1>
+  function arcPos(a, u) {
+    const n = Math.max(1, Math.ceil(u * 40));
+    let x = 0, z = 0;
+    for (let i = 0; i < n; i++) {
+      const phi = Math.PI / 2 * turnEase(u * (i + 0.5) / n);
+      x += Math.sin(phi); z -= Math.cos(phi);
+    }
+    const sc = a.F / TURN_C * u / n;   // celková délka oblouku = F / TURN_C
+    return [a.dir * x * sc, z * sc];
+  }
+  function setRigid(obj, r0, p0x, p0z, ang, px, pz) {
+    const c = Math.cos(ang), s = Math.sin(ang), x = p0x - px, z = p0z - pz;
+    obj.rotation.y = r0 + ang;
+    obj.position.x = x * c + z * s;
+    obj.position.z = -x * s + z * c;
+  }
+  function placeTurn(a, u) {
+    const [px, pz] = arcPos(a, u);
+    const ang = a.dir * Math.PI / 2 * turnEase(u);
+    setRigid(a.old, 0, 0, 0, ang, px, pz);
+    setRigid(world, -a.dir * Math.PI / 2, 0, -a.F, ang, px, pz);
+  }
   function dropOldTurn(a) {
     scene.remove(a.old);
+    if (a.railE && a.railE.obj.parent) a.railE.obj.parent.remove(a.railE.obj);
     a.clones.forEach(c => { if (c.material.map) c.material.map.dispose(); c.material.dispose(); }); // geometrie jsou sdílené
   }
-  function updateTurn(dt, dz) {
+  function updateTurn(dt) {
     const a = turn.active;
     a.t += dt;
-    const k = Math.min(1, a.t / TURN_TIME);
-    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    world.rotation.y = -a.dir * (Math.PI / 2) * (1 - e);
-    a.old.rotation.y = a.dir * (Math.PI / 2) * e;
-    // běží se dál: nový úsek se rozjíždí, jak se dotáčí
-    moveWorld(dz * e, dt);
-    runStreams();
-    if (k >= 1) {
-      world.rotation.y = 0;
-      world.position.y = 0;
-      dropOldTurn(a);
+    const u = Math.min(1, a.t / a.T);
+    placeTurn(a, u);
+    if (u >= 1) {
+      // nová chodba je teď rovně: posun z oblouku převezme běžný posun světa (beze skoku)
+      const ox = world.position.x, oz = world.position.z;
+      world.rotation.y = 0; world.position.set(0, 0, 0);
+      moveWorld(oz, 0);
+      a.old.position.x -= ox;
+      player.x -= ox; camera.position.x -= ox;
+      runStreams();
       turn.active = null;
+      turn.old = { old: a.old, clones: a.clones, left: a.gap + 50, side: a.dir, railE: a.railE };   // stará chodba dojede za kameru a pak zmizí
       score += 50;
       toast('ODBOČENO! +50');
       sfx.power();
+    }
+  }
+  function updateOldTurn(dz) {
+    const o = turn.old;
+    if (!o) return;
+    o.old.position.z += dz;
+    if ((o.left -= dz) <= 0) {
+      const i = decor.indexOf(o.railE);
+      if (i >= 0) { world.remove(o.railE.obj); decor.splice(i, 1); }
+      dropOldTurn(o); turn.old = null;
     }
   }
   function moveWorld(dz, dt) {
@@ -2230,7 +2292,7 @@
       speed = Math.min(MAX_SPEED, START_SPEED + distance / 85);
       const dz = speed * dt;
       if (turn.active) {
-        updateTurn(dt, dz);
+        updateTurn(dt);
         player.x += (0 - player.x) * Math.min(1, dt * 15);
       }
       distance += dz;
@@ -2254,10 +2316,11 @@
       }
       if (player.slide > 0) player.slide -= dt;
 
-      const openSide = !turn.active && turn.pending && turn.pending.z > -45 ? turn.pending.junction : 0;
+      const openSide = turn.active ? turn.active.dir : turn.old ? turn.old.side : turn.pending && turn.pending.z > -(turnLead() + 30) ? turn.pending.junction : 0;
       [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = sd !== openSide)));
       if (!turn.active) {
         moveWorld(dz, dt);
+        updateOldTurn(dz);
         runStreams();
         checkCollisions();
         // upozornění na nájezd, sjezd a odbočku
@@ -2265,7 +2328,7 @@
           if (e.deck) {
             if (!e.w1 && e.z > -32) { e.w1 = true; toast('NÁJEZD NAHORU ▲'); }
             if (!e.w2 && e.z - RAMP - e.deck.L > -32) { e.w2 = true; toast('SJEZD DOLŮ ▼'); }
-          } else if (e.junction && !e.w1 && e.z > -40) { e.w1 = true; toast(e.junction < 0 ? '◄ ODBOČ VLEVO' : 'ODBOČ VPRAVO ►'); }
+          } else if (e.junction && !e.w1 && e.z > -(turnLead() + 32)) { e.w1 = true; toast(e.junction < 0 ? '◄ ODBOČ VLEVO' : 'ODBOČ VPRAVO ►'); }
         }
       }
       animateDog(dt);
@@ -2338,9 +2401,10 @@
   resize();
 
   let last = performance.now();
+  let timeScale = 1;   // jen pro testy
   function frame(now) {
     requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const dt = Math.min(0.05, (now - last) / 1000) * timeScale;
     last = now;
     if (state !== 'paused') update(dt);
     renderer.render(scene, camera);
@@ -2350,5 +2414,5 @@
   requestAnimationFrame(frame);
 
   // ladicí přístup pro testy
-  window.__safetyRun = { forcePreview(on) { forcePreview = on; showHero(); }, get turn() { return turn; }, decor, streams, get distance() { return distance; }, set distance(v) { distance = v; }, get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles };
+  window.__safetyRun = { forcePreview(on) { forcePreview = on; showHero(); }, get turn() { return turn; }, decor, streams, get distance() { return distance; }, set distance(v) { distance = v; }, get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles, set timeScale(v) { timeScale = v; } };
 })();
