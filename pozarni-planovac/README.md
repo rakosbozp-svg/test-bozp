@@ -8,6 +8,8 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 - `Navod_k_vyplneni_operativni_karty_HZS_SCK.pdf` – pravidla vyplnění vzoru
 - `Zasady_pro_zpracovani_DZP.rtf` – zásady zpracování DZP (HZS SCK)
 - `Graficke_znacky_DZP.pdf` – katalog 109 značek (ČAHD, 11/2011, vektorové)
+- `Metodicky_navod_DZP_1996.pdf` – metodika Hanuška 1996 (74 s.)
+- `priklady/` – hotové DZP: Litice (situace, DZP FVE s rozhodnutím HZS Pardubického kraje 2025), Doloplazy (OK FVE 1 a 2)
 
 ## Chybí dodat
 - metodika Hanuška 1996 a „Postup při tvorbě DZP"
