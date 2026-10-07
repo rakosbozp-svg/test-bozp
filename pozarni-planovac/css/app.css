@@ -13,7 +13,7 @@ body { min-height: 100vh; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- horní lišta ---------- */
-.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); background: var(--bg-100); border-bottom: 1px solid var(--line); flex-wrap: wrap; min-height: 56px; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); background: var(--bg-100); border-bottom: 1px solid var(--line); flex-wrap: wrap; min-height: 56px; }
 .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font: 800 17px/1 var(--font-display); letter-spacing: -.02em; border-radius: var(--radius-md); }
 .logo:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .logo__tile { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--inverse); color: var(--on-inverse); }

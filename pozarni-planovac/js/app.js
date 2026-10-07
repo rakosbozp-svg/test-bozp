@@ -122,8 +122,9 @@ function dashboard() {
   };
   $('#d-litice').onclick = async () => {
     try {
-      const r = await fetch('data/litice.projekt.json'); if (!r.ok) throw new Error('soubor nenalezen');
-      const p = M.nactiProjekt(await r.text()); p.id = `proj_${Math.random().toString(36).slice(2, 10)}`;
+      let text = globalThis.__LITICE__;
+      if (!text) { const r = await fetch('data/litice.projekt.json'); if (!r.ok) throw new Error('soubor nenalezen'); text = await r.text(); }
+      const p = M.nactiProjekt(text); p.id = `proj_${Math.random().toString(36).slice(2, 10)}`;
       U.uloz(p); location.hash = `#/p/${p.id}`;
     } catch (err) { ohlas(`Referenční projekt se nepodařilo načíst (${err.message}). Aplikaci je potřeba spustit přes webový server, ne z file://.`); }
   };

@@ -2,6 +2,7 @@
 let katalog = null;
 export async function nactiKatalog() {
   if (katalog) return katalog;
+  if (globalThis.__KATALOG__) { katalog = globalThis.__KATALOG__; return katalog; }   // jednosouborová sestava má katalog (i obrázky) vložený
   const r = await fetch('znacky/katalog.json');
   if (!r.ok) throw new Error('Katalog značek se nepodařilo načíst');
   katalog = (await r.json()).znacky;

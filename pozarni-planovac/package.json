@@ -4,9 +4,13 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/model.test.mjs test/prvky.test.mjs test/render.test.mjs test/mtext.test.mjs test/dxf.test.mjs test/svg.test.mjs test/import.test.mjs",
-    "test:e2e": "node --test test/e2e.test.mjs test/editor.e2e.test.mjs",
+    "test:e2e": "node --test test/e2e.test.mjs test/editor.e2e.test.mjs test/jeden-soubor.e2e.test.mjs",
     "znacky": "python3 tools/build_znacky.py",
     "litice": "node tools/vytvor_litice.mjs",
-    "fixtury-dxf": "python3 tools/generuj_dxf_fixtury.py"
+    "fixtury-dxf": "python3 tools/generuj_dxf_fixtury.py",
+    "build": "node tools/sestav_jeden_soubor.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

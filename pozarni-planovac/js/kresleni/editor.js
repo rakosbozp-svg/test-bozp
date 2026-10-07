@@ -432,6 +432,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     const mapa = new Map();
     for (const id of new Set(v.prvky.filter((p) => p.druh === 'znacka').map((p) => p.znackaId).concat(P.pouziteZnacky(v.prvky)))) {
       const z = zn.get(id); if (!z) continue;
+      if (z.png.startsWith('data:')) { mapa.set(id, z.png); continue; }   // jednosouborová sestava má obrázky už vložené
       const b = await (await fetch(z.png)).blob(); mapa.set(id, await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }));
     }
     return mapa;

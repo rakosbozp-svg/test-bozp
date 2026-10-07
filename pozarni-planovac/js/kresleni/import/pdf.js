@@ -4,9 +4,9 @@
 let lib = null;
 export async function nactiPdfJs() {
   if (lib) return lib;
-  const zdroj = globalThis.__PDFJS_ZDROJE__;                       // jednosouborová sestava dodá vlastní adresy (blob:)
-  lib = await import(zdroj?.lib || '../../../vendor/pdfjs/pdf.min.mjs');
-  lib.GlobalWorkerOptions.workerSrc = zdroj?.worker || new URL('../../../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+  lib = await import('../../../vendor/pdfjs/pdf.min.mjs');
+  // jednosouborová sestava má worker vložený (blob:); jinak se bere ze složky vendor
+  lib.GlobalWorkerOptions.workerSrc = globalThis.__PDFJS_WORKER_URL__ || new URL('../../../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
   return lib;
 }
 
