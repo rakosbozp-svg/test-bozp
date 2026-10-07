@@ -286,6 +286,53 @@
     return new THREE.LatheGeometry(pts, 20);
   });
 
+  // realistická ochranná přilba: kopule, hřeben, boční žebra, kšilt vpředu, lem, vnitřní páska
+  const domeGeo = () => G('hhDome', () => new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2));
+  const ridgeGeo = () => G('hhRidge', () => new THREE.TorusGeometry(1, 0.075, 8, 28, Math.PI));
+  const ribGeo = () => G('hhRib', () => new THREE.TorusGeometry(1, 0.04, 6, 24, Math.PI));
+  const brimGeo = () => G('hhBrim', () => {
+    const pts = [new THREE.Vector2(0.98, 0.0), new THREE.Vector2(1.13, -0.015), new THREE.Vector2(1.14, -0.05), new THREE.Vector2(0.98, -0.04)];
+    return new THREE.LatheGeometry(pts, 32);
+  });
+  const peakGeo = () => G('hhPeak', () => {
+    const sh = new THREE.Shape();
+    sh.moveTo(-0.92, 0);
+    sh.absellipse(0, 0, 0.92, 0.55, Math.PI, Math.PI * 2, false, 0);
+    sh.lineTo(-0.92, 0);
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 });
+    geo.rotateX(Math.PI / 2);
+    return geo;
+  });
+  function makeHardHat(r, opts = {}) {
+    // r = poloměr hlavy pod přilbou; kšilt míří dopředu (−z)
+    const g = new THREE.Group();
+    const mat = opts.mat || C.hat, dark = C.hatDark;
+    const sx = r * 1.06, sy = r * 0.98, sz = r * 1.14;
+    const dome = mesh(domeGeo(), mat, [sx, sy, sz], [0, 0, 0]);
+    g.add(dome);
+    const ridge = mesh(ridgeGeo(), dark, [sx * 1.0, sy * 1.02, sz * 1.0], [0, 0, 0], false);
+    ridge.rotation.y = Math.PI / 2;
+    g.add(ridge);
+    [-1, 1].forEach(sd => {
+      const rib = mesh(ribGeo(), mat, [sx * 0.93, sy * 0.95, sz * 0.97], [sd * sx * 0.36, 0, 0], false);
+      rib.rotation.y = Math.PI / 2;
+      rib.scale.multiplyScalar(0.93);
+      g.add(rib);
+    });
+    g.add(mesh(brimGeo(), mat, [sx, r, sz], [0, 0.005, 0]));
+    const peak = mesh(peakGeo(), mat, [sx, r, sz * 0.95], [0, 0.01, -sz * 0.78]);
+    peak.rotation.x = 0.14;
+    g.add(peak);
+    // vnitřní páska (náhlavní kříž) vidět pod okrajem
+    g.add(mesh(G('hhBand', () => new THREE.CylinderGeometry(1, 1, 1, 28, 1, true)), C.rubber, [sx * 0.95, r * 0.12, sz * 0.95], [0, -r * 0.03, 0], false));
+    if (opts.strap) {
+      const strap = mesh(G('hhStrap', () => new THREE.TorusGeometry(1, 0.035, 6, 24, Math.PI)), C.rubber, [r * 0.95, r * 1.25, r], [0, 0, 0.0], false);
+      strap.rotation.z = Math.PI;
+      g.add(strap);
+    }
+    return g;
+  }
+
   // barvy
   const C = {
     fur: M(0xf1e7d4, { r: 0.92 }),
@@ -295,7 +342,8 @@
     white: M(0xffffff, { r: 0.3 }),
     vest: M(0xcdf51a, { r: 0.6, e: 0x2f3d00, side: THREE.DoubleSide }),
     refl: M(0xe3e8ec, { r: 0.25, m: 0.4, e: 0x505050 }),
-    hat: M(0xffc410, { r: 0.3, e: 0x2a1c00 }),
+    hat: M(0xffc410, { r: 0.28, e: 0x2a1c00 }),
+    hatDark: M(0xe6a800, { r: 0.35, e: 0x221500 }),
     hatPickup: M(0xffc410, { r: 0.28, e: 0x5a3c00 }),
     orange: M(0xff6a13, { r: 0.55 }),
     wood: M(0xc49358, { r: 0.9 }),
@@ -411,21 +459,19 @@
       head.add(mesh(gSph(), C.dark, [0.07, 0.07, 0.05], [s * 0.115, 0.02, -0.2]));
       head.add(mesh(gSph(), C.white, [0.018, 0.018, 0.012], [s * 0.115 + 0.02, 0.045, -0.245], false));
       const ear = new THREE.Group();
-      ear.position.set(s * 0.21, 0.16, 0.02);
-      ear.rotation.z = -s * 0.62;
+      ear.position.set(s * 0.25, 0.07, 0.03);
+      ear.rotation.z = -s * 0.95;
+      ear.rotation.x = 0.15;
       ear.add(mesh(gCone(), C.fur, [0.18, 0.52, 0.07], [0, 0.26, 0]));
       ear.add(mesh(gCone(), C.pink, [0.12, 0.38, 0.03], [0, 0.22, -0.035]));
       // dlouhé chlupy na okrajích uší
       [0.08, 0.2, 0.32].forEach((y, i) => ear.add(mesh(gSph(), C.cream, [0.06 - i * 0.012, 0.08, 0.05], [s * (0.15 - y * 0.3), y, 0.01])));
       head.add(ear);
     });
-    const hat = mesh(helmetGeo, C.hat, [1.1, 1.05, 1.1], [0, 0.08, 0.01]);
-    hat.rotation.x = -0.08;
+    const hat = makeHardHat(0.27, { strap: true });
+    hat.position.set(0, 0.05, -0.005);
+    hat.rotation.x = -0.16;
     head.add(hat);
-    head.add(box(0.05, 0.05, 0.34, C.hat, 0, 0.4, 0.01));
-    const strap = mesh(G('torus', () => new THREE.TorusGeometry(1, 0.08, 6, 20)), C.rubber, [0.26, 0.26, 0.26], [0, -0.04, -0.02], false);
-    strap.rotation.y = Math.PI / 2;
-    head.add(strap);
 
     // nohy (tenké, se „kalhotkami“ na zadních)
     const legs = [];
@@ -471,11 +517,12 @@
       body.add(s);
     });
   }
-  function addHelmet(head, scale, y) {
-    const hat = mesh(helmetGeo, C.hat, [scale, scale * 0.95, scale], [0, y, 0.01]);
-    hat.rotation.x = -0.08;
+  function addHelmet(head, r, y, strap = false) {
+    const hat = makeHardHat(r, { strap });
+    hat.position.set(0, y, 0.01);
+    hat.rotation.x = -0.12;
     head.add(hat);
-    head.add(box(0.05 * scale, 0.05 * scale, 0.32 * scale, C.hat, 0, y + 0.3 * scale, 0.01));
+    return hat;
   }
   function makeBubble(root, sx, sy, sz, y) {
     const bubble = new THREE.Mesh(gSph(), M(0x9cf6ff, { t: true, op: 0.22, e: 0x2fd0ff, ei: 0.8, dw: false }));
@@ -504,14 +551,14 @@
       head.add(mesh(gSph(), C.green, [0.06, 0.065, 0.04], [sd * 0.1, 0.03, -0.17]));
       head.add(mesh(gSph(), C.dark, [0.02, 0.05, 0.02], [sd * 0.1, 0.03, -0.205]));
       const ear = new THREE.Group();
-      ear.position.set(sd * 0.14, 0.15, 0.0);
-      ear.rotation.z = -sd * 0.35;
+      ear.position.set(sd * 0.2, 0.07, 0.02);
+      ear.rotation.z = -sd * 0.85;
       ear.add(mesh(gCone(), C.catFur, [0.1, 0.22, 0.06], [0, 0.11, 0]));
       ear.add(mesh(gCone(), C.pink, [0.06, 0.15, 0.03], [0, 0.09, -0.03]));
       head.add(ear);
       [-0.02, 0.02].forEach(dy => head.add(box(0.2, 0.006, 0.006, C.white, sd * 0.17, -0.06 + dy, -0.17, false)));
     });
-    addHelmet(head, 0.95, 0.07);
+    addHelmet(head, 0.235, 0.075, true).rotation.x = -0.22;
     const legs = [];
     [[-0.13, -0.2], [0.13, -0.2], [-0.13, 0.22], [0.13, 0.22]].forEach(([x, z]) => {
       const pv = new THREE.Group();
@@ -552,7 +599,7 @@
       head.add(mesh(gSph(), C.skin, [0.04, 0.05, 0.03], [sd * 0.2, 0, 0]));
     });
     head.add(mesh(gSph(), C.skin, [0.035, 0.04, 0.04], [0, -0.04, -0.2]));
-    addHelmet(head, 0.85, 0.06);
+    addHelmet(head, 0.212, 0.05, true);
     const limb = (x, y, len, mat, end, endMat) => {
       const pv = new THREE.Group();
       pv.position.set(x, y, 0);
@@ -596,10 +643,11 @@
     body.add(head);
     head.add(mesh(gSph(), C.snail, [0.17, 0.17, 0.17], [0, 0, 0]));
     head.add(mesh(gSph(), C.dark, [0.03, 0.02, 0.02], [0, -0.04, -0.16]));
-    addHelmet(head, 0.62, 0.08);
+    addHelmet(head, 0.175, 0.04);
     // tykadla s očima (vrtí se jako ocas)
     const tail = new THREE.Group();
-    tail.position.set(0, 0.12, -0.04);
+    tail.position.set(0, -0.03, -0.13);
+    tail.rotation.x = -1.15;
     [-1, 1].forEach(sd => {
       const st = new THREE.Group();
       st.position.set(sd * 0.08, 0, 0);
@@ -1297,9 +1345,8 @@
         const t = 1 - Math.pow(k / ((n - 1) / 2 + 0.6), 2);
         y = 0.55 + 1.5 * Math.max(0, t);
       }
-      const h = new THREE.Mesh(helmetGeo, C.hatPickup);
-      h.castShadow = true;
-      h.scale.setScalar(1.25);
+      const h = makeHardHat(0.27, { mat: C.hatPickup });
+      h.scale.setScalar(1.15);
       h.position.set(x, y, z);
       h.rotation.x = -0.25;
       addEntity(pickups, h, z, { kind: 'helmet', x, y, spin: i * 0.4 });
@@ -1637,8 +1684,9 @@
     } catch (e) { prev = { failed: true }; }
     return prev;
   }
+  let forcePreview = false;
   function showHero() {
-    const photo = charKey === 'civava';
+    const photo = charKey === 'civava' && !forcePreview;
     heroImg.hidden = !photo;
     heroCv.hidden = photo;
     if (photo) return;
@@ -2085,5 +2133,5 @@
   requestAnimationFrame(frame);
 
   // ladicí přístup pro testy
-  window.__safetyRun = { get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles };
+  window.__safetyRun = { forcePreview(on) { forcePreview = on; showHero(); }, get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles };
 })();
