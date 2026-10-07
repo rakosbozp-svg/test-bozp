@@ -23,6 +23,18 @@ Na mobilu ve stejné Wi-Fi: `http://<IP-počítače>:8000`.
 | Pauza | Esc nebo P | tlačítko II |
 | Restart po konci | Enter nebo mezerník | tlačítko ZNOVU |
 
+## Postavy a prostředí
+
+- Postavy: čivava, kotě, člověk (pracovník), šnek – všechny v přilbě a reflexní vestě.
+- Prostředí: výroba prefabrikátů, kancelář, stavba, mlékárna – každé má vlastní překážky, budovy a dekorace.
+- Volba se pamatuje v prohlížeči.
+
+## Žebříček
+
+- V aplikaci otevřené přes claude.ai se výsledky zapisují do sdílené databáze artefaktu (kolekce `hraci`, jeden dokument na hráče).
+- Hráč dne, týdne a měsíce, rekordy (skóre, trať, přilby, počet her) a síň slávy minulých období.
+- Zapisovat může jen přihlášený hráč s přístupem k zápisu (vlastník a členové organizace); ostatní žebříček jen vidí.
+
 ## Hra
 
 - 3 pruhy, automatický běh, rychlost roste se vzdáleností.

@@ -38,10 +38,19 @@
 <!-- MENU -->
 <div id="menu" class="overlay">
   <div class="panel menu-panel">
-    <img class="hero" src="assets/chivava.png" alt="Čivava v ochranné přilbě">
+    <img class="hero" id="heroImg" src="assets/chivava.png" alt="Čivava v ochranné přilbě">
+    <canvas class="hero hero3d" id="heroCanvas" width="360" height="360" hidden aria-label="Náhled postavy"></canvas>
     <h1 class="title"><span>SAFETY</span><span>RUN</span></h1>
     <p class="tag">Směna začíná. Uhýbej, skákej, sbírej přilby.</p>
+    <div class="pickers">
+      <span class="pick-label">Postava</span>
+      <div class="pick-row" id="charPick" role="group" aria-label="Postava"></div>
+      <span class="pick-label">Prostředí</span>
+      <div class="pick-row" id="themePick" role="group" aria-label="Prostředí"></div>
+    </div>
     <button id="playBtn" class="btn-main">PLAY</button>
+    <button id="boardBtn" class="btn-ghost">🏆 ŽEBŘÍČEK</button>
+    <p class="who" id="whoLine"></p>
     <div class="controls">
       <div><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> pruh</div>
       <div><kbd>↑</kbd> / <kbd>W</kbd> / <kbd>mezerník</kbd> skok</div>
@@ -78,9 +87,29 @@
     </div>
     <p class="best" id="newBest" hidden>NOVÝ REKORD!</p>
     <p class="best">Rekord: <b id="bestOver">0</b></p>
+    <p class="lb-status" id="lbStatus"></p>
     <button id="restartBtn" class="btn-main">ZNOVU</button>
+    <button id="overBoardBtn" class="btn-ghost">🏆 ŽEBŘÍČEK</button>
     <button id="overMenuBtn" class="btn-ghost">MENU</button>
     <p class="hint">Enter / mezerník = okamžitý restart</p>
+  </div>
+</div>
+
+<!-- ŽEBŘÍČEK -->
+<div id="board" class="overlay" hidden>
+  <div class="panel board-panel">
+    <h2 class="sub">ŽEBŘÍČEK</h2>
+    <div class="champs" id="boardChamps"></div>
+    <div class="board-tabs" id="boardTabs" role="tablist">
+      <button role="tab" data-tab="den" aria-selected="true">Den</button>
+      <button role="tab" data-tab="tyden" aria-selected="false">Týden</button>
+      <button role="tab" data-tab="mesic" aria-selected="false">Měsíc</button>
+      <button role="tab" data-tab="rekordy" aria-selected="false">Rekordy</button>
+      <button role="tab" data-tab="slava" aria-selected="false">Síň slávy</button>
+    </div>
+    <div class="board-list" id="boardList"></div>
+    <p class="hint" id="boardNote"></p>
+    <button id="boardClose" class="btn-ghost">ZAVŘÍT</button>
   </div>
 </div>
 

@@ -15,6 +15,51 @@
   const MAX_SPEED = 42;
   const IS_TOUCH = matchMedia('(pointer: coarse)').matches;
 
+  // ---------------------------------------------------------------- prostředí (témata)
+  const THEMES = {
+    vyroba: {
+      name: 'Výroba', icon: '🏭', sky: ['#5fa8de', '#a9d3ec', '#e6eeec'], fog: 0xdde8ea, hemiG: 0x8a7a66,
+      track: '#5b6068', edge: '#f2c41a', dash: '#f4f1e8', yard: '#bdb7ab', yardKind: 'concrete',
+      hallStyle: 'hall', hallColors: [0x8fa3b3, 0xd8d2c4, 0x5d7f99, 0xc7b8a0], hallSigns: [['PREFABRIKACE'], ['VÝROBA DÍLCŮ']],
+      props: ['rings', 'panels', 'palletStack', 'curbs', 'mould', 'parked', 'lamp', 'sign', 'rings', 'palletStack', 'lamp'],
+      signs: ['oopp', 'vzv', 'safety'], gantry: 'gantry', obs: {},
+      why: { cone: 'Narazil jsi do kuželů!', pallet: 'Zakopl jsi o palety!', block: 'Betonový blok nepovolí!', forklift: 'Pozor na VZV!', pipe: 'Nezapomeň se skrčit!', pipeWide: 'Nezapomeň se skrčit!', pit: 'Spadl jsi do výkopu!' },
+    },
+    kancelar: {
+      name: 'Kancelář', icon: '🏢', sky: ['#6f8fb3', '#c3d2e2', '#eef1f4'], fog: 0xe6ebf1, hemiG: 0x8f96a0,
+      track: '#c4c9d1', edge: '#2f6fd0', dash: '#ffffff', yard: '#9aa4ae', yardKind: 'tiles',
+      hallStyle: 'office', hallColors: [0xdfe4ea, 0xc9d1da, 0xe9e4da, 0xb7c3cf], hallSigns: [['KANCELÁŘE'], ['OPEN SPACE']],
+      props: ['plant', 'desk', 'cooler', 'bench', 'lamp', 'sign', 'plant', 'desk', 'bench'],
+      signs: ['wet', 'exit', 'safety'], gantry: 'exitPortal',
+      obs: { cone: 'wetSign', pallet: 'paperBoxes', block: 'cabinet', forklift: 'cleaningCart', pipe: 'cableBridge', pipeWide: 'cableBridgeWide', pit: 'floorHatch' },
+      why: { cone: 'Uklouzl jsi na mokré podlaze!', pallet: 'Zakopl jsi o krabice!', block: 'Skříň nepřeskočíš!', forklift: 'Pozor na úklidový vozík!', pipe: 'Pozor na kabely, skrč se!', pipeWide: 'Pozor na kabely, skrč se!', pit: 'Spadl jsi do otevřeného kanálu!' },
+    },
+    stavba: {
+      name: 'Stavba', icon: '🏗️', sky: ['#5c9fd6', '#b4d6ea', '#efe6d6'], fog: 0xe9e1d3, hemiG: 0x8f7454,
+      track: '#7c7366', edge: '#ff7a1a', dash: '#e8e0d0', yard: '#a8875f', yardKind: 'dirt',
+      hallStyle: 'frame', hallColors: [0xb9b4aa, 0xa9a49a, 0xc4bfb4, 0x9d988e], hallSigns: [['STAVENIŠTĚ'], ['VSTUP ZAKÁZÁN']],
+      props: ['bricks', 'rebar', 'sand', 'rings', 'lamp', 'sign', 'mixer', 'bricks', 'sand'],
+      signs: ['site', 'oopp', 'safety'], gantry: 'crane',
+      obs: { pallet: 'brickPallet', block: 'skip', forklift: 'dumper', pipe: 'scaffold', pipeWide: 'scaffoldWide' },
+      why: { cone: 'Narazil jsi do kuželů!', pallet: 'Zakopl jsi o cihly!', block: 'Kontejner nepovolí!', forklift: 'Pozor na stavební stroj!', pipe: 'Lešení – skrč se!', pipeWide: 'Lešení – skrč se!', pit: 'Spadl jsi do výkopu!' },
+    },
+    mlekarna: {
+      name: 'Mlékárna', icon: '🥛', sky: ['#69b2e6', '#bfe0f2', '#f2f6f7'], fog: 0xe6f0f4, hemiG: 0x9aa7ad,
+      track: '#d3d9dc', edge: '#2a9d5c', dash: '#ffffff', yard: '#e4e9ec', yardKind: 'tiles',
+      hallStyle: 'hall', hallColors: [0xf4f6f8, 0xe8eef2, 0xdfe8ee, 0xf2f2ee], hallSigns: [['MLÉKÁRNA'], ['PASTERACE']],
+      props: ['silo', 'crates', 'tanker', 'lamp', 'sign', 'crates', 'silo', 'lamp'],
+      signs: ['hygiene', 'oopp', 'vzv'], gantry: 'pipeBridge',
+      obs: { cone: 'milkCans', pallet: 'crates', block: 'steelTank', forklift: 'dairyForklift', pipe: 'steelPipe', pipeWide: 'steelPipeWide', pit: 'drain' },
+      why: { cone: 'Zakopl jsi o konve na mléko!', pallet: 'Zakopl jsi o přepravky!', block: 'Nerezový tank nepovolí!', forklift: 'Pozor na VZV!', pipe: 'Potrubí – skrč se!', pipeWide: 'Potrubí – skrč se!', pit: 'Spadl jsi do odtokového kanálu!' },
+    },
+  };
+  const store = {
+    get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* bez úložiště */ } },
+  };
+  let themeKey = THEMES[store.get('safetyrun_theme', 'vyroba')] ? store.get('safetyrun_theme', 'vyroba') : 'vyroba';
+  let TH = THEMES[themeKey];
+
   // ---------------------------------------------------------------- renderer
   const canvas = document.getElementById('game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -52,42 +97,56 @@
     }
   }
 
-  const skyTex = canvasTex(2, 256, (g, w, h) => {
+  function paintSky(g, w, h) {
     const gr = g.createLinearGradient(0, 0, 0, h);
-    gr.addColorStop(0, '#5fa8de');
-    gr.addColorStop(0.55, '#a9d3ec');
-    gr.addColorStop(1, '#e6eeec');
+    gr.addColorStop(0, TH.sky[0]);
+    gr.addColorStop(0.55, TH.sky[1]);
+    gr.addColorStop(1, TH.sky[2]);
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
-  });
+  }
+  const skyTex = canvasTex(2, 256, paintSky);
   skyTex.wrapS = skyTex.wrapT = THREE.ClampToEdgeWrapping;
   scene.background = skyTex;
 
   // jízdní dráha: 7.6 široká, jedna textura = 10 m
   const TRACK_W = 7.6, TRACK_L = 260, TRACK_REP = 10;
-  const trackTex = canvasTex(256, 512, (g, w, h) => {
-    g.fillStyle = '#5b6068'; g.fillRect(0, 0, w, h);
-    speckle(g, w, h, 5000, 0.18);
+  function paintTrack(g, w, h) {
+    g.fillStyle = TH.track; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 5000, TH.yardKind === 'tiles' ? 0.06 : 0.18);
     const u = x => (x + TRACK_W / 2) / TRACK_W * w;
     // stopy v pruzích
     g.fillStyle = 'rgba(0,0,0,0.08)';
     LANES.forEach(l => { g.fillRect(u(l) - 22, 0, 12, h); g.fillRect(u(l) + 10, 0, 12, h); });
     // krajní žluté čáry
-    g.fillStyle = '#f2c41a';
+    g.fillStyle = TH.edge;
     g.fillRect(u(-3.5) - 4, 0, 8, h); g.fillRect(u(3.5) - 4, 0, 8, h);
     // přerušované dělicí čáry
-    g.fillStyle = '#f4f1e8';
+    g.fillStyle = TH.dash;
     [-1.1, 1.1].forEach(x => g.fillRect(u(x) - 3, 0, 6, h * 0.5));
-  }, 1, TRACK_L / TRACK_REP);
+  }
+  const trackTex = canvasTex(256, 512, paintTrack, 1, TRACK_L / TRACK_REP);
 
   const YARD_TILE = 5;
-  const yardTex = canvasTex(256, 256, (g, w, h) => {
-    g.fillStyle = '#bdb7ab'; g.fillRect(0, 0, w, h);
-    speckle(g, w, h, 4000, 0.16);
-    g.fillStyle = 'rgba(90,80,70,0.10)';
-    for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 10 + Math.random() * 30, 0, 7); g.fill(); }
-    g.fillStyle = 'rgba(60,55,50,0.55)';
-    g.fillRect(0, 0, w, 3); g.fillRect(0, 0, 3, h);
-  }, 40 / YARD_TILE, TRACK_L / YARD_TILE);
+  function paintYard(g, w, h) {
+    g.fillStyle = TH.yard; g.fillRect(0, 0, w, h);
+    if (TH.yardKind === 'tiles') {
+      speckle(g, w, h, 1200, 0.06);
+      g.fillStyle = 'rgba(0,0,0,0.13)';
+      for (let i = 0; i <= 4; i++) { g.fillRect(i * 64 - 1, 0, 2, h); g.fillRect(0, i * 64 - 1, w, 2); }
+    } else if (TH.yardKind === 'dirt') {
+      speckle(g, w, h, 6000, 0.22);
+      for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(${90 + Math.random() * 60},${80 + Math.random() * 40},${60 + Math.random() * 30},0.8)`; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 1.5 + Math.random() * 3, 0, 7); g.fill(); }
+      g.fillStyle = 'rgba(70,50,30,0.15)';
+      for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 20 + Math.random() * 30, 8 + Math.random() * 10, 0, 0, 7); g.fill(); }
+    } else {
+      speckle(g, w, h, 4000, 0.16);
+      g.fillStyle = 'rgba(90,80,70,0.10)';
+      for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 10 + Math.random() * 30, 0, 7); g.fill(); }
+      g.fillStyle = 'rgba(60,55,50,0.55)';
+      g.fillRect(0, 0, w, 3); g.fillRect(0, 0, 3, h);
+    }
+  }
+  const yardTex = canvasTex(256, 256, paintYard, 40 / YARD_TILE, TRACK_L / YARD_TILE);
 
   const concreteTex = canvasTex(128, 128, (g, w, h) => {
     g.fillStyle = '#c9c4b9'; g.fillRect(0, 0, w, h);
@@ -157,9 +216,23 @@
     oopp: textTex(['POUŽÍVEJ', 'OOPP'], '#1f8f4e', '#ffffff'),
     vzv: textTex(['POZOR', 'PROVOZ VZV'], '#ffc410', '#16181b'),
     safety: textTex(['BEZPEČNOST', 'NA 1. MÍSTĚ'], '#1d5fb8', '#ffffff'),
-    hall: textTex(['PREFABRIKACE'], '#ffffff', '#1d2a3a'),
-    hall2: textTex(['VÝROBA DÍLCŮ'], '#ffffff', '#1d2a3a'),
+    wet: textTex(['POZOR', 'MOKRÁ PODLAHA'], '#ffc410', '#16181b'),
+    exit: textTex(['ÚNIKOVÝ', 'VÝCHOD'], '#1f8f4e', '#ffffff'),
+    site: textTex(['STAVENIŠTĚ', 'VSTUP ZAKÁZÁN'], '#d23a2a', '#ffffff'),
+    hygiene: textTex(['HYGIENA', 'MYJ SI RUCE'], '#1d5fb8', '#ffffff'),
+    cables: textTex(['POZOR – KABELY'], '#ffc410', '#16181b', true),
+    scaffold: textTex(['POZOR – LEŠENÍ'], '#ffc410', '#16181b', true),
+    hall: null, hall2: null,
   };
+  const hallSignCache = {};
+  function themeHallSigns() {
+    TH.hallSigns.forEach((lines, i) => {
+      const k = lines.join('|');
+      if (!hallSignCache[k]) hallSignCache[k] = textTex(lines, '#ffffff', '#1d2a3a');
+      signTex[i ? 'hall2' : 'hall'] = hallSignCache[k];
+    });
+  }
+  themeHallSigns();
 
   const glowTex = canvasTex(64, 64, (g, w, h) => {
     const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -244,6 +317,21 @@
     brown: M(0x6b4424, { r: 0.8 }),
     lens: M(0x49c6ff, { r: 0.1, e: 0x0b4a70, t: true, op: 0.85 }),
     moldBlue: M(0x2c62b5, { r: 0.55, m: 0.3 }),
+    // kotě
+    catFur: M(0xe39a52, { r: 0.9 }), catStripe: M(0xb8692c, { r: 0.9 }), catLight: M(0xfbe7cf, { r: 0.92 }),
+    green: M(0x2fb36b, { r: 0.6 }),
+    // člověk
+    skin: M(0xf0c8a4, { r: 0.7 }), jeans: M(0x2f4f7a, { r: 0.85 }), shirt: M(0x3d6fb0, { r: 0.8 }), boot: M(0x3a2a1c, { r: 0.8 }), hair: M(0x4a3222, { r: 0.9 }),
+    // šnek
+    snail: M(0xc8b48a, { r: 0.6 }), snailDark: M(0x9a8460, { r: 0.6 }), shell: M(0xb5651d, { r: 0.55 }), shellLight: M(0xe0a35c, { r: 0.55 }),
+    // kancelář
+    whiteBoard: M(0xf3f4f6, { r: 0.5 }), grey: M(0x9aa2ab, { r: 0.6 }), greyDark: M(0x4b525a, { r: 0.6 }), paper: M(0xf5efe0, { r: 0.9 }),
+    cardboard: M(0xb88a55, { r: 0.95 }), plant: M(0x3f9a4a, { r: 0.8 }), pot: M(0xcf6f3c, { r: 0.8 }), deskTop: M(0xd9b98a, { r: 0.7 }), water: M(0x8fd3ff, { r: 0.1, t: true, op: 0.7 }),
+    exitGreen: M(0x1f8f4e, { r: 0.5, e: 0x0a3d20 }),
+    // stavba
+    brick: M(0xb5523a, { r: 0.9 }), skip: M(0xe0702a, { r: 0.6 }), sand: M(0xd8b97a, { r: 0.98 }), rebar: M(0x6b4a3a, { r: 0.6, m: 0.5 }), netGreen: M(0x3aa35a, { r: 0.9, t: true, op: 0.55, side: THREE.DoubleSide }),
+    // mlékárna
+    steelBright: M(0xe4e9ee, { r: 0.3, m: 0.35 }), milk: M(0xfcfcf8, { r: 0.4 }), crateBlue: M(0x2a7fd0, { r: 0.6 }), crateRed: M(0xd94343, { r: 0.6 }), dairyBlue: M(0x2b6cb0, { r: 0.5 }),
   };
 
   // ---------------------------------------------------------------- světla
@@ -371,8 +459,178 @@
 
     return { root, body, head, legs, tail, bubble };
   }
-  const dog = buildDog();
+  // společné: reflexní vesta na válcovém trupu a přilba
+  function addVest(body, r, y, len, z = 0) {
+    const vg = G('vestCyl', () => new THREE.CylinderGeometry(1, 1, 1, 24, 1, true));
+    const v = mesh(vg, C.vest, [r, len, r * 0.95], [0, y, z]);
+    v.rotation.x = Math.PI / 2;
+    body.add(v);
+    [-len * 0.25, len * 0.2].forEach(dz => {
+      const s = mesh(vg, C.refl, [r * 1.02, 0.06, r * 0.97], [0, y, z + dz]);
+      s.rotation.x = Math.PI / 2;
+      body.add(s);
+    });
+  }
+  function addHelmet(head, scale, y) {
+    const hat = mesh(helmetGeo, C.hat, [scale, scale * 0.95, scale], [0, y, 0.01]);
+    hat.rotation.x = -0.08;
+    head.add(hat);
+    head.add(box(0.05 * scale, 0.05 * scale, 0.32 * scale, C.hat, 0, y + 0.3 * scale, 0.01));
+  }
+  function makeBubble(root, sx, sy, sz, y) {
+    const bubble = new THREE.Mesh(gSph(), M(0x9cf6ff, { t: true, op: 0.22, e: 0x2fd0ff, ei: 0.8, dw: false }));
+    bubble.scale.set(sx, sy, sz);
+    bubble.position.y = y;
+    bubble.visible = false;
+    root.add(bubble);
+    return bubble;
+  }
+
+  function buildCat() {
+    // zrzavé mourovaté kotě
+    const root = new THREE.Group(), body = new THREE.Group();
+    root.add(body);
+    body.add(mesh(gSph(), C.catFur, [0.26, 0.24, 0.4], [0, 0.52, 0]));
+    [-0.12, 0.05, 0.2].forEach(z => body.add(mesh(gSph(), C.catStripe, [0.265, 0.07, 0.06], [0, 0.6, z])));
+    body.add(mesh(gSph(), C.catLight, [0.18, 0.18, 0.16], [0, 0.48, -0.28]));
+    addVest(body, 0.285, 0.54, 0.46, -0.02);
+    const head = new THREE.Group();
+    head.position.set(0, 0.88, -0.34);
+    body.add(head);
+    head.add(mesh(gSph(), C.catFur, [0.24, 0.21, 0.21], [0, 0, 0]));
+    head.add(mesh(gSph(), C.catLight, [0.13, 0.09, 0.1], [0, -0.07, -0.15]));
+    head.add(mesh(gSph(), C.pink, [0.035, 0.025, 0.025], [0, -0.03, -0.24]));
+    [-1, 1].forEach(sd => {
+      head.add(mesh(gSph(), C.green, [0.06, 0.065, 0.04], [sd * 0.1, 0.03, -0.17]));
+      head.add(mesh(gSph(), C.dark, [0.02, 0.05, 0.02], [sd * 0.1, 0.03, -0.205]));
+      const ear = new THREE.Group();
+      ear.position.set(sd * 0.14, 0.15, 0.0);
+      ear.rotation.z = -sd * 0.35;
+      ear.add(mesh(gCone(), C.catFur, [0.1, 0.22, 0.06], [0, 0.11, 0]));
+      ear.add(mesh(gCone(), C.pink, [0.06, 0.15, 0.03], [0, 0.09, -0.03]));
+      head.add(ear);
+      [-0.02, 0.02].forEach(dy => head.add(box(0.2, 0.006, 0.006, C.white, sd * 0.17, -0.06 + dy, -0.17, false)));
+    });
+    addHelmet(head, 0.95, 0.07);
+    const legs = [];
+    [[-0.13, -0.2], [0.13, -0.2], [-0.13, 0.22], [0.13, 0.22]].forEach(([x, z]) => {
+      const pv = new THREE.Group();
+      pv.position.set(x, 0.42, z);
+      pv.add(mesh(gCyl(10), C.catFur, [0.065, 0.38, 0.065], [0, -0.19, 0]));
+      pv.add(mesh(gSph(), C.catLight, [0.075, 0.05, 0.09], [0, -0.39, -0.03]));
+      body.add(pv);
+      legs.push(pv);
+    });
+    // dlouhý ocas zvednutý nahoru
+    const tail = new THREE.Group();
+    tail.position.set(0, 0.62, 0.36);
+    for (let i = 0; i < 9; i++) {
+      const tt = i / 8;
+      tail.add(mesh(gSph(), i % 3 === 2 ? C.catStripe : C.catFur, [0.05, 0.05, 0.05], [0, tt * 0.55, 0.12 * Math.sin(tt * 2.2)]));
+    }
+    body.add(tail);
+    const bubble = makeBubble(root, 0.8, 0.85, 0.95, 0.66);
+    return { root, body, head, legs, tail, bubble };
+  }
+
+  function buildHuman() {
+    // pracovník v montérkách (přikrčená „chibi“ postava, aby seděla do průjezdů)
+    const root = new THREE.Group(), body = new THREE.Group();
+    root.add(body);
+    body.add(box(0.42, 0.42, 0.26, C.shirt, 0, 0.78, 0));
+    body.add(box(0.44, 0.3, 0.28, C.vest, 0, 0.82, 0));
+    body.add(box(0.45, 0.05, 0.29, C.refl, 0, 0.74, 0));
+    body.add(box(0.45, 0.05, 0.29, C.refl, 0, 0.9, 0));
+    body.add(box(0.42, 0.12, 0.26, C.jeans, 0, 0.53, 0));
+    const head = new THREE.Group();
+    head.position.set(0, 1.15, 0);
+    body.add(head);
+    head.add(mesh(gSph(), C.skin, [0.2, 0.21, 0.2], [0, 0, 0]));
+    head.add(mesh(gSph(), C.hair, [0.205, 0.12, 0.2], [0, 0.06, 0.03]));
+    [-1, 1].forEach(sd => {
+      head.add(mesh(gSph(), C.dark, [0.025, 0.03, 0.02], [sd * 0.07, 0.01, -0.18]));
+      head.add(mesh(gSph(), C.skin, [0.04, 0.05, 0.03], [sd * 0.2, 0, 0]));
+    });
+    head.add(mesh(gSph(), C.skin, [0.035, 0.04, 0.04], [0, -0.04, -0.2]));
+    addHelmet(head, 0.85, 0.06);
+    const limb = (x, y, len, mat, end, endMat) => {
+      const pv = new THREE.Group();
+      pv.position.set(x, y, 0);
+      pv.add(box(0.13, len, 0.14, mat, 0, -len / 2, 0));
+      pv.add(box(end[0], end[1], end[2], endMat, 0, -len - end[1] / 2 + 0.02, end[3]));
+      body.add(pv);
+      return pv;
+    };
+    const legL = limb(-0.11, 0.5, 0.42, C.jeans, [0.15, 0.09, 0.22, -0.04], C.boot);
+    const legR = limb(0.11, 0.5, 0.42, C.jeans, [0.15, 0.09, 0.22, -0.04], C.boot);
+    const armL = limb(-0.28, 0.95, 0.36, C.shirt, [0.1, 0.09, 0.1, 0], C.skin);
+    const armR = limb(0.28, 0.95, 0.36, C.shirt, [0.1, 0.09, 0.1, 0], C.skin);
+    const tail = new THREE.Group(); // bez ocasu
+    body.add(tail);
+    const bubble = makeBubble(root, 0.7, 0.95, 0.7, 0.75);
+    return { root, body, head, legs: [legL, legR, armL, armR], tail, bubble, biped: true };
+  }
+
+  function buildSnail() {
+    // šnek s ulitou – „nohy“ jsou jen neviditelné klouby, aby šla použít společná animace
+    const root = new THREE.Group(), body = new THREE.Group();
+    root.add(body);
+    body.add(mesh(gSph(), C.snail, [0.26, 0.16, 0.62], [0, 0.16, -0.05]));
+    body.add(mesh(gSph(), C.snailDark, [0.27, 0.05, 0.6], [0, 0.04, -0.05]));
+    // ulita: spirála z koulí
+    const shell = new THREE.Group();
+    shell.position.set(0, 0.55, 0.12);
+    shell.add(mesh(gSph(), C.shell, [0.36, 0.36, 0.3], [0, 0, 0]));
+    for (let i = 0; i < 14; i++) {
+      const a = i * 0.55, r = 0.3 - i * 0.018;
+      shell.add(mesh(gSph(), i % 2 ? C.shellLight : C.shell, [0.07, 0.07, 0.07], [0.31 * (i % 2 ? 1 : -1) * 0, Math.sin(a) * r, Math.cos(a) * r]));
+    }
+    [-1, 1].forEach(sd => shell.add(mesh(G('torusS', () => new THREE.TorusGeometry(1, 0.12, 8, 24)), C.shellLight, [0.2, 0.2, 0.2], [sd * 0.3, 0, 0])).rotation.y = Math.PI / 2);
+    body.add(shell);
+    // reflexní pás přes ulitu
+    const band = mesh(G('vestCyl', () => new THREE.CylinderGeometry(1, 1, 1, 24, 1, true)), C.vest, [0.37, 0.14, 0.37], [0, 0.55, 0.12]);
+    band.rotation.z = Math.PI / 2;
+    body.add(band);
+    const head = new THREE.Group();
+    head.position.set(0, 0.36, -0.5);
+    body.add(head);
+    head.add(mesh(gSph(), C.snail, [0.17, 0.17, 0.17], [0, 0, 0]));
+    head.add(mesh(gSph(), C.dark, [0.03, 0.02, 0.02], [0, -0.04, -0.16]));
+    addHelmet(head, 0.62, 0.08);
+    // tykadla s očima (vrtí se jako ocas)
+    const tail = new THREE.Group();
+    tail.position.set(0, 0.12, -0.04);
+    [-1, 1].forEach(sd => {
+      const st = new THREE.Group();
+      st.position.set(sd * 0.08, 0, 0);
+      st.rotation.z = -sd * 0.35;
+      st.add(mesh(gCyl(8), C.snail, [0.025, 0.32, 0.025], [0, 0.16, 0]));
+      st.add(mesh(gSph(), C.white, [0.055, 0.055, 0.055], [0, 0.34, 0]));
+      st.add(mesh(gSph(), C.dark, [0.03, 0.03, 0.03], [0, 0.35, -0.04]));
+      tail.add(st);
+    });
+    head.add(tail);
+    const legs = [0, 1, 2, 3].map(() => { const g = new THREE.Group(); body.add(g); return g; });
+    const bubble = makeBubble(root, 0.75, 0.75, 0.95, 0.45);
+    return { root, body, head, legs, tail, bubble, snail: true };
+  }
+
+  const CHARS = {
+    civava: { name: 'Čivava', icon: '🐕', build: buildDog },
+    kote: { name: 'Kotě', icon: '🐈', build: buildCat },
+    clovek: { name: 'Člověk', icon: '👷', build: buildHuman },
+    snek: { name: 'Šnek', icon: '🐌', build: buildSnail },
+  };
+  let charKey = CHARS[store.get('safetyrun_char', 'civava')] ? store.get('safetyrun_char', 'civava') : 'civava';
+  let dog = CHARS[charKey].build();
   scene.add(dog.root);
+  function setChar(k) {
+    if (!CHARS[k]) return;
+    charKey = k; store.set('safetyrun_char', k);
+    scene.remove(dog.root);
+    dog = CHARS[k].build();
+    scene.add(dog.root);
+  }
 
   // ---------------------------------------------------------------- překážky
   const builders = {
@@ -435,6 +693,153 @@
       return { g, boxes: [], pit: { hx: 0.8, hz: 1.12 } };
     },
   };
+
+  // --- překážky pro další prostředí (stejné rozměry kolizí jako originály)
+  Object.assign(builders, {
+    wetSign() {
+      const g = new THREE.Group();
+      [-0.45, 0.45].forEach(x => {
+        [-1, 1].forEach(sd => { const p = box(0.42, 0.72, 0.03, C.hat, x, 0.36, sd * 0.13); p.rotation.x = sd * 0.35; g.add(p); });
+        g.add(box(0.3, 0.08, 0.04, C.rubber, x, 0.45, -0.17, false));
+      });
+      g.add(mesh(G('puddle', () => new THREE.CircleGeometry(1, 20)), C.water, [0.9, 0.5, 1], [0, 0.012, 0.45], false)).rotation.x = -Math.PI / 2;
+      return { g, boxes: [{ hx: 0.75, hz: 0.3, y0: 0, y1: 0.78 }] };
+    },
+    paperBoxes() {
+      const g = new THREE.Group();
+      [[-0.4, 0], [0.4, 0], [0, 0.42]].forEach(([x, y], i) => {
+        g.add(box(0.7, 0.4, 0.9, C.cardboard, x, 0.2 + y, 0));
+        g.add(box(0.72, 0.05, 0.2, C.paper, x, 0.4 + y, 0, false));
+      });
+      return { g, boxes: [{ hx: 0.78, hz: 0.58, y0: 0, y1: 0.8 }] };
+    },
+    cabinet() {
+      const g = new THREE.Group();
+      g.add(box(1.7, 2.2, 1.2, C.grey, 0, 1.1, 0));
+      for (let i = 0; i < 4; i++) {
+        g.add(box(1.6, 0.02, 0.02, C.greyDark, 0, 0.45 + i * 0.5, 0.61, false));
+        g.add(box(0.3, 0.05, 0.04, C.silver, 0, 0.62 + i * 0.5, 0.62, false));
+      }
+      g.add(box(1.72, 0.28, 0.02, C.hazard, 0, 0.15, 0.61, false));
+      return { g, boxes: [{ hx: 0.9, hz: 0.68, y0: 0, y1: 2.3 }] };
+    },
+    cleaningCart() {
+      const g = new THREE.Group();
+      g.add(box(1.2, 1.2, 2.2, C.dairyBlue, 0, 0.9, 0));
+      g.add(box(1.25, 0.1, 2.25, C.greyDark, 0, 0.3, 0));
+      [[-0.5, 0.9], [0.5, 0.9], [-0.5, -0.9], [0.5, -0.9]].forEach(([x, z]) => { const w = mesh(G('cwheel', () => new THREE.CylinderGeometry(0.15, 0.15, 0.12, 12)), C.rubber, null, [x, 0.15, z]); w.rotation.z = Math.PI / 2; g.add(w); });
+      g.add(mesh(gCyl(), C.hat, [0.35, 0.5, 0.35], [0, 1.75, 0.4]));
+      g.add(cyl(0.03, 1.6, C.wood, 0.3, 2.0, -0.4));
+      g.add(box(1.25, 0.25, 0.04, C.hazard, 0, 1.1, 1.11, false));
+      g.add(mesh(gCyl(), C.beacon, [0.08, 0.12, 0.08], [-0.4, 2.3, -0.6], false));
+      return { g, boxes: [{ hx: 0.78, hz: 1.2, y0: 0, y1: 2.3 }], vz: 4.5 };
+    },
+    cableBridge() { return buildLowPass(false, 'cables'); },
+    cableBridgeWide() { return buildLowPass(true, 'cables'); },
+    floorHatch() { return buildHole('#3a3f46', C.grey, C.hat); },
+    brickPallet() {
+      const g = new THREE.Group();
+      g.add(box(1.5, 0.12, 1.1, C.wood, 0, 0.06, 0));
+      for (let y = 0; y < 3; y++) for (let x = -1; x <= 1; x++) g.add(box(0.46, 0.2, 1.0, y % 2 ? C.brick : M(0xa64a33, { r: 0.9 }), x * 0.48, 0.22 + y * 0.21, 0));
+      return { g, boxes: [{ hx: 0.78, hz: 0.58, y0: 0, y1: 0.8 }] };
+    },
+    skip() {
+      const g = new THREE.Group();
+      g.add(box(1.75, 1.6, 1.3, C.skip, 0, 0.8, 0));
+      g.add(box(1.4, 0.4, 1.0, C.concreteDark, 0, 1.75, 0));
+      [-0.5, 0.5].forEach(x => g.add(box(0.12, 0.6, 1.32, C.steelDark, x, 2.0, 0)));
+      g.add(box(1.77, 0.28, 0.02, C.hazard, 0, 0.3, 0.66, false));
+      return { g, boxes: [{ hx: 0.9, hz: 0.68, y0: 0, y1: 2.3 }] };
+    },
+    dumper() {
+      const g = new THREE.Group();
+      g.add(box(1.3, 0.7, 1.5, C.skip, 0, 0.75, -0.4));
+      const bucket = box(1.4, 0.8, 1.2, C.hat, 0, 1.2, 0.6); bucket.rotation.x = -0.25; g.add(bucket);
+      [[-0.65, 0.6], [0.65, 0.6], [-0.65, -0.8], [0.65, -0.8]].forEach(([x, z]) => { const w = mesh(G('dwheel', () => new THREE.CylinderGeometry(0.42, 0.42, 0.3, 16)), C.rubber, null, [x, 0.42, z]); w.rotation.z = Math.PI / 2; g.add(w); });
+      g.add(box(0.08, 1.1, 0.08, C.steelDark, 0.5, 1.6, -0.9));
+      g.add(box(0.08, 1.1, 0.08, C.steelDark, -0.5, 1.6, -0.9));
+      g.add(box(1.1, 0.06, 0.4, C.steelDark, 0, 2.15, -0.9));
+      g.add(mesh(gCyl(), C.beacon, [0.09, 0.14, 0.09], [0.4, 2.28, -0.9], false));
+      return { g, boxes: [{ hx: 0.78, hz: 1.5, y0: 0, y1: 2.3 }], vz: 5.5 };
+    },
+    scaffold() { return buildLowPass(false, 'scaffold'); },
+    scaffoldWide() { return buildLowPass(true, 'scaffold'); },
+    milkCans() {
+      const g = new THREE.Group();
+      [-0.45, 0.45].forEach(x => {
+        g.add(mesh(gCyl(), C.steelBright, [0.22, 0.55, 0.22], [x, 0.28, 0]));
+        g.add(mesh(gCyl(), C.steelBright, [0.12, 0.18, 0.12], [x, 0.64, 0]));
+        g.add(mesh(gCyl(), C.dairyBlue, [0.14, 0.04, 0.14], [x, 0.74, 0]));
+      });
+      return { g, boxes: [{ hx: 0.75, hz: 0.3, y0: 0, y1: 0.78 }] };
+    },
+    crates() {
+      const g = new THREE.Group();
+      [[-0.38, 0, C.crateBlue], [0.38, 0, C.crateRed], [0, 0.38, C.crateBlue]].forEach(([x, y, m]) => {
+        g.add(box(0.72, 0.36, 0.95, m, x, 0.18 + y, 0));
+        for (let i = -1; i <= 1; i++) g.add(mesh(gCyl(), C.milk, [0.07, 0.3, 0.07], [x + i * 0.2, 0.42 + y, 0], false));
+      });
+      return { g, boxes: [{ hx: 0.78, hz: 0.58, y0: 0, y1: 0.8 }] };
+    },
+    steelTank() {
+      const g = new THREE.Group();
+      g.add(mesh(gCyl(24), C.steelBright, [0.85, 2.0, 0.65], [0, 1.15, 0]));
+      g.add(mesh(gSph(), C.steelBright, [0.85, 0.25, 0.65], [0, 2.15, 0]));
+      [-0.5, 0.5].forEach(x => g.add(box(0.08, 0.3, 0.08, C.steel, x, 0.15, 0)));
+      g.add(box(1.0, 0.25, 0.02, C.dairyBlue, 0, 1.4, 0.66, false));
+      return { g, boxes: [{ hx: 0.9, hz: 0.68, y0: 0, y1: 2.3 }] };
+    },
+    dairyForklift() {
+      const g = buildForklift(C.dairyBlue);
+      return { g, boxes: [{ hx: 0.78, hz: 1.5, y0: 0, y1: 2.3 }], vz: 5.5 };
+    },
+    steelPipe() { return buildLowPass(false, 'steel'); },
+    steelPipeWide() { return buildLowPass(true, 'steel'); },
+    drain() { return buildHole('#2a2f33', C.steelBright, C.dairyBlue); },
+  });
+  // nízký průjezd v různých prostředích (kolize = původní potrubí)
+  function buildLowPass(wide, kind) {
+    const r = buildPipe(wide);
+    if (kind === 'steel') {
+      r.g.traverse(o => { if (o.isMesh && (o.material === C.red || o.material === C.blue || o.material === C.silver)) o.material = C.steelBright; });
+      return r;
+    }
+    const g = new THREE.Group();
+    const half = wide ? 3.7 : 1.08, len = half * 2;
+    const post = kind === 'scaffold' ? C.silver : C.greyDark;
+    [-half, half].forEach(x => { g.add(box(0.12, 2.7, 0.12, post, x, 1.35, 0)); g.add(box(0.3, 0.05, 0.3, C.steelDark, x, 0.025, 0)); });
+    if (kind === 'scaffold') {
+      [1.05, 1.6].forEach(y => g.add(box(len, 0.08, 0.08, C.silver, 0, y, 0)));
+      g.add(box(len, 0.06, 0.6, C.wood, 0, 1.12, -0.2));
+      const d = box(len * 1.05, 0.06, 0.06, C.silver, 0, 1.8, 0); d.rotation.z = 0.25; g.add(d);
+    } else {
+      g.add(box(len, 0.08, 0.45, C.greyDark, 0, 1.05, 0));
+      [-0.12, 0, 0.12].forEach((z, i) => g.add(box(len, 0.06, 0.06, [C.red, C.blue, C.hat][i], 0, 1.13, z)));
+    }
+    const sign = new THREE.Mesh(gBox(), [C.steelDark, C.steelDark, C.steelDark, C.steelDark, M(0xffffff, { map: signTex[kind], r: 0.6 }), C.steelDark]);
+    sign.scale.set(wide ? 6.2 : len - 0.1, 0.7, 0.06); sign.position.set(0, 2.25, 0.1); sign.castShadow = true;
+    g.add(sign);
+    return { g, boxes: [{ hx: wide ? 3.8 : 1.1, hz: 0.24, y0: 0.93, y1: 2.6 }] };
+  }
+  function buildHole(inner, rimMat, postMat) {
+    const g = new THREE.Group();
+    const hole = new THREE.Mesh(G('pitPlane', () => new THREE.PlaneGeometry(1.8, 2.5)), M(0xffffff, { map: holeTex(inner), r: 1 }));
+    hole.rotation.x = -Math.PI / 2; hole.position.y = 0.012;
+    g.add(hole);
+    g.add(box(1.9, 0.06, 0.12, rimMat, 0, 0.03, -1.28, false));
+    g.add(box(1.9, 0.06, 0.12, rimMat, 0, 0.03, 1.28, false));
+    [[-0.95, -1.3], [0.95, -1.3], [-0.95, 1.3], [0.95, 1.3]].forEach(([x, z]) => g.add(box(0.1, 0.7, 0.1, postMat === C.hat ? C.hazard : postMat, x, 0.35, z)));
+    const lid = box(1.0, 0.04, 1.4, rimMat, -1.3, 0.3, -0.6); lid.rotation.z = 0.6; g.add(lid);
+    return { g, boxes: [], pit: { hx: 0.8, hz: 1.12 } };
+  }
+  const holeTexCache = {};
+  function holeTex(inner) {
+    if (!holeTexCache[inner]) holeTexCache[inner] = canvasTex(128, 128, (g, w, h) => {
+      g.fillStyle = inner; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 12; i++) { const p = i * 5; g.fillStyle = `rgba(0,0,0,${0.07 * i})`; g.fillRect(p, p, w - p * 2, h - p * 2); }
+    });
+    return holeTexCache[inner];
+  }
 
   function buildForklift(colorMat) {
     const g = new THREE.Group();
@@ -594,7 +999,7 @@
     },
     sign() {
       const g = new THREE.Group();
-      const keys = ['oopp', 'vzv', 'safety'];
+      const keys = TH.signs;
       const t = signTex[keys[Math.floor(Math.random() * keys.length)]];
       [-0.9, 0.9].forEach(z => g.add(box(0.08, 2.2, 0.08, C.steel, 0, 1.1, z, false)));
       const b = new THREE.Mesh(gBox(), [M(0xffffff, { map: t }), M(0xffffff, { map: t }), C.steel, C.steel, C.steel, C.steel]);
@@ -604,10 +1009,129 @@
       return g;
     },
   };
+  Object.assign(decorBuilders, {
+    plant() {
+      const g = new THREE.Group();
+      g.add(mesh(gCyl(), C.pot, [0.35, 0.6, 0.35], [0, 0.3, 0], false));
+      [[0, 1.0, 0, 0.45], [0.2, 1.3, 0.1, 0.3], [-0.2, 1.25, -0.1, 0.32]].forEach(([x, y, z, r]) => g.add(mesh(gSph(), C.plant, [r, r, r], [x, y, z], false)));
+      return g;
+    },
+    desk() {
+      const g = new THREE.Group();
+      g.add(box(1.2, 0.06, 2.0, C.deskTop, 0, 0.75, 0, false));
+      [[-0.55, -0.9], [0.55, -0.9], [-0.55, 0.9], [0.55, 0.9]].forEach(([x, z]) => g.add(box(0.05, 0.75, 0.05, C.greyDark, x, 0.37, z, false)));
+      g.add(box(0.05, 0.4, 0.6, C.rubber, 0.2, 1.05, 0, false));
+      g.add(box(0.3, 0.02, 0.5, C.greyDark, -0.2, 0.79, 0, false));
+      return g;
+    },
+    cooler() {
+      const g = new THREE.Group();
+      g.add(box(0.4, 1.0, 0.4, C.whiteBoard, 0, 0.5, 0, false));
+      g.add(mesh(gCyl(), C.water, [0.17, 0.45, 0.17], [0, 1.23, 0], false));
+      return g;
+    },
+    bench() {
+      const g = new THREE.Group();
+      g.add(box(0.5, 0.08, 2.0, C.wood, 0, 0.45, 0, false));
+      g.add(box(0.08, 0.45, 2.0, C.wood, 0.22, 0.75, 0, false));
+      [-0.8, 0.8].forEach(z => g.add(box(0.4, 0.45, 0.06, C.greyDark, 0, 0.22, z, false)));
+      return g;
+    },
+    bricks() {
+      const g = new THREE.Group();
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let c = 0; c < n; c++) { g.add(box(1.1, 0.12, 1.1, C.wood, 0, 0.06, c * 1.4, false)); g.add(box(1.0, 0.7, 1.0, C.brick, 0, 0.47, c * 1.4, false)); }
+      return g;
+    },
+    rebar() {
+      const g = new THREE.Group();
+      [-0.6, 0.6].forEach(z => g.add(box(0.5, 0.2, 0.2, C.wood, 0, 0.1, z, false)));
+      for (let i = 0; i < 10; i++) g.add(box(0.05, 0.05, 3.0, C.rebar, -0.2 + (i % 5) * 0.1, 0.24 + Math.floor(i / 5) * 0.06, 0, false));
+      return g;
+    },
+    sand() {
+      const g = new THREE.Group();
+      g.add(mesh(gCone(), C.sand, [1.4, 1.1, 1.4], [0, 0.55, 0], false));
+      return g;
+    },
+    mixer() {
+      const g = new THREE.Group();
+      const drum = mesh(gCyl(16), C.skip, [0.45, 0.9, 0.45], [0, 1.0, 0], false); drum.rotation.x = 0.6; g.add(drum);
+      g.add(box(0.8, 0.1, 1.2, C.steelDark, 0, 0.45, 0, false));
+      [-0.4, 0.4].forEach(x => { const w = mesh(G('mwheel', () => new THREE.CylinderGeometry(0.22, 0.22, 0.1, 12)), C.rubber, null, [x, 0.22, 0.3], false); w.rotation.z = Math.PI / 2; g.add(w); });
+      return g;
+    },
+    silo() {
+      const g = new THREE.Group();
+      g.add(mesh(gCyl(20), C.steelBright, [1.3, 7, 1.3], [0, 3.8, 0], false));
+      g.add(mesh(gCone(), C.steelBright, [1.3, 0.8, 1.3], [0, 7.7, 0], false));
+      [-0.9, 0.9].forEach(x => [-0.9, 0.9].forEach(z => g.add(box(0.12, 0.6, 0.12, C.steel, x, 0.3, z, false))));
+      g.add(box(1.4, 0.4, 0.02, C.dairyBlue, 0, 4.5, 1.31, false));
+      return g;
+    },
+    crates() {
+      const g = new THREE.Group();
+      const n = 2 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n; i++) g.add(box(0.8, 0.36, 1.0, i % 2 ? C.crateRed : C.crateBlue, 0, 0.18 + i * 0.37, 0, false));
+      return g;
+    },
+    tanker() {
+      const g = new THREE.Group();
+      const tank = mesh(gCyl(20), C.steelBright, [0.95, 5.5, 0.95], [0, 1.6, 0.6], false); tank.rotation.x = Math.PI / 2; g.add(tank);
+      g.add(box(1.9, 1.6, 1.6, C.whiteBoard, 0, 1.25, -3.0, false));
+      g.add(box(1.92, 0.5, 0.02, C.glass, 0, 1.6, -3.81, false));
+      [[-0.85, -2.8], [0.85, -2.8], [-0.85, 1.8], [0.85, 1.8], [-0.85, 2.8], [0.85, 2.8]].forEach(([x, z]) => { const w = mesh(G('wheel', () => new THREE.CylinderGeometry(0.3, 0.3, 0.26, 16)), C.rubber, null, [x, 0.4, z], false); w.rotation.z = Math.PI / 2; g.add(w); });
+      g.add(box(1.92, 0.3, 4.0, C.dairyBlue, 0, 0.75, 0.6, false));
+      g.rotation.y = Math.PI / 2;
+      return g;
+    },
+  });
   // haly
-  const hallMats = [0x8fa3b3, 0xd8d2c4, 0x5d7f99, 0xc7b8a0].map(c => M(c, { map: hallTex, r: 0.7, m: 0.2 }));
+  let hallMats = [];
+  const officeTex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#7fa6c9'; g.fillRect(0, 0, w, h);
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#dfe5ea';
+    for (let x = 0; x < w; x += 32) g.fillRect(x, 0, 4, h);
+    for (let y = 0; y < h; y += 42) g.fillRect(0, y, w, 6);
+  }, 4, 3);
   const roofMat = M(0x5f6670, { r: 0.6, m: 0.3 });
+  function buildOffice(side, len) {
+    const g = new THREE.Group();
+    const w = 14, h = 10 + Math.random() * 8;
+    g.add(mesh(gBox(), M(0xffffff, { map: officeTex, r: 0.15, m: 0.3 }), [w, h, len], [0, h / 2, 0], false));
+    g.add(box(w + 0.4, 0.4, len + 0.4, C.whiteBoard, 0, h + 0.2, 0, false));
+    const face = -side * (w / 2 + 0.05);
+    const door = box(0.1, 3, 4, C.glass, face, 1.5, 0, false); g.add(door);
+    g.add(box(0.3, 0.3, 5, C.whiteBoard, face - side * 0.6, 3.2, 0, false));
+    if (len > 22) {
+      const t = new THREE.Mesh(G('plane', () => new THREE.PlaneGeometry(1, 1)), M(0xffffff, { map: Math.random() < 0.5 ? signTex.hall : signTex.hall2 }));
+      t.scale.set(7, 1.75, 1); t.position.set(face - side * 0.02, 4.4, 4.5); t.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2; g.add(t);
+    }
+    return g;
+  }
+  function buildFrame(side, len) {
+    // rozestavěná budova: skelet, stropy, lešení se sítí
+    const g = new THREE.Group();
+    const w = 12, floors = 2 + Math.floor(Math.random() * 3), fh = 3.2;
+    for (let f = 0; f <= floors; f++) g.add(box(w, 0.3, len, C.concrete, 0, f * fh + 0.15, 0, false));
+    for (let f = 0; f < floors; f++) for (let z = -len / 2 + 1; z <= len / 2 - 1; z += 5) [-w / 2 + 0.5, w / 2 - 0.5].forEach(x => g.add(box(0.5, fh, 0.5, C.concreteDark, x, f * fh + fh / 2 + 0.3, z, false)));
+    const face = -side * (w / 2 + 1.0);
+    for (let z = -len / 2; z <= len / 2; z += 2.5) g.add(box(0.08, floors * fh, 0.08, C.silver, face, floors * fh / 2, z, false));
+    for (let f = 1; f <= floors; f++) g.add(box(0.08, 0.08, len, C.silver, face, f * fh, 0, false));
+    const net = new THREE.Mesh(G('plane', () => new THREE.PlaneGeometry(1, 1)), C.netGreen);
+    net.scale.set(len * 0.6, floors * fh * 0.6, 1); net.position.set(face - side * 0.05, floors * fh * 0.55, (Math.random() - 0.5) * len * 0.3); net.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    g.add(net);
+    if (len > 22) {
+      const t = new THREE.Mesh(G('plane', () => new THREE.PlaneGeometry(1, 1)), M(0xffffff, { map: signTex.site }));
+      t.scale.set(6, 1.5, 1); t.position.set(face - side * 0.1, 1.6, 0); t.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2; g.add(t);
+    }
+    return g;
+  }
   function buildHall(side, len) {
+    if (TH.hallStyle === 'office') return buildOffice(side, len);
+    if (TH.hallStyle === 'frame') return buildFrame(side, len);
     const g = new THREE.Group();
     const w = 14, h = 7 + Math.random() * 3;
     const wall = mesh(gBox(), hallMats[Math.floor(Math.random() * hallMats.length)], [w, h, len], [0, h / 2, 0], false);
@@ -642,6 +1166,36 @@
     wall.receiveShadow = true;
     return g;
   }
+  function buildPortal() {
+    if (TH.gantry === 'exitPortal') {
+      const g = new THREE.Group();
+      [-6.2, 6.2].forEach(x => g.add(box(0.5, 6.5, 0.5, C.whiteBoard, x, 3.25, 0, false)));
+      g.add(box(13, 0.6, 0.6, C.whiteBoard, 0, 6.6, 0, false));
+      const sgn = new THREE.Mesh(gBox(), [C.exitGreen, C.exitGreen, C.exitGreen, C.exitGreen, M(0xffffff, { map: signTex.exit }), C.exitGreen]);
+      sgn.scale.set(3.2, 0.9, 0.1); sgn.position.set(0, 5.9, 0.2); g.add(sgn);
+      return g;
+    }
+    if (TH.gantry === 'crane') {
+      // věžový jeřáb vedle trati s výložníkem nad tratí
+      const g = new THREE.Group();
+      const sx = Math.random() < 0.5 ? -9 : 9;
+      g.add(box(1.0, 16, 1.0, C.hat, sx, 8, 0, false));
+      g.add(box(2.6, 1.0, 2.6, C.concreteDark, sx, 0.5, 0, false));
+      g.add(box(22, 0.6, 0.8, C.hat, sx * 0.1, 16.2, 0, false));
+      g.add(box(1.6, 1.4, 1.4, C.steelDark, sx + Math.sign(sx) * 3, 15.6, 0, false));
+      g.add(cyl(0.03, 6, C.steelDark, -sx * 0.4, 13, 0, false));
+      g.add(box(0.8, 0.5, 0.8, C.concrete, -sx * 0.4, 9.8, 0, false));
+      return g;
+    }
+    if (TH.gantry === 'pipeBridge') {
+      const g = new THREE.Group();
+      [-6.2, 6.2].forEach(x => g.add(box(0.4, 7, 0.4, C.steel, x, 3.5, 0, false)));
+      g.add(box(13, 0.2, 1.2, C.steel, 0, 6.9, 0, false));
+      [-0.4, 0, 0.4].forEach((z, i) => { const pp = mesh(G('pipeCyl', () => new THREE.CylinderGeometry(1, 1, 1, 14)), i === 1 ? C.dairyBlue : C.steelBright, [0.18, 13, 0.18], [0, 7.25, z], false); pp.rotation.z = Math.PI / 2; g.add(pp); });
+      return g;
+    }
+    return buildGantry();
+  }
   function buildGantry() {
     const g = new THREE.Group();
     [-6.2, 6.2].forEach(x => {
@@ -655,6 +1209,23 @@
     g.add(box(0.3, 0.3, 0.3, C.hat, -1.5, 4.5, 0, false));
     return g;
   }
+
+  function repaint(tex, fn) {
+    const c = tex.image, g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    fn(g, c.width, c.height);
+    tex.needsUpdate = true;
+  }
+  function applyTheme(k) {
+    if (!THEMES[k]) return;
+    themeKey = k; TH = THEMES[k]; store.set('safetyrun_theme', k);
+    repaint(skyTex, paintSky); repaint(trackTex, paintTrack); repaint(yardTex, paintYard);
+    scene.fog.color.set(TH.fog);
+    hemi.groundColor.set(TH.hemiG);
+    hallMats = TH.hallColors.map(c => M(c, { map: hallTex, r: 0.7, m: 0.2 }));
+    themeHallSigns();
+  }
+  applyTheme(themeKey);
 
   // ---------------------------------------------------------------- stav hry
   let state = 'menu';
@@ -708,7 +1279,7 @@
   const TALL = new Set(['block', 'forklift']);
 
   function spawnObstacle(type, lane, z) {
-    const b = builders[type]();
+    const b = builders[TH.obs[type] || type]();
     const x = type === 'pipeWide' ? 0 : LANES[lane];
     b.g.position.x = x;
     return addEntity(obstacles, b.g, z, { type, lane, x, boxes: b.boxes, pit: b.pit || null, vz: b.vz || 0, len: 4 });
@@ -781,11 +1352,10 @@
     }
   }
 
-  const propKeys = ['rings', 'panels', 'palletStack', 'curbs', 'mould', 'parked', 'lamp', 'sign', 'rings', 'palletStack', 'lamp'];
   function spawnProp(side, z) {
-    const k = propKeys[Math.floor(Math.random() * propKeys.length)];
+    const k = TH.props[Math.floor(Math.random() * TH.props.length)];
     const g = decorBuilders[k]();
-    const x = side * (k === 'lamp' ? 5.2 : 6.2 + Math.random() * 2.5);
+    const x = side * (k === 'lamp' ? 5.2 : k === 'silo' || k === 'tanker' ? 9 + Math.random() * 2 : 6.2 + Math.random() * 2.5);
     g.position.x = x;
     if (k === 'lamp' && side > 0) g.rotation.y = Math.PI;
     if (k === 'sign') g.position.x = side * 5.4;
@@ -818,7 +1388,7 @@
     });
     while (s.gantry.cursor > SPAWN_Z) {
       s.gantry.cursor -= 90 + Math.random() * 70;
-      addEntity(decor, buildGantry(), s.gantry.cursor, { len: 2 });
+      addEntity(decor, buildPortal(), s.gantry.cursor, { len: 2 });
     }
   }
 
@@ -926,7 +1496,7 @@
     audio();
     resetWorld(true);
     state = 'play';
-    show(ui.menu, false); show(ui.over, false); show(ui.pause, false); show(ui.hud, true);
+    show(ui.menu, false); show(ui.over, false); show(ui.pause, false); show($('board'), false); show(ui.hud, true);
     toast('BĚŽ!');
     updateHud();
   }
@@ -971,6 +1541,7 @@
     ui.newBest.hidden = !isBest;
     show(ui.hud, false);
     show(ui.over, true);
+    lbSave({ score: s, dist: Math.floor(distance), helmets });
   }
 
   // ---------------------------------------------------------------- akce hráče
@@ -1012,6 +1583,7 @@
     } else if (state === 'paused') {
       if (k === 'Escape' || k === 'KeyP' || k === 'Enter' || k === 'Space') resumeGame();
     } else if (state === 'menu' || state === 'over') {
+      if (!$('board').hidden) { if (k === 'Escape') lbClose(); return; }
       if (k === 'Enter' || k === 'Space') { e.preventDefault(); startGame(); }
     }
   });
@@ -1048,6 +1620,232 @@
     else slide();
   });
 
+  // ---------------------------------------------------------------- menu: postava a prostředí
+  const heroImg = $('heroImg'), heroCv = $('heroCanvas');
+  let prev = null;
+  function setupPreview() {
+    if (prev) return prev;
+    try {
+      const r = new THREE.WebGLRenderer({ canvas: heroCv, alpha: true, antialias: true });
+      r.setPixelRatio(1); r.setSize(360, 360, false);
+      r.toneMapping = THREE.ACESFilmicToneMapping;
+      const sc = new THREE.Scene();
+      sc.add(new THREE.HemisphereLight(0xffffff, 0x8a7a66, 1.7));
+      const dl = new THREE.DirectionalLight(0xfff0d8, 2.2); dl.position.set(-2, 3, -3); sc.add(dl);
+      const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+      prev = { r, sc, cam, model: null, key: null };
+    } catch (e) { prev = { failed: true }; }
+    return prev;
+  }
+  function showHero() {
+    const photo = charKey === 'civava';
+    heroImg.hidden = !photo;
+    heroCv.hidden = photo;
+    if (photo) return;
+    const pv = setupPreview();
+    if (pv.failed) { heroCv.hidden = true; return; }
+    if (pv.key !== charKey) {
+      if (pv.model) pv.sc.remove(pv.model.root);
+      pv.model = CHARS[charKey].build();
+      pv.model.bubble.visible = false;
+      pv.sc.add(pv.model.root);
+      pv.key = charKey;
+      const tall = pv.model.biped ? 1.35 : pv.model.snail ? 0.8 : 1.15;
+      pv.cam.position.set(1.4, tall * 0.85, -3.0);
+      pv.cam.lookAt(0, tall * 0.48, 0);
+    }
+  }
+  function renderPreview() {
+    if (!prev || prev.failed || heroCv.hidden || ui.menu.hidden) return;
+    const m = prev.model;
+    m.root.rotation.y = Math.sin(t * 0.8) * 0.7;
+    const s = Math.sin(t * 6);
+    m.legs.forEach((l, i) => (l.rotation.x = (i === 0 || i === 3 ? s : -s) * 0.5));
+    m.tail.rotation.z = Math.sin(t * 8) * 0.4;
+    prev.r.render(prev.sc, prev.cam);
+  }
+  function renderPickers() {
+    $('charPick').innerHTML = Object.entries(CHARS).map(([k, c]) => `<button type="button" data-char="${k}" aria-pressed="${k === charKey}"><span>${c.icon}</span>${c.name}</button>`).join('');
+    $('themePick').innerHTML = Object.entries(THEMES).map(([k, c]) => `<button type="button" data-theme="${k}" aria-pressed="${k === themeKey}"><span>${c.icon}</span>${c.name}</button>`).join('');
+    heroImg.alt = CHARS[charKey].name + ' v ochranné přilbě';
+    showHero();
+  }
+  $('charPick').addEventListener('click', e => {
+    const b = e.target.closest('[data-char]'); if (!b) return;
+    setChar(b.dataset.char);
+    renderPickers();
+  });
+  $('themePick').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme]'); if (!b || b.dataset.theme === themeKey) return;
+    applyTheme(b.dataset.theme);
+    resetWorld(false);
+    renderPickers();
+  });
+
+  // ---------------------------------------------------------------- žebříček (sdílená databáze artefaktu)
+  // Dokument hraci/<id hráče>: nejlepší výsledky za dny, týdny a měsíce + osobní rekordy.
+  const LB = { db: null, user: null, uid: null, players: [], ready: false, tab: 'den', names: {}, writeFailed: false };
+  const TZ = 'Europe/Prague';
+  function pragueParts(d = new Date()) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+    const v = k => p.find(x => x.type === k).value;
+    return { y: +v('year'), m: +v('month'), d: +v('day') };
+  }
+  const pad2 = n => String(n).padStart(2, '0');
+  function isoWeek(y, m, d) {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    const day = dt.getUTCDay() || 7;
+    dt.setUTCDate(dt.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+    return dt.getUTCFullYear() + '-W' + pad2(Math.ceil(((dt - y0) / 86400000 + 1) / 7));
+  }
+  function periodKeys(date = new Date()) {
+    const { y, m, d } = pragueParts(date);
+    return { den: `${y}-${pad2(m)}-${pad2(d)}`, tyden: isoWeek(y, m, d), mesic: `${y}-${pad2(m)}` };
+  }
+  const MAPKEY = { den: 'days', tyden: 'weeks', mesic: 'months' };
+  const trim = (obj, n) => Object.fromEntries(Object.entries(obj || {}).sort((a, b) => b[0].localeCompare(a[0])).slice(0, n));
+  async function lbInit() {
+    const use = window.claude && window.claude.use;
+    if (!use) { lbRender(); return; }
+    const [db, user] = await Promise.all([use('db').catch(() => null), use('user').catch(() => null)]);
+    LB.db = db; LB.user = user;
+    if (user) { try { LB.uid = await user.id(); } catch (e) { LB.uid = null; } }
+    if (db) {
+      db.collection('hraci').onSnapshot(snap => {
+        LB.players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        LB.ready = true;
+        lbRender();
+      }, () => { LB.ready = true; lbRender(); });
+    }
+    lbRender();
+  }
+  async function lbNames(ids) {
+    if (!LB.user || !ids.length) return {};
+    try { return await LB.user.profiles(ids); } catch (e) { return {}; }
+  }
+  async function lbSave(run) {
+    const st = $('lbStatus');
+    st.textContent = '';
+    if (!LB.db || !LB.uid) { st.textContent = LB.db ? '' : ''; return; }
+    if (LB.writeFailed) return;
+    const keys = periodKeys();
+    const ref = LB.db.collection('hraci').doc(LB.uid);
+    try {
+      let cur = {};
+      try { const sn = await ref.get(); if (sn.exists) cur = JSON.parse(JSON.stringify(sn.data())); } catch (e) { /* první zápis */ }
+      const up = (map, k, v) => { const o = { ...(map || {}) }; o[k] = Math.max(o[k] || 0, v); return o; };
+      const best = cur.best && cur.best.score >= run.score ? cur.best : { score: run.score, dist: run.dist, helmets: run.helmets, theme: themeKey, char: charKey, at: new Date().toISOString() };
+      const next = {
+        games: (cur.games || 0) + 1,
+        total: (cur.total || 0) + run.score,
+        best,
+        bestDist: Math.max(cur.bestDist || 0, run.dist),
+        bestHelmets: Math.max(cur.bestHelmets || 0, run.helmets),
+        days: trim(up(cur.days, keys.den, run.score), 62),
+        weeks: trim(up(cur.weeks, keys.tyden, run.score), 60),
+        months: trim(up(cur.months, keys.mesic, run.score), 36),
+        lastChar: charKey, lastTheme: themeKey,
+        updatedAt: new Date().toISOString(),
+      };
+      await ref.set(next);
+      const rank = per => { const k = periodKeys()[per], mk = MAPKEY[per]; const list = LB.players.map(p => (p.id === LB.uid ? next : p)).map(p => (p[mk] || {})[k] || 0).filter(v => v > 0).sort((a, b) => b - a); return list.indexOf(next[mk][k]) + 1; };
+      const r = rank('den');
+      st.textContent = run.score >= (cur.best ? cur.best.score : 0) && run.score > 0 ? `Osobní rekord! Zapsáno, dnes ${r}. místo.` : `Zapsáno do žebříčku, dnes ${r || '–'}. místo.`;
+    } catch (e) {
+      LB.writeFailed = true;
+      st.textContent = 'Body se nezapsaly: do žebříčku může zapisovat jen pozvaný hráč.';
+    }
+  }
+  function lbOpen() { show(ui.menu, false); show(ui.over, false); show($('board'), true); lbRender(); }
+  function lbClose() { show($('board'), false); show(state === 'over' ? ui.over : ui.menu, true); }
+  async function lbRender() {
+    // řádek „hraješ jako“
+    const who = $('whoLine');
+    if (!LB.db) who.textContent = 'Žebříček funguje v aplikaci otevřené přes claude.ai.';
+    else if (!LB.uid) who.textContent = 'Přihlas se na claude.ai, ať se ti body počítají do žebříčku.';
+    else {
+      const me = (await lbNames([LB.uid]))[LB.uid];
+      who.innerHTML = ''; who.append('Hraješ jako ');
+      const b = document.createElement('b'); b.textContent = (me && me.name) || 'ty'; who.append(b);
+    }
+    if ($('board').hidden) return;
+    const list = $('boardList'), note = $('boardNote'), champs = $('boardChamps');
+    document.querySelectorAll('#boardTabs button').forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === LB.tab)));
+    if (!LB.db) { list.innerHTML = '<div class="lb-empty">Žebříček je dostupný jen v aplikaci otevřené přes claude.ai.</div>'; champs.innerHTML = ''; note.textContent = ''; return; }
+    const keys = periodKeys(), P = LB.players;
+    const top = (per, key) => P.map(p => ({ id: p.id, v: ((p[MAPKEY[per]] || {})[key]) || 0 })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+    const ids = P.map(p => p.id);
+    const names = await lbNames(ids);
+    const nm = id => (names[id] && names[id].name) || (id === LB.uid ? 'Ty' : 'Hráč');
+    const av = id => (names[id] && names[id].avatarUrl) || '';
+    champs.innerHTML = '';
+    [['den', 'Hráč dne'], ['tyden', 'Hráč týdne'], ['mesic', 'Hráč měsíce']].forEach(([per, label]) => {
+      const w = top(per, keys[per])[0];
+      const c = document.createElement('div'); c.className = 'champ';
+      const l = document.createElement('span'); l.className = 'label'; l.textContent = label;
+      const n = document.createElement('span'); n.className = 'nm'; n.textContent = w ? nm(w.id) : '—';
+      const v = document.createElement('b'); v.textContent = w ? w.v : '0';
+      c.append(l, n, v); champs.append(c);
+    });
+    const rowsEl = (rows, unit = '') => {
+      if (!rows.length) return '<div class="lb-empty">Zatím nikdo. Buď první!</div>';
+      return rows.slice(0, 10).map((r, i) => `<div class="lb-row${r.id === LB.uid ? ' me' : ''}" data-id="${i}"><span class="rk">${i + 1}</span><img alt=""><span class="nm"></span><span class="val">${r.v}${unit}</span></div>`).join('');
+    };
+    const fill = (rows, sub) => {
+      list.querySelectorAll('.lb-row').forEach((el, i) => {
+        const r = rows[i];
+        el.querySelector('img').src = av(r.id);
+        const n = el.querySelector('.nm'); n.textContent = nm(r.id);
+        if (sub) { const sm = document.createElement('small'); sm.textContent = sub(r); n.append(sm); }
+      });
+    };
+    let rows = [];
+    if (LB.tab === 'den' || LB.tab === 'tyden' || LB.tab === 'mesic') {
+      rows = top(LB.tab, keys[LB.tab]);
+      list.innerHTML = rowsEl(rows);
+      fill(rows);
+      note.textContent = { den: 'Nejlepší výsledky dnes.', tyden: `Týden ${keys.tyden.split('-W')[1]}.`, mesic: 'Tento měsíc.' }[LB.tab];
+    } else if (LB.tab === 'rekordy') {
+      const sec = (title, arr, unit, sub) => ({ title, arr, unit, sub });
+      const parts = [
+        sec('Nejvyšší skóre', P.filter(p => p.best).map(p => ({ id: p.id, v: p.best.score, p })).sort((a, b) => b.v - a.v), '', r => `${(THEMES[r.p.best.theme] || {}).name || ''} · ${(CHARS[r.p.best.char] || {}).name || ''}`),
+        sec('Nejdelší trať', P.map(p => ({ id: p.id, v: p.bestDist || 0 })).filter(x => x.v > 0).sort((a, b) => b.v - a.v), ' m'),
+        sec('Nejvíc přileb v jedné hře', P.map(p => ({ id: p.id, v: p.bestHelmets || 0 })).filter(x => x.v > 0).sort((a, b) => b.v - a.v), ''),
+        sec('Nejvíc odehraných her', P.map(p => ({ id: p.id, v: p.games || 0 })).filter(x => x.v > 0).sort((a, b) => b.v - a.v), ''),
+      ];
+      list.innerHTML = parts.map(x => `<p class="lb-sec">${x.title}</p><div data-sec>${rowsEl(x.arr.slice(0, 5), x.unit)}</div>`).join('');
+      list.querySelectorAll('[data-sec]').forEach((box, si) => {
+        const x = parts[si];
+        box.querySelectorAll('.lb-row').forEach((el, i) => {
+          const r = x.arr[i]; el.querySelector('img').src = av(r.id);
+          const n = el.querySelector('.nm'); n.textContent = nm(r.id);
+          if (x.sub) { const sm = document.createElement('small'); sm.textContent = x.sub(r); n.append(sm); }
+        });
+      });
+      note.textContent = 'Rekordy všech dob.';
+    } else {
+      // síň slávy: vítězové předchozích dnů, týdnů a měsíců
+      const winner = (per, key) => top(per, key)[0];
+      const out = [];
+      const now = new Date();
+      for (let i = 1; i <= 7; i++) { const k = periodKeys(new Date(now - i * 86400000)).den; const w = winner('den', k); if (w) out.push({ ...w, label: 'Den ' + k.split('-').reverse().slice(0, 2).map(Number).join('. ') + '.' }); }
+      for (let i = 1; i <= 4; i++) { const k = periodKeys(new Date(now - i * 7 * 86400000)).tyden; const w = winner('tyden', k); if (w) out.push({ ...w, label: 'Týden ' + k.split('-W')[1] }); }
+      for (let i = 1; i <= 6; i++) { const d = new Date(now); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); const k = periodKeys(d).mesic; const w = winner('mesic', k); if (w) out.push({ ...w, label: 'Měsíc ' + Number(k.slice(5)) + '/' + k.slice(0, 4) }); }
+      list.innerHTML = out.length ? rowsEl(out) : '<div class="lb-empty">Síň slávy se zaplní po prvním dni hraní.</div>';
+      fill(out, r => r.label);
+      note.textContent = 'Vítězové minulých dnů, týdnů a měsíců.';
+    }
+    if (!LB.uid) note.textContent += ' Pro zápis vlastních bodů se přihlas na claude.ai.';
+    else if (LB.writeFailed) note.textContent += ' Tvoje body se nezapisují – požádej správce o přístup.';
+  }
+  $('boardTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; LB.tab = b.dataset.tab; lbRender(); });
+  $('boardBtn').addEventListener('click', lbOpen);
+  $('overBoardBtn').addEventListener('click', lbOpen);
+  $('boardClose').addEventListener('click', lbClose);
+  renderPickers();
+  lbInit();
+
   $('playBtn').addEventListener('click', startGame);
   $('restartBtn').addEventListener('click', startGame);
   $('overMenuBtn').addEventListener('click', toMenu);
@@ -1069,7 +1867,7 @@
         if (player.y <= 0.02 && Math.abs(player.x - o.x) < o.pit.hx && dz < o.pit.hz - 0.15) {
           player.fall = true;
           player.x = o.x;
-          gameOver('Spadl jsi do výkopu!');
+          gameOver(TH.why.pit);
           return;
         }
         continue;
@@ -1083,10 +1881,7 @@
             sfx.smash();
             break;
           }
-          const why = {
-            cone: 'Narazil jsi do kuželů!', pallet: 'Zakopl jsi o palety!', block: 'Betonový blok nepovolí!',
-            forklift: 'Pozor na VZV!', pipe: 'Nezapomeň se skrčit!', pipeWide: 'Nezapomeň se skrčit!',
-          }[o.type] || 'Náraz!';
+          const why = TH.why[o.type] || 'Náraz!';
           gameOver(why);
           return;
         }
@@ -1284,6 +2079,7 @@
     last = now;
     if (state !== 'paused') update(dt);
     renderer.render(scene, camera);
+    renderPreview();
   }
   resetWorld(false);
   requestAnimationFrame(frame);
