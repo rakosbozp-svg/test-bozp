@@ -23,6 +23,11 @@ Na mobilu ve stejné Wi-Fi: `http://<IP-počítače>:8000`.
 | Pauza | Esc nebo P | tlačítko II |
 | Restart po konci | Enter nebo mezerník | tlačítko ZNOVU |
 
+## Odbočky a úrovně
+
+- Křižovatky: šipka a cedule ukáží směr, na křižovatce ← / → (swipe) = odbočení. Kdo neodbočí, narazí do zdi; správné odbočení +50 bodů.
+- Vyvýšené úseky: nájezd o úroveň výš, rovina s překážkami nahoře, sjezd o úroveň níž.
+
 ## Postavy a prostředí
 
 - Postavy: čivava, kotě, člověk (pracovník), šnek – všechny v přilbě a reflexní vestě.

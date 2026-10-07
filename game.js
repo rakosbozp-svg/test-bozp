@@ -74,6 +74,9 @@
   scene.fog = new THREE.Fog(FOG_COLOR, 45, 120);
 
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
+  // celý svět (trať, překážky, dekorace) je ve skupině, aby se dal při odbočení otočit kolem hráče
+  const world = new THREE.Group();
+  scene.add(world);
 
   // ---------------------------------------------------------------- textury
   const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -397,21 +400,24 @@
   trackMesh.rotation.x = -Math.PI / 2;
   trackMesh.position.set(0, 0, 20 - TRACK_L / 2);
   trackMesh.receiveShadow = true;
-  scene.add(trackMesh);
+  world.add(trackMesh);
 
   const yardMat = M(0xffffff, { map: yardTex, r: 0.95 });
+  const sideRails = { '-1': [], '1': [] }; // obrubník a zábradlí – na straně odbočky se skryjí
   [-1, 1].forEach(side => {
     const y = new THREE.Mesh(new THREE.PlaneGeometry(40, TRACK_L), yardMat);
     y.rotation.x = -Math.PI / 2;
     y.position.set(side * (TRACK_W / 2 + 20), -0.01, 20 - TRACK_L / 2);
     y.receiveShadow = true;
-    scene.add(y);
+    world.add(y);
     const curb = box(0.3, 0.16, TRACK_L, C.concrete, side * (TRACK_W / 2 + 0.1), 0.08, 20 - TRACK_L / 2, false);
-    scene.add(curb);
+    world.add(curb);
+    sideRails[side].push(curb);
     const rail = new THREE.Mesh(new THREE.PlaneGeometry(TRACK_L, 1.15), M(0xffffff, { map: railTex, at: 0.5, side: THREE.DoubleSide, r: 0.5 }));
     rail.rotation.y = Math.PI / 2;
     rail.position.set(side * (TRACK_W / 2 + 0.55), 0.58, 20 - TRACK_L / 2);
-    scene.add(rail);
+    world.add(rail);
+    sideRails[side].push(rail);
   });
 
   // ---------------------------------------------------------------- postava: čivava
@@ -1258,6 +1264,7 @@
     return g;
   }
 
+  const extraTex = []; // další textury trati (nájezdy, křižovatky), překreslují se se změnou prostředí
   function repaint(tex, fn) {
     const c = tex.image, g = c.getContext('2d');
     g.clearRect(0, 0, c.width, c.height);
@@ -1268,6 +1275,7 @@
     if (!THEMES[k]) return;
     themeKey = k; TH = THEMES[k]; store.set('safetyrun_theme', k);
     repaint(skyTex, paintSky); repaint(trackTex, paintTrack); repaint(yardTex, paintYard);
+    extraTex.forEach(tx => repaint(tx, paintTrack));
     scene.fog.color.set(TH.fog);
     hemi.groundColor.set(TH.hemiG);
     hallMats = TH.hallColors.map(c => M(c, { map: hallTex, r: 0.7, m: 0.2 }));
@@ -1284,7 +1292,7 @@
   let best = 0;
   try { best = parseInt(localStorage.getItem('safetyrun_best') || '0', 10) || 0; } catch (e) { /* bez úložiště */ }
 
-  const player = { lane: 1, x: 0, y: 0, vy: 0, slide: 0, slideQueued: false, dead: false, deadT: 0, fall: false, runPhase: 0 };
+  const player = { lane: 1, x: 0, y: 0, vy: 0, ground: 0, jumped: false, turnDir: 0, slide: 0, slideQueued: false, dead: false, deadT: 0, fall: false, runPhase: 0 };
   const power = { vest: 0, boots: 0, goggles: 0 };
 
   const obstacles = [];
@@ -1293,17 +1301,18 @@
 
   function addEntity(list, obj, z, data) {
     obj.position.z = z;
-    scene.add(obj);
+    world.add(obj);
     const e = Object.assign({ obj, z, len: 0, vz: 0 }, data);
     list.push(e);
     return e;
   }
-  function clearList(list) { list.forEach(e => scene.remove(e.obj)); list.length = 0; }
+  function clearList(list) { list.forEach(e => world.remove(e.obj)); list.length = 0; }
 
   // spawnery (kurzor = z konce posledního objektu, jede se světem)
   const streams = {};
   function resetStreams(withRows) {
-    streams.rows = { cursor: withRows ? -38 : -1e9 };
+    streams.rows = { cursor: withRows ? -38 : -1e9, blocked: false, untilFeature: 9 + Math.floor(Math.random() * 6) };
+    turn.pending = null; turn.active = null;
     streams.propsL = { cursor: 16 };
     streams.propsR = { cursor: 16 };
     streams.hallL = { cursor: 30 };
@@ -1312,6 +1321,110 @@
   }
 
   function rowGap() { return 12 + speed * 0.75; }
+
+  // ---------------------------------------------------------------- vyvýšená úroveň (nájezd nahoru, rovina, sjezd dolů)
+  const DECK_H = 2.4, RAMP = 10;
+  const deckTex = canvasTex(256, 512, paintTrack, 1, 1);
+  extraTex.push(deckTex);
+  function buildDeck(L) {
+    const g = new THREE.Group();
+    const tex = deckTex.clone(); tex.needsUpdate = true; tex.repeat.set(1, L / TRACK_REP);
+    const top = M(0xffffff, { map: tex, r: 0.9 });
+    const rampTex = deckTex.clone(); rampTex.needsUpdate = true; rampTex.repeat.set(1, RAMP / TRACK_REP);
+    const rampMat = M(0xffffff, { map: rampTex, r: 0.9 });
+    const th = 0.35, hyp = Math.hypot(RAMP, DECK_H), ang = Math.atan2(DECK_H, RAMP);
+    const up = mesh(gBox(), rampMat, [TRACK_W, th, hyp], [0, DECK_H / 2 - th / 2, -RAMP / 2]); up.rotation.x = ang; g.add(up);
+    g.add(mesh(gBox(), top, [TRACK_W, th, L], [0, DECK_H - th / 2, -RAMP - L / 2]));
+    const dn = mesh(gBox(), rampMat, [TRACK_W, th, hyp], [0, DECK_H / 2 - th / 2, -RAMP * 1.5 - L]); dn.rotation.x = -ang; g.add(dn);
+    // boky: výstražný pruh, zábradlí a podpěry
+    [-1, 1].forEach(sd => {
+      const x = sd * (TRACK_W / 2 + 0.06);
+      g.add(box(0.12, 0.35, L, C.hazard, x, DECK_H - 0.17, -RAMP - L / 2, false));
+      g.add(box(0.08, 0.08, L, C.hat, x, DECK_H + 1.0, -RAMP - L / 2, false));
+      for (let z = 0; z <= L; z += 3) g.add(box(0.07, 1.0, 0.07, C.hat, x, DECK_H + 0.5, -RAMP - z, false));
+      for (let z = 2; z < L; z += 7) g.add(box(0.6, DECK_H - 0.3, 0.6, C.concreteDark, sd * (TRACK_W / 2 - 0.5), (DECK_H - 0.3) / 2, -RAMP - z, false));
+      [-1, 1].forEach(e => { const r = box(0.12, 0.35, hyp, C.hazard, x, DECK_H / 2 - 0.17, e < 0 ? -RAMP / 2 : -RAMP * 1.5 - L, false); r.rotation.x = e < 0 ? ang : -ang; g.add(r); });
+    });
+    return g;
+  }
+  function spawnDeck(z) {
+    const L = 45 + Math.random() * 45;
+    addEntity(decor, buildDeck(L), z, { deck: { L, total: 2 * RAMP + L }, len: 2 * (2 * RAMP + L) + 4 });
+  }
+  // výška terénu v místě z (0 = základní úroveň)
+  function deckAt(zq) {
+    let h = 0, ramp = false;
+    for (const e of decor) {
+      if (!e.deck) continue;
+      const d = e.z - zq, { L, total } = e.deck;
+      if (d < 0 || d > total) continue;
+      if (d < RAMP) { h = Math.max(h, DECK_H * d / RAMP); ramp = true; }
+      else if (d < RAMP + L) h = Math.max(h, DECK_H);
+      else { h = Math.max(h, DECK_H * (total - d) / RAMP); ramp = true; }
+    }
+    return { h, ramp };
+  }
+
+  // ---------------------------------------------------------------- odbočka doleva / doprava
+  const turn = { pending: null, active: null };
+  const TURN_TIME = 0.5;
+  const arrowTex = {
+    '-1': textTex(['◄  ODBOČ VLEVO'], '#ffc410', '#16181b', true),
+    '1': textTex(['ODBOČ VPRAVO  ►'], '#ffc410', '#16181b', true),
+  };
+  const junctionTex = canvasTex(256, 512, paintTrack, 1, 6);
+  extraTex.push(junctionTex);
+  function buildJunction(dir) {
+    const g = new THREE.Group();
+    // příčná trať směrem odbočky
+    const floor = new THREE.Mesh(G('jFloor', () => new THREE.PlaneGeometry(TRACK_W, 60)), M(0xffffff, { map: junctionTex, r: 0.9 }));
+    floor.rotation.x = -Math.PI / 2; floor.rotation.z = Math.PI / 2;
+    floor.position.set(dir * 30, 0.006, 0);
+    floor.receiveShadow = true;
+    g.add(floor);
+    // zeď na konci rovného úseku přes celou šířku
+    const wz = -(TRACK_W / 2 + 1.2);
+    g.add(box(64, 9, 2, hallMats[0] || C.concrete, 0, 4.5, wz - 1, false));
+    g.add(box(64, 0.5, 2.2, C.hazard, 0, 0.25, wz - 1, false));
+    // zeď na neprůjezdné straně
+    g.add(box(2, 9, 30, hallMats[1] || C.concrete, -dir * (TRACK_W / 2 + 1.5), 4.5, wz - 14, false));
+    g.add(box(30, 9, 2, hallMats[1] || C.concrete, -dir * (TRACK_W / 2 + 16), 4.5, TRACK_W / 2 + 1.2, false));
+    const sign = new THREE.Mesh(G('plane', () => new THREE.PlaneGeometry(1, 1)), M(0xffffff, { map: arrowTex[dir] }));
+    sign.scale.set(9, 2.2, 1); sign.position.set(0, 3.4, wz + 0.02);
+    g.add(sign);
+    // šipky na zemi
+    for (let i = 0; i < 3; i++) {
+      const a = mesh(gCone(), C.hat, [0.5, 1.2, 0.05], [dir * (2 + i * 3), 0.05, 0], false);
+      a.rotation.x = -Math.PI / 2; a.rotation.z = -dir * Math.PI / 2;
+      g.add(a);
+    }
+    return g;
+  }
+  function spawnJunction(z) {
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const e = addEntity(decor, buildJunction(dir), z, { junction: dir, len: 140 });
+    turn.pending = e;
+    streams.rows.blocked = true;
+    // uvolnit průchod na straně odbočky: pryč s halami a dekoracemi v okolí křižovatky
+    for (let i = decor.length - 1; i >= 0; i--) {
+      const d = decor[i];
+      if (d === e || d.deck) continue;
+      const near = d.z + d.len / 2 > z - 10 && d.z - d.len / 2 < z + 10;
+      const side = Math.sign(d.obj.position.x);
+      if (near && side === dir) { world.remove(d.obj); decor.splice(i, 1); }
+      else if (d.z < z - 4) { world.remove(d.obj); decor.splice(i, 1); } // za zdí nic nebude vidět
+    }
+    for (let i = obstacles.length - 1; i >= 0; i--) if (obstacles[i].z < z + 8) { world.remove(obstacles[i].obj); obstacles.splice(i, 1); }
+    for (let i = pickups.length - 1; i >= 0; i--) if (pickups[i].z < z + 6) { world.remove(pickups[i].obj); pickups.splice(i, 1); }
+    streams.hallL.cursor = Math.min(streams.hallL.cursor, z - 40); streams.hallR.cursor = Math.min(streams.hallR.cursor, z - 40);
+    streams.propsL.cursor = Math.min(streams.propsL.cursor, z - 40); streams.propsR.cursor = Math.min(streams.propsR.cursor, z - 40);
+    streams.gantry.cursor = Math.min(streams.gantry.cursor, z - 60);
+  }
+  function spawnFeature(z) {
+    if (deckAt(z).h > 0 || deckAt(z - 30).h > 0) return false;
+    if (Math.random() < 0.5) spawnJunction(z); else spawnDeck(z);
+    return true;
+  }
 
   function pickType() {
     const d = distance;
@@ -1327,10 +1440,12 @@
   const TALL = new Set(['block', 'forklift']);
 
   function spawnObstacle(type, lane, z) {
+    if (rowLevel > 0) type = { pit: 'cone', forklift: 'block' }[type] || type;
     const b = builders[TH.obs[type] || type]();
     const x = type === 'pipeWide' ? 0 : LANES[lane];
     b.g.position.x = x;
-    return addEntity(obstacles, b.g, z, { type, lane, x, boxes: b.boxes, pit: b.pit || null, vz: b.vz || 0, len: 4 });
+    b.g.position.y = rowLevel;
+    return addEntity(obstacles, b.g, z, { type, lane, x, boxes: b.boxes, pit: b.pit || null, vz: b.vz || 0, len: 4, yOff: rowLevel });
   }
 
   function spawnHelmetLine(lane, zCenter, type, gap) {
@@ -1347,6 +1462,7 @@
       }
       const h = makeHardHat(0.27, { mat: C.hatPickup });
       h.scale.setScalar(1.15);
+      y += rowLevel;
       h.position.set(x, y, z);
       h.rotation.x = -0.25;
       addEntity(pickups, h, z, { kind: 'helmet', x, y, spin: i * 0.4 });
@@ -1357,10 +1473,18 @@
     const types = ['vest', 'boots', 'goggles'];
     const type = types[Math.floor(Math.random() * 3)];
     const p = buildPowerup(type);
-    p.g.position.set(LANES[lane], 1.0, z);
-    addEntity(pickups, p.g, z, { kind: 'power', type, x: LANES[lane], y: 1.0, spinObj: p.spin, spin: 0 });
+    p.g.position.set(LANES[lane], 1.0 + rowLevel, z);
+    addEntity(pickups, p.g, z, { kind: 'power', type, x: LANES[lane], y: 1.0 + rowLevel, spinObj: p.spin, spin: 0 });
   }
 
+  let rowLevel = 0;
+  function spawnRowAt(z) {
+    const info = deckAt(z);
+    if (info.ramp) return;
+    rowLevel = info.h;
+    spawnRow(z);
+    rowLevel = 0;
+  }
   function spawnRow(z) {
     const gap = rowGap();
     // speciální řada – široké potrubí přes všechny pruhy
@@ -1411,19 +1535,24 @@
 
   function runStreams() {
     const s = streams;
-    while (s.rows.cursor - rowGap() > SPAWN_Z) {
+    while (!s.rows.blocked && s.rows.cursor - rowGap() > SPAWN_Z) {
       s.rows.cursor -= rowGap();
-      spawnRow(s.rows.cursor);
+      if (state === 'play' && distance > 140 && --s.rows.untilFeature <= 0) {
+        s.rows.untilFeature = 12 + Math.floor(Math.random() * 10);
+        if (spawnFeature(s.rows.cursor)) { if (s.rows.blocked) break; s.rows.cursor -= RAMP + 4; continue; }
+      }
+      spawnRowAt(s.rows.cursor);
     }
+    const stopZ = turn.pending ? turn.pending.z - 4 : -Infinity;
     [['propsL', -1], ['propsR', 1]].forEach(([k, side]) => {
-      while (s[k].cursor > SPAWN_Z) {
+      while (s[k].cursor > Math.max(SPAWN_Z, stopZ)) {
         const step = 6 + Math.random() * 7;
         s[k].cursor -= step;
         spawnProp(side, s[k].cursor);
       }
     });
     [['hallL', -1], ['hallR', 1]].forEach(([k, side]) => {
-      while (s[k].cursor > SPAWN_Z - 30) {
+      while (s[k].cursor > Math.max(SPAWN_Z - 30, stopZ)) {
         const len = 18 + Math.random() * 18;
         const gap = 3 + Math.random() * 8;
         const zc = s[k].cursor - gap - len / 2;
@@ -1433,7 +1562,7 @@
         s[k].cursor = zc - len / 2;
       }
     });
-    while (s.gantry.cursor > SPAWN_Z) {
+    while (s.gantry.cursor > Math.max(SPAWN_Z, stopZ)) {
       s.gantry.cursor -= 90 + Math.random() * 70;
       addEntity(decor, buildPortal(), s.gantry.cursor, { len: 2 });
     }
@@ -1528,7 +1657,9 @@
   function resetWorld(withRows) {
     clearList(obstacles); clearList(pickups); clearList(decor);
     speed = START_SPEED; distance = 0; score = 0; helmets = 0;
-    Object.assign(player, { lane: 1, x: 0, y: 0, vy: 0, slide: 0, slideQueued: false, dead: false, deadT: 0, fall: false });
+    Object.assign(player, { lane: 1, x: 0, y: 0, vy: 0, ground: 0, jumped: false, turnDir: 0, slide: 0, slideQueued: false, dead: false, deadT: 0, fall: false });
+    world.rotation.y = 0;
+    [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = true)));
     power.vest = power.boots = power.goggles = 0;
     dog.root.rotation.set(0, 0, 0);
     dog.body.rotation.set(0, 0, 0);
@@ -1593,13 +1724,16 @@
 
   // ---------------------------------------------------------------- akce hráče
   function moveLane(dir) {
-    if (state !== 'play') return;
+    if (state !== 'play' || turn.active) return;
+    const j = turn.pending;
+    if (j && j.z > -22) { if (!player.turnDir) { player.turnDir = dir; sfx.lane(); toast(dir < 0 ? '◄' : '►'); } return; }
     const nl = Math.max(0, Math.min(2, player.lane + dir));
     if (nl !== player.lane) { player.lane = nl; sfx.lane(); }
   }
   function jump() {
     if (state !== 'play') return;
-    if (player.y <= 0.001 && !player.fall) {
+    if (player.y <= player.ground + 0.001 && !player.fall) {
+      player.jumped = true;
       player.vy = power.boots > 0 ? JUMP_V_BOOTS : JUMP_V;
       player.slide = 0;
       player.slideQueued = false;
@@ -1608,7 +1742,7 @@
   }
   function slide() {
     if (state !== 'play') return;
-    if (player.y > 0.001) {
+    if (player.y > player.ground + 0.001) {
       player.vy = Math.min(player.vy, -22);
       player.slideQueued = true;
     } else {
@@ -1906,13 +2040,19 @@
   const PHX = 0.3, PHZ = 0.35;
   function checkCollisions() {
     const top = player.y + (player.slide > 0 ? 0.6 : 1.25);
+    // odbočka: hráč dorazil na křižovatku
+    const j = turn.pending;
+    if (j && !turn.active && j.z >= -0.4) {
+      if (player.turnDir === j.junction) { startTurn(j.junction); return; }
+      if (j.z >= TRACK_W / 2 - 0.6) { gameOver(player.turnDir ? 'Špatný směr!' : 'Narazil jsi do zdi – odboč!'); return; }
+    }
     for (const o of obstacles) {
       if (o.knocked) continue;
       const dz = Math.abs(o.z);
       if (dz > 3) continue;
       if (o.pit) {
         if (power.vest > 0) continue;
-        if (player.y <= 0.02 && Math.abs(player.x - o.x) < o.pit.hx && dz < o.pit.hz - 0.15) {
+        if (player.y <= player.ground + 0.02 && Math.abs(player.x - o.x) < o.pit.hx && dz < o.pit.hz - 0.15) {
           player.fall = true;
           player.x = o.x;
           gameOver(TH.why.pit);
@@ -1921,7 +2061,8 @@
         continue;
       }
       for (const b of o.boxes) {
-        if (Math.abs(player.x - o.x) < b.hx + PHX && dz < b.hz + PHZ && player.y < b.y1 && top > b.y0) {
+        const yo = o.yOff || 0;
+        if (Math.abs(player.x - o.x) < b.hx + PHX && dz < b.hz + PHZ && player.y < b.y1 + yo && top > b.y0 + yo) {
           if (power.vest > 0) {
             o.knocked = true;
             o.kvy = 8; o.kvx = (o.x - player.x >= 0 ? 1 : -1) * 4 + (Math.random() - 0.5) * 2;
@@ -1949,7 +2090,7 @@
         sfx.power();
         toast(PU_LABEL[p.type].toUpperCase() + '!');
       }
-      scene.remove(p.obj);
+      world.remove(p.obj);
       pickups.splice(i, 1);
     }
   }
@@ -1957,13 +2098,40 @@
   // ---------------------------------------------------------------- update
   let shake = 0;
   let t = 0;
+  function startTurn(dir) {
+    turn.active = { dir, t: 0 };
+    player.lane = 1;
+    sfx.lane();
+  }
+  function updateTurn(dt) {
+    const a = turn.active;
+    a.t += dt;
+    const k = Math.min(1, a.t / TURN_TIME);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    world.rotation.y = a.dir * (Math.PI / 2) * e;
+    if (k >= 1) {
+      // nový rovný úsek: svět zpět do osy a nové okolí
+      world.rotation.y = 0;
+      clearList(obstacles); clearList(pickups); clearList(decor);
+      trackTex.offset.set(0, 0); yardTex.offset.set(0, 0); railTex.offset.set(0, 0);
+      const untilFeature = 12 + Math.floor(Math.random() * 10);
+      resetStreams(true);
+      streams.rows.untilFeature = untilFeature;
+      runStreams();
+      player.turnDir = 0;
+      turn.active = null;
+      score += 50;
+      toast('ODBOČENO! +50');
+      sfx.power();
+    }
+  }
   function moveWorld(dz, dt) {
     for (const list of [obstacles, pickups, decor]) {
       for (let i = list.length - 1; i >= 0; i--) {
         const e = list[i];
         e.z += dz + (e.vz && e.z > -70 ? e.vz * dt : 0);
         e.obj.position.z = e.z;
-        if (e.z - e.len / 2 > DESPAWN_Z) { scene.remove(e.obj); list.splice(i, 1); }
+        if (e.z - e.len / 2 > DESPAWN_Z) { world.remove(e.obj); list.splice(i, 1); }
       }
     }
     for (const k in streams) streams[k].cursor += dz;
@@ -1974,7 +2142,7 @@
 
   function animateDog(dt) {
     const p = player;
-    const airborne = p.y > 0.001;
+    const airborne = p.y > p.ground + 0.001;
     const sliding = p.slide > 0;
     dog.root.position.set(p.x, p.y, 0);
     // náklon při změně pruhu
@@ -2030,7 +2198,13 @@
       idleDog(dt);
     } else if (state === 'play') {
       speed = Math.min(MAX_SPEED, START_SPEED + distance / 85);
-      const dz = speed * dt;
+      if (turn.active) {
+        updateTurn(dt);
+        player.x += (0 - player.x) * Math.min(1, dt * 15);
+        animateDog(dt);
+        updateHud();
+      }
+      const dz = turn.active ? 0 : speed * dt;
       distance += dz;
       score += dz * (power.goggles > 0 ? 2 : 1);
       for (const k in power) power[k] = Math.max(0, power[k] - dt);
@@ -2038,19 +2212,34 @@
       // pohyb hráče
       const tx = LANES[player.lane];
       player.x += (tx - player.x) * Math.min(1, dt * 15);
-      if (player.y > 0 || player.vy > 0) {
+      const gnd = deckAt(0).h;
+      player.ground = gnd;
+      if (!player.jumped && player.vy <= 0 && player.y - gnd < 0.7) {
+        player.y = gnd; player.vy = 0;   // drží se nájezdu i sjezdu
+      } else if (player.y > gnd || player.vy > 0) {
         player.vy -= GRAV * dt;
         player.y += player.vy * dt;
-        if (player.y <= 0) {
-          player.y = 0; player.vy = 0;
+        if (player.y <= gnd) {
+          player.y = gnd; player.vy = 0; player.jumped = false;
           if (player.slideQueued) { player.slide = SLIDE_TIME; player.slideQueued = false; sfx.slide(); }
         }
       }
       if (player.slide > 0) player.slide -= dt;
 
-      moveWorld(dz, dt);
-      runStreams();
-      checkCollisions();
+      const openSide = turn.active ? turn.active.dir : (turn.pending && turn.pending.z > -45 ? turn.pending.junction : 0);
+      [-1, 1].forEach(sd => sideRails[sd].forEach(m => (m.visible = sd !== openSide)));
+      if (!turn.active) {
+        moveWorld(dz, dt);
+        runStreams();
+        checkCollisions();
+        // upozornění na nájezd, sjezd a odbočku
+        for (const e of decor) {
+          if (e.deck) {
+            if (!e.w1 && e.z > -32) { e.w1 = true; toast('NÁJEZD NAHORU ▲'); }
+            if (!e.w2 && e.z - RAMP - e.deck.L > -32) { e.w2 = true; toast('SJEZD DOLŮ ▼'); }
+          } else if (e.junction && !e.w1 && e.z > -40) { e.w1 = true; toast(e.junction < 0 ? '◄ ODBOČ VLEVO' : 'ODBOČ VPRAVO ►'); }
+        }
+      }
       animateDog(dt);
       updateHud();
     } else if (state === 'dying') {
@@ -2096,14 +2285,14 @@
     const camH = portrait ? 4.2 : 3.4;
     const cx = player.x * 0.55;
     camera.position.x += (cx - camera.position.x) * Math.min(1, dt * 6);
-    camera.position.y = camH + (state === 'play' ? player.y * 0.35 : 0);
+    camera.position.y = camH + (state === 'play' || state === 'dying' ? player.ground + (player.y - player.ground) * 0.35 : 0);
     camera.position.z = camDist;
     if (shake > 0) {
       shake -= dt;
       camera.position.x += (Math.random() - 0.5) * shake * 0.8;
       camera.position.y += (Math.random() - 0.5) * shake * 0.8;
     }
-    camera.lookAt(camera.position.x * 0.8, 1.0 + player.y * 0.2, -8);
+    camera.lookAt(camera.position.x * 0.8, 1.0 + player.ground + (player.y - player.ground) * 0.2, -8);
 
     sun.position.set(player.x - 7, 14, 8);
     sun.target.position.set(player.x, 0, -5);
@@ -2133,5 +2322,5 @@
   requestAnimationFrame(frame);
 
   // ladicí přístup pro testy
-  window.__safetyRun = { forcePreview(on) { forcePreview = on; showHero(); }, get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles };
+  window.__safetyRun = { forcePreview(on) { forcePreview = on; showHero(); }, get turn() { return turn; }, decor, streams, get distance() { return distance; }, set distance(v) { distance = v; }, get state() { return state; }, get score() { return score; }, get helmets() { return helmets; }, player, power, obstacles };
 })();
