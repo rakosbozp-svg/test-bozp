@@ -215,9 +215,9 @@
 
   // barvy
   const C = {
-    fur: M(0xd8914f, { r: 0.85 }),
-    cream: M(0xf7e1c4, { r: 0.85 }),
-    pink: M(0xf4a3a0, { r: 0.8 }),
+    fur: M(0xf1e7d4, { r: 0.92 }),
+    cream: M(0xfbf6ec, { r: 0.95 }),
+    pink: M(0xe9a1a7, { r: 0.8 }),
     dark: M(0x24160f, { r: 0.4 }),
     white: M(0xffffff, { r: 0.3 }),
     vest: M(0xcdf51a, { r: 0.6, e: 0x2f3d00, side: THREE.DoubleSide }),
@@ -280,80 +280,92 @@
 
   // ---------------------------------------------------------------- postava: čivava
   function buildDog() {
+    // dlouhosrstá krémově bílá čivava (podle předlohy): chundelatá srst, velké uši s růžovým vnitřkem,
+    // velké tmavé oči, chlupatý ocas stočený nad hřbetem
     const root = new THREE.Group();
     const body = new THREE.Group();
     root.add(body);
+    const tuft = (mat, s, p) => body.add(mesh(gSph(), mat, s, p));
 
-    body.add(mesh(gSph(), C.fur, [0.3, 0.28, 0.42], [0, 0.56, 0]));
-    body.add(mesh(gSph(), C.cream, [0.2, 0.2, 0.18], [0, 0.5, -0.3]));
+    tuft(C.fur, [0.3, 0.29, 0.42], [0, 0.56, 0]);
+    // chundelaté boky a hřbet
+    [[-0.22, 0.6, 0.12], [0.22, 0.6, 0.12], [-0.2, 0.58, -0.14], [0.2, 0.58, -0.14], [0, 0.76, 0.2], [0, 0.42, 0.1]].forEach(p => tuft(C.fur, [0.15, 0.15, 0.17], p));
+    // náprsenka (hříva na hrudi)
+    tuft(C.cream, [0.25, 0.25, 0.2], [0, 0.55, -0.3]);
+    [-1, 1].forEach(s => tuft(C.cream, [0.13, 0.15, 0.12], [s * 0.13, 0.44, -0.33]));
+    tuft(C.cream, [0.14, 0.16, 0.12], [0, 0.38, -0.32]);
 
     // reflexní vesta
     const vg = G('vestCyl', () => new THREE.CylinderGeometry(1, 1, 1, 24, 1, true));
-    const vest = mesh(vg, C.vest, [0.318, 0.5, 0.298], [0, 0.57, -0.02]);
+    const vest = mesh(vg, C.vest, [0.33, 0.5, 0.31], [0, 0.58, -0.02]);
     vest.rotation.x = Math.PI / 2;
     body.add(vest);
     [-0.13, 0.1].forEach(z => {
-      const s = mesh(vg, C.refl, [0.324, 0.06, 0.304], [0, 0.57, z]);
+      const s = mesh(vg, C.refl, [0.336, 0.06, 0.316], [0, 0.58, z]);
       s.rotation.x = Math.PI / 2;
       body.add(s);
     });
-    // X pásy na zádech
     [-0.5, 0.5].forEach(a => {
-      const s = box(0.07, 0.02, 0.44, C.refl, 0, 0.865, -0.02);
+      const s = box(0.07, 0.02, 0.44, C.refl, 0, 0.9, -0.02);
       s.rotation.y = a;
       body.add(s);
     });
 
-    // hlava
+    // hlava (kulatá „jablíčková“)
     const head = new THREE.Group();
-    head.position.set(0, 0.96, -0.36);
+    head.position.set(0, 0.98, -0.36);
     body.add(head);
-    head.add(mesh(gSph(), C.fur, [0.27, 0.25, 0.25], [0, 0, 0]));
-    head.add(mesh(gSph(), C.cream, [0.18, 0.15, 0.14], [0, -0.06, -0.14]));
-    head.add(mesh(gSph(), C.cream, [0.11, 0.09, 0.13], [0, -0.07, -0.25]));
-    head.add(mesh(gSph(), C.dark, [0.05, 0.04, 0.04], [0, -0.03, -0.37]));
+    head.add(mesh(gSph(), C.fur, [0.28, 0.26, 0.26], [0, 0, 0]));
+    [-1, 1].forEach(s => head.add(mesh(gSph(), C.cream, [0.13, 0.13, 0.12], [s * 0.19, -0.1, -0.04])));
+    head.add(mesh(gSph(), C.cream, [0.13, 0.1, 0.12], [0, -0.08, -0.2]));
+    head.add(mesh(gSph(), C.dark, [0.045, 0.035, 0.035], [0, -0.04, -0.32]));
     [-1, 1].forEach(s => {
-      head.add(mesh(gSph(), C.white, [0.075, 0.075, 0.06], [s * 0.11, 0.03, -0.19]));
-      head.add(mesh(gSph(), C.dark, [0.045, 0.045, 0.03], [s * 0.115, 0.03, -0.24]));
+      head.add(mesh(gSph(), C.dark, [0.07, 0.07, 0.05], [s * 0.115, 0.02, -0.2]));
+      head.add(mesh(gSph(), C.white, [0.018, 0.018, 0.012], [s * 0.115 + 0.02, 0.045, -0.245], false));
       const ear = new THREE.Group();
-      ear.position.set(s * 0.22, 0.14, 0.02);
-      ear.rotation.z = -s * 0.75;
-      ear.add(mesh(gCone(), C.fur, [0.15, 0.46, 0.06], [0, 0.23, 0]));
-      ear.add(mesh(gCone(), C.pink, [0.1, 0.35, 0.03], [0, 0.2, -0.03]));
+      ear.position.set(s * 0.21, 0.16, 0.02);
+      ear.rotation.z = -s * 0.62;
+      ear.add(mesh(gCone(), C.fur, [0.18, 0.52, 0.07], [0, 0.26, 0]));
+      ear.add(mesh(gCone(), C.pink, [0.12, 0.38, 0.03], [0, 0.22, -0.035]));
+      // dlouhé chlupy na okrajích uší
+      [0.08, 0.2, 0.32].forEach((y, i) => ear.add(mesh(gSph(), C.cream, [0.06 - i * 0.012, 0.08, 0.05], [s * (0.15 - y * 0.3), y, 0.01])));
       head.add(ear);
     });
-    const hat = mesh(helmetGeo, C.hat, [1.1, 1.05, 1.1], [0, 0.07, 0.01]);
+    const hat = mesh(helmetGeo, C.hat, [1.1, 1.05, 1.1], [0, 0.08, 0.01]);
     hat.rotation.x = -0.08;
     head.add(hat);
-    head.add(box(0.05, 0.05, 0.34, C.hat, 0, 0.39, 0.01));
-    // podbradní pásek
-    const strap = mesh(G('torus', () => new THREE.TorusGeometry(1, 0.08, 6, 20)), C.rubber, [0.25, 0.25, 0.25], [0, -0.04, -0.02], false);
+    head.add(box(0.05, 0.05, 0.34, C.hat, 0, 0.4, 0.01));
+    const strap = mesh(G('torus', () => new THREE.TorusGeometry(1, 0.08, 6, 20)), C.rubber, [0.26, 0.26, 0.26], [0, -0.04, -0.02], false);
     strap.rotation.y = Math.PI / 2;
     head.add(strap);
 
-    // nohy
+    // nohy (tenké, se „kalhotkami“ na zadních)
     const legs = [];
-    [[-0.15, -0.22], [0.15, -0.22], [-0.15, 0.24], [0.15, 0.24]].forEach(([x, z]) => {
+    [[-0.15, -0.22], [0.15, -0.22], [-0.15, 0.24], [0.15, 0.24]].forEach(([x, z], i) => {
       const pivot = new THREE.Group();
       pivot.position.set(x, 0.45, z);
-      pivot.add(mesh(gCyl(10), C.fur, [0.075, 0.4, 0.075], [0, -0.2, 0]));
-      pivot.add(mesh(gSph(), C.cream, [0.085, 0.06, 0.11], [0, -0.41, -0.03]));
+      pivot.add(mesh(gCyl(10), C.fur, [0.07, 0.4, 0.07], [0, -0.2, 0]));
+      if (i > 1) pivot.add(mesh(gSph(), C.cream, [0.11, 0.17, 0.12], [0, -0.06, 0.04]));
+      pivot.add(mesh(gSph(), C.cream, [0.08, 0.055, 0.1], [0, -0.41, -0.03]));
       body.add(pivot);
       legs.push(pivot);
     });
 
-    // ocas
+    // ocas: chlupatý chochol stočený nad hřbet
     const tail = new THREE.Group();
-    tail.position.set(0, 0.68, 0.38);
-    tail.rotation.x = 0.9;
-    tail.add(mesh(gCone(), C.fur, [0.07, 0.36, 0.07], [0, 0.16, 0]));
-    tail.add(mesh(gSph(), C.cream, [0.055, 0.07, 0.055], [0, 0.33, 0]));
+    tail.position.set(0, 0.7, 0.36);
+    const R = 0.3;
+    for (let i = 0; i <= 7; i++) {
+      const t = (i / 7) * 2.3;
+      const r = 0.08 + Math.sin((i / 7) * Math.PI) * 0.07;
+      tail.add(mesh(gSph(), i % 2 ? C.cream : C.fur, [r, r, r * 1.1], [0, R * Math.sin(t), -R * (1 - Math.cos(t)) + 0.06]));
+    }
     body.add(tail);
 
     // štít
     const bubble = new THREE.Mesh(gSph(), M(0x9cf6ff, { t: true, op: 0.22, e: 0x2fd0ff, ei: 0.8, dw: false }));
-    bubble.scale.set(0.85, 0.9, 1.0);
-    bubble.position.y = 0.7;
+    bubble.scale.set(0.9, 0.95, 1.05);
+    bubble.position.y = 0.72;
     bubble.visible = false;
     root.add(bubble);
 
