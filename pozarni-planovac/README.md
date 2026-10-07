@@ -39,3 +39,8 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 6. import DXF/PDF/SVG
 
 Odborné údaje je nutné před vydáním DZP ověřit podle aktuální legislativy a s HZS.
+
+## Rozhodnutí uživatele
+- Výchozí vzor operativní karty: `podklady/VZOR_operativni_karta_list_A4.docx` (finální). Starší `VZOR_OPERATIVNI_KARTA.docx` je delší varianta.
+- Metodika Hanuška 1996 je pro uživatele závazný základ; legislativní platnost se i tak ověřuje u každé DZP.
+- Přiložené PNG značky (zatím 10 ks) jsou v `podklady/znacky_E_F/`, kódy E/F zatím nepřiřazeny.
