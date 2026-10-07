@@ -601,6 +601,11 @@ a.btn { text-decoration: none; }
 .role-pick { display: inline-flex; align-items: center; gap: 6px; }
 .role-pick select { width: auto; min-height: 32px; padding: 4px 8px; font-size: 13px; }
 input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); }
+
+:root[data-brand="osvc"] .zpsv-only, :root:not([data-brand="osvc"]) .osvc-only { display: none !important; }
+.feat-row { display: flex; gap: 8px 18px; flex-wrap: wrap; }
+.feat-row .check { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.feat-row input { width: 18px; height: 18px; accent-color: var(--brand); }
 </style>
 
 <div class="auth" id="auth">
@@ -776,7 +781,8 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
     <div id="weeklyView" hidden>
       <div class="section" id="wBoardSec">
         <div class="section-head"><h2>Týdenní kontroly BOZP</h2><span class="hint" id="wWeekHint"></span></div>
-        <p class="small-note">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (25 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <p class="small-note osvc-only">Vedoucí zaměstnanec kontroluje své pracoviště <b>minimálně 1× týdně</b> krátkou <b>kontrolou vedoucího</b> (25 bodů). Výstup je záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností. Co nevyhovuje, se rovnou uloží jako závada.</p>
+        <p class="small-note zpsv-only">Podle směrnice 08-01-SM-GŘ-Q10 kontroluje vedoucí zaměstnanec své pracoviště <b>minimálně 1× týdně</b> – krátkou <b>kontrolou vedoucího</b> (25 bodů, výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností). Správce navíc provádí <b>kontrolu podle ZQ-10-02</b> s výstupem ZQ-10-01. Otázky jsou z formuláře <b>ZQ-10-02</b> a u každého pracoviště se střídají: nejdřív každá 2., pak každá 3. … z dosud nepoložených, po vyčerpání všech od začátku. Co nevyhovuje, se rovnou uloží jako závada.</p>
         <div class="wk-board" id="wBoard"></div>
         <div id="wHidden"></div>
       </div>
@@ -890,6 +896,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
           <span class="label">Aplikace školení</span>
           <b>Školení 2D – THP</b>
           <p class="small-note">Školení a test dělá zaměstnanec v samostatné aplikaci. Když ho úspěšně dokončí, klikni tady u jeho termínu na <b>Obnoveno dnes</b>.</p>
+          <p class="small-note osvc-only">Školení se zpřístupní až po zaplacení v aplikaci školení.</p>
         </div>
         <a class="btn primary big" id="sOpen" target="_blank" rel="noopener" hidden>Přepnout do školení ↗</a>
         <p class="small-note" id="sNoUrl" hidden>Odkaz na aplikaci školení zatím není nastavený.</p>
@@ -1356,6 +1363,15 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
   }
   const visPairs = withWhole => { const k = myKeys(); return allPairs(withWhole || !!k).filter(p => !k || k.includes(p.key)); };
   const visCompanies = () => uniq(visPairs().map(p => p.company));
+  // Živnost: moduly Kontrola, Závady a Školení jsou placené – hlavní správce je povoluje každé firmě zvlášť
+  const FEATS = [['kontrola', 'Kontrola'], ['zavady', 'Závady'], ['skoleni', 'Školení']];
+  const featOn = (company, f) => !OSVC || isAdmin() || !!((firms.find(x => x.name === company) || {}).features || {})[f];
+  const canTab = f => !OSVC || isAdmin() || visCompanies().some(c => featOn(c, f));
+  function applyFeatureTabs() {
+    if (!me) return;
+    FEATS.forEach(([f]) => { const t = $('#tab-' + f); if (t) t.hidden = !canTab(f); });
+    if (FEATS.some(([f]) => f === tab && !canTab(f))) setTab('prehled');
+  }
   const visSitesOf = firm => { const k = myKeys(); return sitesOf(firm).filter(sn => !k || k.includes(keyOf(firm, sn))); };
   const wholeAllowed = firm => { const k = myKeys(); return !k || k.includes(keyOf(firm, '')); };
   const pairLabel = (company, site) => company + (site ? ' › ' + site : ' · celá firma');
@@ -1409,7 +1425,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
   }
   function refreshKPickers() {
     const sp = scopePair(), fresh = !$('#kFirm').value && sp;
-    setPick('kFirm', visCompanies(), firmOpts(fresh ? { value: sp.company } : {}));
+    setPick('kFirm', visCompanies().filter(c => featOn(c, 'kontrola')), firmOpts(fresh ? { value: sp.company } : {}));
     const firm = getPick('kFirm');
     setPick('kSite', firm ? visSitesOf(firm) : [], siteOpts(firm, fresh ? { value: sp.site } : {}));
     setPick('kPlace', firm ? placesOf(firm, getPick('kSite')) : [], { none: '— bez pracoviště —', newLabel: 'Nové pracoviště…' });
@@ -1477,11 +1493,12 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
 
   function render() {
     renderScope();
+    applyFeatureTabs();
     const all = terms.filter(t => t.last && t.months && inScope(t)).map(withDue).sort((a, b) => a.days - b.days);
     const late = all.filter(t => t.days < 0);
     const d30 = all.filter(t => t.days >= 0 && t.days <= 30);
     const d90 = all.filter(t => t.days > 30 && t.days <= 90);
-    const openF = findings.filter(f => f.status !== 'done' && inScope(f));
+    const openF = findings.filter(f => f.status !== 'done' && inScope(f) && featOn(f.company, 'zavady'));
     const lateF = openF.filter(f => f.due && daysUntil(f.due) < 0).sort((a, b) => a.due.localeCompare(b.due));
 
     // počet na záložce
@@ -1532,7 +1549,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
 
     // závady
     const zc = $('#zCompany').value, zs = $('#zStatus').value;
-    const fs = findings.filter(f => inScope(f) && (!zc || f.company === zc) && (zs === 'all' || (zs === 'open' ? f.status !== 'done' : f.status === 'done')))
+    const fs = findings.filter(f => inScope(f) && featOn(f.company, 'zavady') && (!zc || f.company === zc) && (zs === 'all' || (zs === 'open' ? f.status !== 'done' : f.status === 'done')))
       .sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due || '9999').localeCompare(String(b.due || '9999')));
     $('#findList').innerHTML = fs.length ? `<div class="cards">${fs.map(findingCard).join('')}</div>` : `<div class="empty">Žádné závady v tomto výběru.</div>`;
 
@@ -1561,6 +1578,9 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
         return `<section class="firm-card">
           <div class="firm-head"><h3>${ic('building')}${esc(n)}</h3><button class="btn small" data-action="rename" data-kind="firm" data-firm="${esc(n)}" data-old="${esc(n)}">${ic('edit')}Přejmenovat</button><button class="btn small danger" data-action="del-firm" data-id="firm:${esc(id)}" data-name="${esc(n)}">${ic('trash')}Smazat</button></div>
           <div class="firm-body">
+          ${OSVC ? `<div class="sub"><span class="label">${ic('check')}Placené moduly (na žádost klienta)</span>
+            <div class="feat-row">${FEATS.map(([fk, fl]) => `<label class="check"><input type="checkbox" data-feat="${fk}" data-firm="${esc(n)}" ${((f.features || {})[fk]) ? 'checked' : ''}> ${fl}</label>`).join('')}</div>
+            <p class="small-note">Přehled a Termíny má firma vždy. Ostatní záložky uvidí její správci až po povolení.</p></div>` : ''}
           <div class="firm-mail">
             <input type="text" id="fe-${id}" inputmode="email" placeholder="E-mail pro upozornění: kontakt@firma.cz, dalsi@firma.cz" value="${esc(f.email || '')}" aria-label="E-mail firmy ${esc(n)}">
             <label class="check"><input type="checkbox" id="fn-${id}" ${f.notify ? 'checked' : ''}> posílat</label>
@@ -1894,7 +1914,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
     editingFind = f.id;
     setTab('kontrola');
     setKMode('zavada');
-    setPick('kFirm', visCompanies(), firmOpts({ value: f.company }));
+    setPick('kFirm', visCompanies().filter(c => featOn(c, 'kontrola') || featOn(c, 'zavady')), firmOpts({ value: f.company }));
     setPick('kSite', visSitesOf(f.company), siteOpts(f.company, { value: f.site || '' }));
     setPick('kPlace', placesOf(f.company, f.site || ''), { none: '— bez pracoviště —', newLabel: 'Nové pracoviště…', value: f.place || '' });
     setPick('kOwner', ownersOf(f.company), { none: '— nevyplněno —', newLabel: 'Nová osoba…', value: f.owner || '' });
@@ -1936,7 +1956,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
     if (kind === 'firm') {
       const nfid = slug(nv), f = firms.find(x => x.id === fid) || {};
       if (nfid !== fid && companiesOf().some(c => slug(c) === nfid)) throw new Error('Firma s tímto názvem už existuje.');
-      await put('firmy', nfid, { name: nv, email: f.email || '', notify: !!f.notify, updatedAt: now });
+      await put('firmy', nfid, { name: nv, email: f.email || '', notify: !!f.notify, features: f.features || {}, updatedAt: now });
       for (const x of sites.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.name); await put('provozovny', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('provozovny', x.id); }
       for (const x of places.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.site) + '--' + seg(x.name); await put('mista', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('mista', x.id); }
       for (const x of people.filter(x => x.firmId === fid)) { const nid = nfid + '--' + seg(x.name); await put('osoby', nid, { ...strip(x), firmId: nfid, firm: nv }); if (nid !== x.id) await del('osoby', x.id); }
@@ -2074,12 +2094,12 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
   }
   function exportFindings() {
     const rows = [['Číslo', 'Firma', 'Závod / provozovna', 'Místo', 'Závada', 'Opatření', 'Závažnost', 'Odpovídá', 'Termín nápravy', 'Stav', 'Zjištěno', 'Odstraněno', 'Způsob odstranění', 'Zdroj', 'Fotek závady', 'Fotek po opravě']];
-    findings.filter(inScope).forEach(f => rows.push([f.cislo, f.company, f.site, f.place, f.text, f.measure, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'odstraněno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), f.fixText, f.source === 'tydenni' ? 'týdenní kontrola' : 'kontrola', (f.photos || []).length, (f.fixPhotos || []).length]));
+    findings.filter(f => inScope(f) && featOn(f.company, 'zavady')).forEach(f => rows.push([f.cislo, f.company, f.site, f.place, f.text, f.measure, SEV[f.severity], f.owner, fmt(f.due), f.status === 'done' ? 'odstraněno' : 'otevřeno', fmt(f.createdAt), fmt(f.doneAt), f.fixText, f.source === 'tydenni' ? 'týdenní kontrola' : 'kontrola', (f.photos || []).length, (f.fixPhotos || []).length]));
     offer(`zavady-bozp-${todayISO}.csv`, csv(rows));
   }
   async function copyProtocol() {
     const zc = $('#zCompany').value;
-    const open = findings.filter(f => f.status !== 'done' && inScope(f) && (!zc || f.company === zc));
+    const open = findings.filter(f => f.status !== 'done' && inScope(f) && featOn(f.company, 'zavady') && (!zc || f.company === zc));
     if (!open.length) { toast('Žádné otevřené závady k zkopírování.'); return; }
     const text = `Zjištěné nedostatky${zc ? ' – ' + zc : ''} (stav k ${fmt(todayISO)})\n\n` + open.map((f, i) =>
       `${i + 1}. ${f.text}\n   ${f.site ? 'Závod: ' + f.site + ' | ' : ''}Místo: ${f.place || '–'} | Závažnost: ${SEV[f.severity]} | Odpovídá: ${f.owner || '–'} | Termín nápravy: ${fmt(f.due)}`).join('\n\n');
@@ -2226,8 +2246,9 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
     $('#modeBtn').textContent = OSVC ? '⇄ Verze ŽPSV' : '⇄ Verze Živnost';
     $('#tab-uzivatele').hidden = !admin;
     $('#tab-firmy').hidden = !admin;
-    document.querySelectorAll('[data-action="open-proto"]').forEach(x => (x.hidden = !admin));
+    document.querySelectorAll('[data-action="open-proto"]').forEach(x => (x.hidden = !admin || OSVC));
     if (!admin && (tab === 'uzivatele' || tab === 'firmy')) setTab('prehled');
+    applyFeatureTabs();
     if ((me ? me.id : null) !== scopeFor) {
       scopeFor = me ? me.id : null;
       scope = '';
@@ -2484,7 +2505,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
   }
   const weekNo = iso => Number(isoWeek(iso).slice(-2));
   const keyOfCheck = k => k.key || keyOf(k.company, k.site);
-  const weeklyPairs = () => visPairs().filter(p => p.site && (!scope || p.key === scope));
+  const weeklyPairs = () => visPairs().filter(p => p.site && (!scope || p.key === scope) && featOn(p.company, 'kontrola'));
   const tracked = p => { const d = sites.find(x => x.id === p.key); return !d || d.weekly !== false; };
   const unitsOf = p => { const pl = placesOf(p.company, p.site); return pl.length ? pl : ['']; };
   function mgrOf(company, site, place) {
@@ -2590,7 +2611,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
       </article>`;
     }).join('') : `<div class="empty">${pairs.length ? 'Všechny závody jsou vypnuté ze sledování.' : isAdmin() ? 'Zatím žádný závod. Založ ho v záložce Firmy.' : 'Nemáš přiřazený žádný závod.'}</div>`;
     $('#wHidden').innerHTML = (off.length ? `<p class="small-note">Nesledované závody: ${off.map(p => `${esc(p.label)} <button class="link" data-action="w-track" data-id="${esc(p.key)}" data-on="1">zapnout</button>`).join(' · ')}</p>` : '')
-      + (isAdmin() ? `<div class="toolbar"><button class="btn small" data-action="w-q-edit">${ic('edit')}Upravit kontrolní otázky ZQ-10-02</button></div>` : '');
+      + (isAdmin() && !OSVC ? `<div class="toolbar"><button class="btn small" data-action="w-q-edit">${ic('edit')}Upravit kontrolní otázky ZQ-10-02</button></div>` : '');
     const hist = checks.filter(k => inScope(k)).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30);
     $('#wHistory').innerHTML = hist.length ? `<div class="list">${hist.map(k => `<div class="row">
       <div class="pillcell"><span class="pill ${k.nok ? 'red' : 'ok'}">${k.nok ? `${k.nok}× nevyhovuje` : 'Bez závad'}</span></div>
@@ -2613,7 +2634,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
     $('#sNoUrl').textContent = admin ? 'Odkaz na aplikaci školení zatím není nastavený. Vlož ho níže.' : 'Odkaz na aplikaci školení zatím není nastavený. Požádej správce.';
     $('#sUrlRow').hidden = !admin;
     if (admin && document.activeElement !== $('#sUrl') && !$('#sUrl').value) $('#sUrl').value = settings.skoleniUrl || '';
-    const all = terms.filter(t => t.last && t.months && inScope(t) && isTraining(t)).map(withDue).sort((a, b) => a.days - b.days);
+    const all = terms.filter(t => t.last && t.months && inScope(t) && isTraining(t) && featOn(t.company, 'skoleni')).map(withDue).sort((a, b) => a.days - b.days);
     const late = all.filter(t => t.days < 0), soon = all.filter(t => t.days >= 0 && t.days <= 30), ok = all.filter(t => t.days > 30);
     const c = $('#cnt-skoleni'); c.textContent = late.length; c.hidden = !late.length;
     $('#sHint').textContent = `${all.length} ${plural(all.length, 'termín', 'termíny', 'termínů')} · stav k ${fmt(todayISO)}`;
@@ -2680,7 +2701,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
   function renderStart(force, key, place) {
     if (!me) return;
     const types = [['vedouci', 'Kontrola vedoucího', `${VED_Q.length} krátkých bodů pro vedoucí úseků. Výstup: záznam s fotkou, zjištěním, opatřením, odpovědnou osobou, termínem a závažností.`, 'user']];
-    if (isAdmin()) types.push(['zq', 'Kontrola ZQ-10-02', 'Kontrolní otázky ZQ-10-02 s obměnou po pracovištích. Výstup: protokol ZQ-10-01.', 'table']);
+    if (isAdmin() && !OSVC) types.push(['zq', 'Kontrola ZQ-10-02', 'Kontrolní otázky ZQ-10-02 s obměnou po pracovištích. Výstup: protokol ZQ-10-01.', 'table']);
     if (wsType && !types.some(t => t[0] === wsType)) wsType = null;
     $('#wTypes').innerHTML = types.map(([t, title, desc, icn]) => `<button type="button" class="type-card" data-action="w-type" data-type="${t}" aria-pressed="${wsType === t}"><b>${ic(icn)}${title}</b><span>${desc}</span></button>`).join('');
     $('#wStartPick').hidden = !wsType;
@@ -3233,7 +3254,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
       t += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0], wp(wr(String(i + 1), { ...A, b: true }), { jc: 'center' }))}${tc(W[1], photo)}${tc(W[2], wp(wr(f.text, A)))}${tc(W[3], wp(wr(f.measure || '', A)))}${tc(W[4], wp(wr(f.owner || '', A)))}${tc(W[5], wp(wr(f.due ? ddmm(f.due) : '', A), { jc: 'center' }))}${tc(W[6], wp(wr(SEV[f.severity] || 'Střední', { ...A, b: true, color: SEVC[f.severity] || 'C07800' }), { jc: 'center' }))}</w:tr>`;
     });
     body += t + '</w:tbl>' + wp('');
-    return packDocx({ body, files, rels, logo: d.logo, footer: 'Týdenní kontrola vedoucího pracoviště · 08-01-SM-GŘ-Q10', title: 'Týdenní kontrola ' + (k.site || ''), author: d.author, landscape: true });
+    return packDocx({ body, files, rels, logo: d.logo, footer: OSVC ? 'Týdenní kontrola vedoucího pracoviště' : 'Týdenní kontrola vedoucího pracoviště · 08-01-SM-GŘ-Q10', title: 'Týdenní kontrola ' + (k.site || ''), author: d.author, landscape: true });
   }
 
   function packDocx(o) {
@@ -3291,6 +3312,16 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
 
   // přiřazení závodů uživateli
   let sitesRole = 'user', sitesFor = null;
+  document.addEventListener('change', async e => {
+    const t = e.target; if (!t.dataset || !t.dataset.feat || !isAdmin() || !OSVC) return;
+    const name = t.dataset.firm, fid = firmIdOf(name), doc = firms.find(x => x.id === fid);
+    const features = { ...((doc && doc.features) || {}), [t.dataset.feat]: t.checked };
+    try {
+      if (doc) await patch('firmy', fid, { features, updatedAt: nowIso() });
+      else await put('firmy', fid, { name, email: '', notify: false, features, updatedAt: nowIso() });
+      toast(`${name}: ${FEATS.find(x => x[0] === t.dataset.feat)[1]} ${t.checked ? 'povoleno' : 'vypnuto'}.`);
+    } catch (err) { t.checked = !t.checked; }
+  });
   document.addEventListener('change', async e => {
     const t = e.target; if (!t.dataset || !t.dataset.urole || !isAdmin()) return;
     const a = accounts.find(x => x.id === t.dataset.urole); if (!a || isMainAdminAcc(a)) return;
@@ -3360,7 +3391,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
         if (bad.length) { toast('Neplatný e-mail: ' + bad[0]); break; }
         const notify = $('#fn-' + id).checked;
         if (notify && !emails.length) { toast('Pro zapnutí upozornění vyplň e-mail.'); break; }
-        try { await put('firmy', id, { name, email: emails.join(', '), notify, updatedAt: new Date().toISOString() }); toast('Uloženo.'); b.blur(); render(); } catch (err) { /* */ }
+        try { await put('firmy', id, { name, email: emails.join(', '), notify, features: (firms.find(x => x.id === id) || {}).features || {}, updatedAt: new Date().toISOString() }); toast('Uloženo.'); b.blur(); render(); } catch (err) { /* */ }
         break;
       }
       case 'edit-term': setTab('terminy'); openTermForm(terms.find(t => t.id === id)); break;
@@ -3442,7 +3473,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
       case 'zoom': $('#lightboxImg').src = b.dataset.src; $('#lightbox').hidden = false; break;
       case 'goto-status': $('#tStatus').value = b.dataset.status; setTab('terminy'); render(); break;
       case 'goto-findings': $('#zStatus').value = 'open'; setTab('zavady'); render(); break;
-      case 'open-proto': if (isAdmin()) openProto(); break;
+      case 'open-proto': if (isAdmin() && !OSVC) openProto(); break;
       case 'close-proto': $('#protoModal').hidden = true; break;
       case 'p-all': document.querySelectorAll('#pFindings input').forEach(x => { const f = findings.find(z => z.id === x.value); x.checked = !!f && f.status !== 'done'; }); break;
       case 'p-none': document.querySelectorAll('#pFindings input').forEach(x => (x.checked = false)); break;
@@ -3464,7 +3495,7 @@ input[type=color] { min-height: 44px; padding: 4px; width: 100%; border: 1px sol
         $('#renameTitle').textContent = `Zodpovědný vedoucí · ${pr.site}${pl ? ' › ' + pl : ''}`;
         $('#renameLbl').textContent = 'Jméno a příjmení vedoucího';
         $('#renameInput').value = renameCtx.old;
-        $('#renameNote').textContent = 'Uvede se v protokolu ZQ-10-01 u tohoto pracoviště.';
+        $('#renameNote').textContent = OSVC ? 'Uvede se v záznamu z kontroly u tohoto pracoviště.' : 'Uvede se v protokolu ZQ-10-01 u tohoto pracoviště.';
         $('#renameSave').textContent = 'Uložit';
         $('#renameModal').hidden = false; $('#renameInput').focus();
         break;
