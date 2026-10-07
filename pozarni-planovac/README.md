@@ -28,7 +28,13 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 - **Kontrola úplnosti** (`js/uplnost.js`): povinná pole, hasivo u nebezpečí, výkon FVE v kWp, ověřený průtok hydrantu,
   měřítko, severka, legenda, revize, existence značek.
 - **Litice** (`data/litice.projekt.json`): jen potvrzené údaje o FVE a poznámky o rozsahu a polohách.
-- Testy: `npm test` (10 testů, Node ≥ 22).
+
+- **Aplikace (krok 3)**: `index.html` + `js/app.js`. Spuštění: `python3 -m http.server 8000` v této složce, pak http://localhost:8000.
+  Dashboard (logo vrací na přehled; pokračovat, nový plán, import `.pplan.json`, referenční projekt Litice, duplikovat/stáhnout/smazat),
+  formulář operativní karty podle finálního vzoru A4 (tlačítko „NE“, značky z katalogu u nebezpečí a vodních zdrojů, desetinná čísla s čárkou),
+  živý náhled A4, kontrola úplnosti s přeskokem na pole, panel Metodika DZP, správa listů a revizí, lokální ukládání (localStorage),
+  záloha Stáhnout → Editovatelný projekt. Tisk/PDF zatím přes tisk prohlížeče; vlastní export PDF je krok 5.
+- Testy: `npm test` (jednotkové), `npm run test:e2e` (Chromium + Playwright, hlavní pracovní toky).
 
 ## Plán práce
 1. datový model karty podle vzoru

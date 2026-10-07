@@ -37,7 +37,7 @@ function kontrolaKarty(k, p, chyba, upoz) {
     [o.provoz.kontaktTelefon, 'KONTAKT', 'objekt.provoz.kontaktTelefon', 'Kontakt na provoz (telefon)'],
     [o.prijezdZ, 'PRIJEZD', 'objekt.prijezdZ', 'Příjezd z'],
     [o.omezeni, 'OMEZENI', 'objekt.omezeni', 'Omezení průjezdu (nebo „NE“)'],
-    [k.znalostObjektu.jmeno, 'ZNALOST', 'znalostObjektu', 'Osoba se znalostí objektu'],
+    [k.znalostObjektu.jmeno, 'ZNALOST', 'znalostObjektu.jmeno', 'Osoba se znalostí objektu'],
     [k.zpracoval.jmeno, 'ZPRACOVAL', 'zpracoval.jmeno', 'Zpracovatel'],
     [k.zpracoval.cisloOsvedceni, 'OSVEDCENI', 'zpracoval.cisloOsvedceni', 'Číslo osvědčení zpracovatele'],
   ];
@@ -54,7 +54,7 @@ function kontrolaKarty(k, p, chyba, upoz) {
     else if (nb.popis.trim().toUpperCase() !== 'NE' && prazdne(nb.hasivo)) chyba('NEBEZPECI_HASIVO', `${p}.karta.nebezpeci[${nb.id}]`, `Nebezpečí „${nb.popis}“: chybí vhodné hasivo (návod HZS).`);
   }
 
-  if (k.fve.pritomna === null) chyba('FVE_ROZHODNUTI', `${p}.karta.fve`, 'Není uvedeno, zda je v objektu FVE (uveďte ano/ne).');
+  if (k.fve.pritomna === null) chyba('FVE_ROZHODNUTI', `${p}.karta.fve.pritomna`, 'Není uvedeno, zda je v objektu FVE (uveďte ano/ne).');
   if (k.fve.pritomna === true) {
     if (prazdne(k.fve.vykonKWp)) chyba('FVE_VYKON', `${p}.karta.fve.vykonKWp`, 'FVE: chybí výkon v kWp (návod HZS).');
     if (prazdne(k.fve.vypinacSilovaCast)) chyba('FVE_VYPINAC', `${p}.karta.fve.vypinacSilovaCast`, 'FVE: chybí umístění vypínače silové části.');
