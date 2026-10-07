@@ -10,7 +10,7 @@ const cti = (p) => readFileSync(join(koren, p));
 const txt = (p) => cti(p).toString('utf8');
 const zabezpecit = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');   // bezpečné vložení do <script>
 
-const js = await build({ entryPoints: [join(koren, 'js/app.js')], bundle: true, format: 'iife', minify: true, write: false, target: 'es2022', legalComments: 'none', logLevel: 'error', define: { 'import.meta.url': '"about:blank"' } });
+const js = await build({ entryPoints: [join(koren, 'js/app.js')], bundle: true, format: 'iife', minify: true, write: false, target: 'es2022', legalComments: 'none', logLevel: 'error', external: ['node:fs/promises'], define: { 'import.meta.url': '"about:blank"' } });
 const kod = js.outputFiles[0].text;
 
 const kat = JSON.parse(txt('znacky/katalog.json')).znacky.map((z) => ({ id: z.id, nazev: z.nazev, zdroj: z.zdroj, png: `data:image/png;base64,${cti(z.png).toString('base64')}`, overeno: z.overeno }));
@@ -21,7 +21,7 @@ const verze = new Date().toISOString().slice(0, 16).replace('T', ' ');
 let html = txt('index.html');
 html = html.replace(/<link rel="stylesheet" href="css\/rakos.css">\s*<link rel="stylesheet" href="css\/app.css">/, () => `<style>\n${txt('css/rakos.css')}\n${txt('css/app.css')}\n</style>`);
 html = html.replace(/<script type="module" src="js\/app.js"><\/script>/, () =>
-  `<script>window.__KATALOG__=${zabezpecit(JSON.stringify(kat))};window.__LITICE__=${zabezpecit(JSON.stringify(litice))};window.__SESTAVENO__=${JSON.stringify(verze)};` +
+  `<script>window.__KATALOG__=${zabezpecit(JSON.stringify(kat))};window.__LITICE__=${zabezpecit(JSON.stringify(litice))};window.__SESTAVENO__=${JSON.stringify(verze)};window.__FONTY__=${JSON.stringify({ regular: cti('vendor/fonts/Roboto-Regular.woff').toString('base64'), bold: cti('vendor/fonts/Roboto-Bold.woff').toString('base64') })};` +
   `try{var b=atob("${worker}"),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.__PDFJS_WORKER_URL__=URL.createObjectURL(new Blob([u],{type:"text/javascript"}));}catch(e){}</script>\n` +
   `<script>\n${zabezpecit(kod)}\n</script>`);
 if (!html.includes('window.__KATALOG__')) throw new Error('Sestavení selhalo: nepodařilo se vložit skript');

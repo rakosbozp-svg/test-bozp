@@ -25,7 +25,7 @@ test('render: obsahuje prvky, délku trasy v metrech, razítko, legendu i varov�
   let svg = renderListu(v, o());
   assert.match(svg, /^<svg /); assert.ok(svg.includes('data-druh="stena"') && svg.includes('data-druh="dvere"'));
   assert.ok(svg.includes('20,0 m'), 'délka trasy 14 + 6 = 20 m');
-  assert.ok(svg.includes('LEGENDA ZNAČEK · PBŘ') && svg.includes('Nadzemní požární hydrant'));
+  assert.ok(svg.includes('LEGENDA ZNAČEK') && svg.includes('Nadzemní požární hydrant'));
   assert.ok(svg.includes('1 : 100') && svg.includes('Ing. Test') && svg.includes('Hala PREFA 1'));
   assert.ok(!svg.includes('NEOVĚŘENO'));
   v.pozadi = { prilohaId: 'a', x: 0, y: 0, sirkaPx: 100, vyskaPx: 50, mNaPx: 0.1, kalibrace: null };

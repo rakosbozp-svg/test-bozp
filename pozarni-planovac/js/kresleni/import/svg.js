@@ -147,14 +147,17 @@ export function nactiSvg(text) {
       }
       case 'path': for (const c of parsujCestu(el.attrs.d)) cara(c.body, c.zav); break;
       case 'text': {
-        const fs0 = s['font-size'] || 12, delky = [];
-        const radky = []; const sbirka = (t, x, y, st2) => {
-          const tx = t.attrs.x !== undefined ? parseFloat(t.attrs.x) : x, ty = (t.attrs.y !== undefined ? parseFloat(t.attrs.y) : y) + (t.attrs.dy ? parseFloat(t.attrs.dy) : 0);
+        const fs0 = s['font-size'] || 12;
+        const radky = []; const sbirka = (t, tx, ty, st2) => {      // tx, ty = výsledná poloha prvku (po x/y a dy)
           const vlastni = t.text.replace(/\s+/g, ' ').trim();
           if (vlastni) radky.push({ x: tx, y: ty, text: vlastni, fs: st2['font-size'] || fs0, kotva: st2['text-anchor'] || 'start' });
-          let cx = tx, cy = ty; for (const d of t.deti) if (d.tag === 'tspan') { sbirka(d, cx, cy, styl(d, st2)); } void delky;
+          let cx = tx, cy = ty;
+          for (const d of t.deti) if (d.tag === 'tspan') {        // dy se v SVG sčítá od předchozího řádku
+            cx = d.attrs.x !== undefined ? parseFloat(d.attrs.x) : cx; cy = (d.attrs.y !== undefined ? parseFloat(d.attrs.y) : cy) + (d.attrs.dy ? parseFloat(d.attrs.dy) : 0);
+            sbirka(d, cx, cy, styl(d, st2));
+          }
         };
-        sbirka(el, a('x'), a('y'), s);
+        sbirka(el, a('x'), a('y') + (el.attrs.dy ? parseFloat(el.attrs.dy) : 0), s);
         for (const r of radky) {
           const sirka = r.text.length * r.fs * 0.55, dx = r.kotva === 'middle' ? -sirka / 2 : r.kotva === 'end' ? -sirka : 0;
           const P = T(r.x + dx, r.y), k = Math.sqrt(Math.abs(M2[0] * M2[3] - M2[1] * M2[2]));

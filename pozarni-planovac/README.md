@@ -38,7 +38,7 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
   plocha, obdélník, elipsa, volná kresba, text, značka z katalogu, dveře, kalibrace. Výběr (klik, Shift, oblast), úchyty pro velikost a otočení,
   úprava vrcholů, kopírování/vložení/mazání, undo/redo, přichytávání (body, mřížka, ortho), vrstvy (viditelnost, zámek, pořadí, aktivní vrstva),
   přesná editace vlastností, dveře vázané na stěny (jedno-/dvoukřídlé, vrata; sledují stěnu, jdou odpojit a přepojit), barvy metodiky, síť 10 × 10 m,
-  severka, měřítko, razítko, automatická legenda „LEGENDA ZNAČEK · PBŘ“, velikost značek a textu 1–500 mm (krok 0,1, posuvník, +/−),
+  severka, měřítko, razítko, automatická legenda „LEGENDA ZNAČEK“, velikost značek a textu 1–500 mm (krok 0,1, posuvník, +/−),
   zoom kolečkem bez Ctrl k ukazateli, dotyk (tap, dva prsty), export listu do SVG a PNG (300 dpi), import podkladu PNG/JPG s kalibrací podle známé délky.
   Měřítko podkladu je do kalibrace označené jako NEOVĚŘENÉ (v editoru, v kontrole úplnosti i na razítku exportu).
   Úložiště: IndexedDB (kvůli podkladům), záložně localStorage. Podklady jsou součástí zálohy projektu.

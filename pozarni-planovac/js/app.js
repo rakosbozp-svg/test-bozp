@@ -4,9 +4,10 @@ import { nactiKatalog } from './znacky.js';
 import { vykresliKartu, pripoj, esc } from './formular.js';
 import { nahledKarty } from './nahled.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
-import { zkontrolujUplnost } from './uplnost.js';
+import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
-import { zeptejSe, potvrd, oznam } from './dialogy.js';
+import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
+import { exportujPdf, stahniBajty, jmenoPdf } from './pdf/export.js';
 import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
 import { vlozPodklad } from './kresleni/podklad.js';
@@ -137,6 +138,28 @@ function dashboard() {
   };
 }
 
+// ---------- export PDF ----------
+async function exportPdfDialog() {
+  const p = S.p, katMapa = new Map(katalog.map((z) => [z.id, z]));
+  const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
+  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text' };
+  const dlg = await formular({
+    titul: 'Export do PDF',
+    html: `<p class="dlg__text">Vyberte listy, které se zahrnou do jednoho PDF (v pořadí, v jakém jsou v projektu). Karty a texty se vykreslí s vloženým písmem, výkresy jako vektory.</p>
+      <div class="moznosti">${p.listy.map((l) => `<label class="moznost"><input type="checkbox" name="l_${l.id}" checked><div><b>${esc(l.nazev)}</b><span>${typy[l.typ] || l.typ}</span></div></label>`).join('')}</div>
+      <div class="zprava ${sh.chyby ? 'pozor' : ''}">Kontrola úplnosti: ${sh.chyby} chyb, ${sh.upozorneni} upozornění. PDF se vytvoří i tak; před odevzdáním HZS doplňte chybějící údaje a ověřte měřítko.</div>`,
+    ano: 'Vytvořit PDF',
+  });
+  if (!dlg.ok) return;
+  const ids = p.listy.filter((l) => dlg.pole[`l_${l.id}`]).map((l) => l.id);
+  if (!ids.length) return oznam('Vyberte alespoň jeden list.');
+  try {
+    ohlas('Vytvářím PDF…', true);
+    const bajty = await exportujPdf(p, { listy: ids, katalog: katMapa });
+    stahniBajty(bajty, jmenoPdf(p.nazev)); ohlas(`PDF je hotové (${Math.round(bajty.length / 1024)} kB).`);
+  } catch (err) { ohlas(''); await oznam(`PDF se nepodařilo vytvořit: ${err.message}`); }
+}
+
 // ---------- editor ----------
 const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', uplnost: 'Úplnost', metodika: 'Metodika DZP', projekt: 'Projekt' };
 const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
@@ -147,8 +170,10 @@ function editor() {
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
   topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span><span id="stav" class="stav">${esc(S.stav)}</span>
     ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">${ikona('tisk', 16)}Tisk / PDF</button>` : ''}
+    <button class="btn" id="a-pdf" title="Vytvoří PDF z karet, výkresů a textů projektu">${ikona('soubor', 16)}Export PDF</button>
     <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json">${ikona('stahnout', 16)}Stáhnout → Editovatelný projekt</button>`;
   $('#a-stahnout').onclick = () => U.stahni(p);
+  $('#a-pdf').onclick = () => exportPdfDialog();
   if ($('#a-tisk')) $('#a-tisk').onclick = () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); window.print(); };
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">

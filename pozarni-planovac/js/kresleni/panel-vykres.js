@@ -6,7 +6,7 @@ import { zeptejSe, potvrd, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
 import { normalizujVelikost, VELIKOST_MIN, VELIKOST_MAX, VELIKOST_KROK } from '../model.js';
 
-const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Trasa', plocha: 'Plocha', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
+const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Úniková cesta', plocha: 'Nástupní plocha a komunikace pro techniku', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
 const f1 = (n) => zCisla(Math.round(n * 100) / 100);
 
 export function vykresliPanelVykresu(druh, host, ed) {

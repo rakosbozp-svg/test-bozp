@@ -198,7 +198,8 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .a4 { background: var(--papir); color: var(--papir-ink); border: 1px solid var(--line-strong); max-width: 794px; margin: 0 auto; padding: 12px; font: 12px/1.3 Arial, sans-serif; }
 .ok { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
 .ok td, .ok th { border: 1px solid var(--papir-ink); padding: 3px 6px; vertical-align: top; text-align: left; }
-.ok th { width: 35%; font-weight: 700; }
+.ok th { width: 17%; font-weight: 700; }
+.ok.media td { width: 33%; }
 .ok .zl { background: #ff0; } .ok .nadpis { font-weight: 700; font-size: 15px; text-align: center; } .ok .stupen { text-align: center; }
 .ok td.zn { width: 50px; text-align: center; } .ok td.zn img { max-width: 40px; max-height: 40px; }
 .pruh { font-weight: 700; text-align: center; padding: 3px; border: 1px solid var(--papir-ink); margin-top: 6px; letter-spacing: .15em; }

@@ -7,15 +7,27 @@ import { naCislo } from '../formular.js';
 import { zeptejSe, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
 import { vlozPodklad } from './podklad.js';
+import { exportujPdf, stahniBajty, jmenoPdf } from '../pdf/export.js';
 import { importujSoubor, vlozVektor, kalibrujVektor } from './import/index.js';
 
 const NASTROJE = [
   ['vyber', 'Výběr', 'Výběr a úprava prvků (V)'], ['posun', 'Plátno', 'Posun plátna (H) – nebo střední tlačítko / mezerník'],
   ['stena', 'Stěna', 'Kreslení stěn: klik = bod, dvojklik / Enter = konec'], ['cara', 'Čára', 'Čára nebo lomená čára (hranice požárního úseku, plot…)'],
-  ['trasa', 'Trasa', 'Úniková nebo zásahová trasa – délka se počítá v metrech'], ['plocha', 'Plocha', 'Uzavřená plocha (komunikace, zeleň, nádvoří)'],
+  ['trasa', 'Úniková cesta', 'Úniková cesta – délka se počítá v metrech'], ['plocha', 'Nástupní plocha a komunikace pro techniku', 'Uzavřená plocha: nástupní plocha a komunikace pro techniku'],
   ['obdelnik', 'Obdélník', 'Obdélník tažením'], ['elipsa', 'Elipsa', 'Elipsa tažením'], ['volna', 'Volně', 'Volná kresba'],
   ['text', 'Text', 'Textový popisek'], ['znacka', 'Značka', 'Vložení značky z katalogu'], ['dvere', 'Dveře', 'Dveře – klik na stěnu je připojí'], ['kalibrace', 'Kalibrace', 'Kalibrace měřítka podkladu podle známé délky'],
 ];
+const NAPOVEDA = [
+  'K BODŮM – kurzor se „chytí“ na koncové body a rohy už nakreslených prvků (vyznačí se oranžovým kroužkem). Čáry a stěny tak na sebe přesně navazují. Doporučeno nechat zapnuté.',
+  '',
+  'K MŘÍŽCE – body se zaokrouhlí na pravidelnou síť. Krok (0,1 až 10 m) volíte v rozbalovacím poli vedle. Hodí se, když kreslíte podle známých rozměrů, např. po celých metrech.',
+  '',
+  'ORTHO (rovně) – čára se srovná na vodorovnou, svislou nebo úhel 45°. Stejně funguje podržení klávesy Shift při kreslení, bez zapínání.',
+  '',
+  'ZKRATKY: V výběr · H plátno · W stěna · L čára · T trasa · R obdélník · E elipsa · D dveře · Esc zrušit · Enter dokončit · Delete smazat',
+  'Ctrl+Z zpět · Ctrl+Y znovu · Ctrl+C / V kopírovat a vložit · Ctrl+D duplikovat · Ctrl+A vybrat vše · šipky posun (Shift = větší krok)',
+  'Kolečko myši přibližuje k ukazateli, střední tlačítko nebo mezerník posouvá plátno, na dotyku dva prsty.',
+].join('\n');
 const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', dvere: 'dvere', kalibrace: 'kalibrace' };
 const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
 const KROKY = [0.1, 0.5, 1, 5, 10];
@@ -47,14 +59,15 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
       <div class="nast-skupina">
-        <label class="prep" title="Přichytávání k bodům prvků"><input type="checkbox" data-prep="snapBody" checked> Body</label>
-        <label class="prep" title="Přichytávání k mřížce"><input type="checkbox" data-prep="snapMriz"> Mřížka</label>
-        <select data-krok title="Krok mřížky (m)" aria-label="Krok mřížky">${KROKY.map((k) => `<option value="${k}" ${k === S.krok ? 'selected' : ''}>${bezCarky(k, 1)} m</option>`).join('')}</select>
-        <label class="prep" title="Vodorovně / svisle / 45° (nebo držte Shift)"><input type="checkbox" data-prep="ortho"> Ortho</label>
+        <label class="prep" title="Kurzor se při kreslení a posouvání „chytí“ na koncové body a rohy už nakreslených prvků, takže na sebe čáry přesně navazují."><input type="checkbox" data-prep="snapBody" checked> K bodům</label>
+        <label class="prep" title="Body se zaokrouhlují na pravidelnou síť s krokem vpravo (např. po 1 m). Hodí se pro přesné rozměry."><input type="checkbox" data-prep="snapMriz"> K mřížce</label>
+        <select data-krok title="Krok mřížky v metrech – platí jen při zapnutém „K mřížce“" aria-label="Krok mřížky v metrech">${KROKY.map((k) => `<option value="${k}" ${k === S.krok ? 'selected' : ''}>${bezCarky(k, 1)} m</option>`).join('')}</select>
+        <label class="prep" title="Ortho: čára se při kreslení srovná na vodorovnou, svislou nebo 45°. Totéž udělá podržení klávesy Shift."><input type="checkbox" data-prep="ortho"> Ortho (rovně)</label>
+        ${ak('napoveda', 'info', 'Nápověda k přichytávání a zkratkám')}
       </div>
       <div class="nast-skupina">
         <label class="nast" title="Import podkladu: DXF, SVG, PDF, PNG, JPG">${ikona('import', 18)}<span class="nast__txt">Import…</span><input type="file" class="sr-only" data-podklad accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
-        <button type="button" class="nast" data-akce="export-svg" title="Stáhnout list jako SVG">${ikona('stahnout', 18)}<span class="nast__txt">SVG</span></button><button type="button" class="nast" data-akce="export-png" title="Stáhnout list jako PNG (300 dpi)">${ikona('stahnout', 18)}<span class="nast__txt">PNG</span></button>
+        <button type="button" class="nast" data-akce="export-svg" title="Stáhnout list jako SVG">${ikona('stahnout', 18)}<span class="nast__txt">SVG</span></button><button type="button" class="nast" data-akce="export-png" title="Stáhnout list jako PNG (300 dpi)">${ikona('stahnout', 18)}<span class="nast__txt">PNG</span></button><button type="button" class="nast" data-akce="export-pdf" title="Stáhnout tento list jako PDF (vektorově)">${ikona('stahnout', 18)}<span class="nast__txt">PDF</span></button>
       </div>
     </div>
     <div class="ed-scena" tabindex="0"><div class="ed-svg"></div>
@@ -452,7 +465,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   host.querySelector('.ed-nastroje').addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.nastroj) return nastavNastroj(b.dataset.nastroj);
-    ({ zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng })[b.dataset.akce]?.();
+    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
   });
   host.querySelector('.ed-nastroje').addEventListener('change', (e) => {
     if (e.target.dataset.prep) S[e.target.dataset.prep] = e.target.checked;

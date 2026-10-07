@@ -98,7 +98,7 @@ function legenda(v, o, L) {
     const ls = zalom(it.text);
     return `${ikona}<text x="${f(cx + 7.5)}" y="${f(cy + 2.4)}" font-size="2.1" font-family="Arial,sans-serif">${ls.map((l, j) => `<tspan x="${f(cx + 7.5)}" dy="${j ? 2.4 : 0}">${esc(l)}</tspan>`).join('')}</text>`;
   });
-  return `<g data-legenda="1"><rect x="${f(x0)}" y="${f(y0)}" width="${f(w)}" height="${f(h)}" fill="#fff" fill-opacity=".92" stroke="#000" stroke-width="0.3"/><text x="${f(x0 + 2)}" y="${f(y0 + 5)}" font-size="2.8" font-weight="700" font-family="Arial,sans-serif">LEGENDA ZNAČEK · PBŘ</text>${radky.join('')}</g>`;
+  return `<g data-legenda="1"><rect x="${f(x0)}" y="${f(y0)}" width="${f(w)}" height="${f(h)}" fill="#fff" fill-opacity=".92" stroke="#000" stroke-width="0.3"/><text x="${f(x0 + 2)}" y="${f(y0 + 5)}" font-size="2.8" font-weight="700" font-family="Arial,sans-serif">LEGENDA ZNAČEK</text>${radky.join('')}</g>`;
 }
 
 function razitko(v, o, L) {

@@ -194,7 +194,7 @@ test('značky z katalogu, velikost 1–500 s desetinami, legenda a trvanlivost p
   await text.fill('0'); await text.dispatchEvent('change'); assert.equal(await p.locator('#panel-obsah [data-vel-text]').inputValue(), '1');
   await text.fill('3,3'); await text.dispatchEvent('change');
   assert.ok(await p.locator('#svet').innerHTML().then((h) => h.includes('LEGENDA') === false) || true);
-  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('LEGENDA ZNAČEK · PBŘ'), 'legenda ve výkresu');
+  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('LEGENDA ZNAČEK'), 'legenda ve výkresu');
   // po znovuotevření zůstane
   await p.waitForFunction(() => document.querySelector('#stav')?.textContent.startsWith('Uloženo'));
   await p.reload(); await p.waitForSelector('#svet');
@@ -208,7 +208,7 @@ test('export SVG a PNG obsahuje legendu, délky tras a značky', skip, async () 
   await p.nastroj('znacka'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt'); await p.klik(10, 8);
   const [d1] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
   const f = join(tmp, 'v.svg'); await d1.saveAs(f); const svg = readFileSync(f, 'utf8');
-  assert.ok(svg.includes('LEGENDA ZNAČEK · PBŘ') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
+  assert.ok(svg.includes('LEGENDA ZNAČEK') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
   assert.ok(svg.includes('1 : 100') && !svg.includes('NaN'));
   const [d2] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-png]')]);
   const g = join(tmp, 'v.png'); await d2.saveAs(g); const png = readFileSync(g);
@@ -426,5 +426,17 @@ test('import skutečného CAD PDF (situace Litice, ~20 000 úseček): vektorově
   assert.ok((await p.pocet('cara')) > 200, 'mnoho čar');
   assert.ok((await p.locator('#svet [data-druh=text]').allTextContents()).some((x) => /Strojní dílny|Armovna|Přístřešek/.test(x)), 'texty ze situace');
   console.log(`   (import Litice: ${ms} ms, čar ${await p.pocet('cara')}, ploch ${await p.pocet('plocha')}, textů ${await p.pocet('text')})`);
+  assert.deepEqual(p.chyby, []);
+});
+
+test('export PDF: tlačítko v editoru i dialog celého projektu stáhnou platné PDF', skip, async () => {
+  const p = await nova();
+  await p.nastroj('trasa'); for (const [x, y] of [[4, 4], [18, 4]]) await p.klik(x, y); await p.keyboard.press('Enter');
+  const [d1] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.click('[data-akce=export-pdf]')]);
+  const f = join(tmp, 'list.pdf'); await d1.saveAs(f); const b = readFileSync(f);
+  assert.equal(b.subarray(0, 5).toString(), '%PDF-'); assert.ok(b.length > 5000);
+  await p.click('[data-akce=obsah]');
+  const [d2] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), (async () => { await p.click('#a-pdf'); await p.waitForSelector('.dlg[open]'); await p.click('.dlg [data-vysledek=ok]'); })()]);
+  const g = join(tmp, 'projekt.pdf'); await d2.saveAs(g); assert.equal(readFileSync(g).subarray(0, 5).toString(), '%PDF-');
   assert.deepEqual(p.chyby, []);
 });
