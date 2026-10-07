@@ -1,0 +1,59 @@
+Add a new feature: WEEKLY SUPERVISOR CHECK ("Týdenní kontrola vedoucího"). All UI text in Czech. Keep the existing defect form ("Nová závada z kontroly") working exactly as now. Do not change emails, auth or other pages.
+
+## Navigation
+On the Kontrola page add a two-option switch at the top: "Závada" (the existing form, default) | "Týdenní kontrola" (new). Remember the last choice in localStorage.
+
+## Data (Supabase, with RLS consistent with existing tables: approved users can read/write, follow the same pattern as defects)
+1. `locations`: add column `manager text default ''` = responsible supervisor of that workplace (pracoviště).
+2. New table `inspections`: id uuid pk, company_id, plant_id (nullable), location_id (nullable), plant_name text, location_name text, inspected_on date, inspector text, manager text, note text, items jsonb (array of {group, no, text, answer: 'ok'|'nok'|'na', note, defect_id}), ok_count int, nok_count int, na_count int, created_by uuid, created_at.
+3. New table `inspection_drafts` (work saved for later): id uuid pk, user_id uuid (owner), company_id, plant_id, location_id, inspected_on date, inspector text, answers jsonb, failures jsonb (per question: text, measure, severity, responsible, due_date, photos: string[] of already-uploaded photo paths), note text, updated_at. Unique (user_id, location_id). A user sees only their own drafts; admins see all.
+4. `defects`: add `inspection_id uuid null` and `source text default ''` ('vedouci' for defects created by this check).
+
+## Questions (fixed list, 25 items, keep exactly). Each item: group | question | default finding when not filled | default measure when not filled
+1 Pořádek a komunikace | Na pracovišti je pořádek a čisto. | Na pracovišti je nepořádek. | Pracoviště uklidit a pořádek udržovat.
+2 Pořádek a komunikace | Materiál a výrobky jsou uloženy stabilně na určených místech. | Materiál nebo výrobky jsou uloženy nestabilně nebo mimo určené místo. | Materiál uložit stabilně na určené místo.
+3 Pořádek a komunikace | Komunikace a průchody jsou volné. | Komunikace nebo průchod je zastavěný. | Komunikaci ihned uvolnit a udržovat volnou.
+4 Pořádek a komunikace | Únikové cesty a nouzové východy jsou volné a označené. | Úniková cesta nebo nouzový východ je zastavěný či neoznačený. | Únikovou cestu uvolnit a obnovit její označení.
+5 Lidé a pracovní postupy | Zaměstnanci používají předepsané OOPP (přilba, obuv, rukavice, brýle, reflexní vesta, chrániče sluchu). | Zaměstnanec nepoužívá předepsané OOPP. | Zjednat okamžitou nápravu a zaměstnance prokazatelně poučit o používání OOPP.
+6 Lidé a pracovní postupy | Práce probíhá podle pracovních postupů a místních provozních bezpečnostních předpisů (MPBP). | Práce neprobíhá podle pracovního postupu nebo MPBP. | Práci přerušit a zaměstnance poučit o správném postupu.
+7 Lidé a pracovní postupy | Při údržbě a čištění strojů se dodržuje postup LOTO. | Při údržbě nebo čištění stroje nebyl dodržen postup LOTO. | Práci zastavit, stroj zajistit podle LOTO a zaměstnance poučit.
+8 Stroje a zařízení | Ochranné kryty a zábrany strojů jsou na místě a nepoškozené. | Ochranný kryt nebo zábrana stroje chybí nebo je poškozená. | Stroj odstavit z provozu, kryt nebo zábranu doplnit či opravit.
+9 Stroje a zařízení | Bezpečnostní prvky strojů (koncové spínače, světelné závory) jsou funkční. | Bezpečnostní prvek stroje nefunguje. | Stroj odstavit z provozu a zajistit opravu a ověření funkce.
+10 Stroje a zařízení | Tlačítka nouzového zastavení jsou přístupná a funkční. | Tlačítko nouzového zastavení je nepřístupné nebo nefunkční. | Uvolnit přístup k tlačítku nouzového zastavení, případně zajistit jeho opravu.
+11 Stroje a zařízení | Elektrická zařízení, kabely a prodlužovací přívody jsou nepoškozené. | Elektrické zařízení, kabel nebo prodlužovací přívod je poškozený. | Zařízení vyřadit z provozu a zajistit opravu osobou s elektrotechnickou kvalifikací.
+12 Stroje a zařízení | Elektrické rozvaděče jsou uzavřené a přístup k nim je volný. | Elektrický rozvaděč je otevřený nebo zastavěný. | Rozvaděč uzavřít a uvolnit přístup k němu.
+13 Manipulace s břemeny a doprava | Jeřáby a zdvihací zařízení jsou bez viditelného poškození. | Jeřáb nebo zdvihací zařízení je viditelně poškozené. | Zařízení odstavit a zajistit jeho prohlídku a opravu.
+14 Manipulace s břemeny a doprava | Vázací prostředky jsou nepoškozené a označené nosností. | Vázací prostředek je poškozený nebo neoznačený. | Vázací prostředek vyřadit z používání a nahradit.
+15 Manipulace s břemeny a doprava | Břemena váží jen vazači s platným oprávněním. | Břemeno váže osoba bez platného oprávnění. | Vázání svěřit jen vazači s platným oprávněním.
+16 Manipulace s břemeny a doprava | VZV a manipulační technika mají provedenou denní kontrolu. | U VZV nebo manipulační techniky chybí záznam o denní kontrole. | Provést denní kontrolu a zapsat ji.
+17 Manipulace s břemeny a doprava | Řidiči VZV jezdí bezpečně a dodržují pravidla provozu. | Řidič VZV jezdí nebezpečně nebo nedodržuje pravidla provozu. | Řidiče poučit o pravidlech bezpečné jízdy.
+18 Manipulace s břemeny a doprava | Formy, stojany, palety a skladované výrobky jsou stabilní, nepoškozené a nepřetížené. | Forma, stojan nebo uložení výrobků je nestabilní, poškozené či přetížené. | Uložení stabilizovat, poškozený stojan nebo formu vyřadit z používání.
+19 Práce ve výšce | Okraje a otvory, odkud hrozí pád, jsou zajištěny zábradlím nebo jiným zajištěním. | Okraj nebo otvor, odkud hrozí pád, není zajištěn. | Okraj nebo otvor zajistit zábradlím, poklopem nebo jiným zajištěním.
+20 Práce ve výšce | Žebříky jsou nepoškozené a správně používané. | Žebřík je poškozený nebo nesprávně používaný. | Poškozený žebřík vyřadit, zaměstnance poučit o správném používání.
+21 Požární ochrana | Hasicí přístroje jsou přístupné, označené a s platnou kontrolou. | Hasicí přístroj je nepřístupný, neoznačený nebo bez platné kontroly. | Uvolnit přístup k hasicímu přístroji, doplnit označení a zajistit kontrolu.
+22 Požární ochrana | Požární hydranty jsou přístupné a označené. | Požární hydrant je nepřístupný nebo neoznačený. | Uvolnit přístup k hydrantu a doplnit označení.
+23 První pomoc | Lékárnička je dostupná a úplně vybavená. | Lékárnička je nedostupná nebo neúplně vybavená. | Lékárničku zpřístupnit a doplnit její vybavení.
+24 Chemické látky | Chemické látky (odbedňovací oleje, přísady) jsou v označených obalech. | Chemická látka je v neoznačeném obalu. | Obal označit podle bezpečnostního listu.
+25 Chemické látky | Chemické látky jsou správně uložené (záchytné vany) a bezpečnostní listy jsou k dispozici. | Chemická látka je nesprávně uložená nebo chybí bezpečnostní list. | Chemickou látku uložit do záchytné vany a doplnit bezpečnostní list.
+
+## Weekly view layout (top to bottom)
+1. **"Týdenní kontroly BOZP"** board, header hint "týden {ISO week} · {Mon date} – {Sun date}". Short note: "Vedoucí kontroluje své pracoviště minimálně 1× týdně. Co nevyhovuje, se rovnou uloží jako závada." One card per plant (závod): list of its workplaces (locations) with responsible supervisor (editable inline, saves to locations.manager), status "tento týden hotovo dd. m." (green) / "zatím neproběhla" (amber), and a strip of the last 8 weeks (green = done, red hatched = missed, current week outlined). Button on each workplace "Začít kontrolu".
+2. **"Rozpracované kontroly"** (only if any): rows with place, answered X z 25, saved date; buttons "Pokračovat" and "Smazat" (confirm).
+3. **"Nová kontrola"**: Firma → Závod → Pracoviště (pick existing or "+ Nové pracoviště", which creates the location), then button "Začít kontrolu". Shows info "25 bodů · zodpovědný vedoucí: X · tento týden zatím neproběhla / už proběhla (date)".
+4. **"Provedené kontroly"** (last 30): pill "Bez závad" (green) or "N× nevyhovuje" (red), place, date + week, inspector; buttons "Detail" (modal with all answers) and "Záznam (Word)"; admin also delete (confirm, defects stay).
+
+## The check form
+- Header: small mono line "Kontrola vedoucího · tý {week} · vedoucí {manager or 'nezadán'}", big title "{plant} › {workplace}". Fields: date (default today, max today), "Kontrolu provedl" (default current user's name).
+- Sticky progress bar: "N z 25 otázek", counts ✓/✗/–, button "Zbytek označit jako Vyhovuje".
+- Questions grouped by group (dark header bar per group). Each question: number + text, and a 3-part segmented answer "Vyhovuje | Nevyhovuje | Netýká se" (active Vyhovuje = soft green, Nevyhovuje = solid red with white text, Netýká se = grey).
+- When "Nevyhovuje": the row turns light red and expands: "Co nevyhovuje" (textarea, placeholder "Když nevyplníš: {default finding}"), "Opatření" (placeholder "Když nevyplníš: {default measure}"), "Závažnost" segmented Vysoká/Střední/Nízká (default Střední), "Odpovídá" (placeholder "Když nevyplníš: {workplace manager or inspector}"), "Termín nápravy" (default today + 3 / 14 / 30 days by severity Vysoká/Střední/Nízká; changes when severity changes unless the user edited it), "Fotky" as 64×54 thumbnails plus a dashed "+" tile (camera on mobile).
+- Sticky footer with three buttons: **"Zrušit"** (if anything answered: ask "Opravdu zahodit?" first; discards unsaved changes, an earlier saved draft stays), **"Uložit na později"** (uploads photos, saves/updates inspection_drafts row, returns to the weekly view, toast "Kontrola uložena na později"), **"Uložit kontrolu"** (primary; while unanswered questions remain its label is "Zbývá N otázek" and it is disabled; otherwise "Uložit kontrolu a N závad" / "Uložit kontrolu").
+- Starting a check on a workplace where the user has a draft automatically continues the draft (message "Pokračuješ v kontrole uložené {date}").
+- On final save: for every "Nevyhovuje" create a `defects` row (status open, company/plant/location, description = typed text or default finding, remedial_action = typed or default measure, severity, responsible = typed or workplace manager or inspector, due_date, photos, source 'vedouci', inspection_id); then insert the `inspections` row with items; delete the user's draft for that workplace; toast "Kontrola uložena, N× závada v záložce Závady." or "Kontrola uložena. Bez závad."
+
+## "Záznam (Word)" export (.docx, landscape A4) — use the `docx` npm package, generate in the browser
+- Title "Záznam z týdenní kontroly vedoucího pracoviště", then info lines: Firma, Závod, Pracoviště, Datum kontroly (+ týden), Kontrolu provedl, Zodpovědný vedoucí, Výsledek (X vyhovuje, Y nevyhovuje, Z netýká se), Poznámka if any.
+- Table of findings with columns: Č. | Foto | Zjištění | Opatření | Odpovědná osoba | Termín | Závažnost (embed the first photo of each defect, max ~4 cm wide). If no findings: sentence "Při kontrole nebyly zjištěny žádné nedostatky."
+- Footer "Týdenní kontrola vedoucího pracoviště". File name "Kontrola_vedouciho_{plant}_{workplace}_{date}.docx".
+
+Mobile-first, same visual style as the rest of the app (cards, mono labels, red primary). Touch targets ≥ 44 px. When finished, list what you created (tables/columns, files) and anything you could not do.
