@@ -66,3 +66,35 @@ details{border-top:1px solid var(--line);padding:6px 0}summary{cursor:pointer;fo
 .vykres-info{padding:12px}
 @media (max-width:1100px){.editor{grid-template-columns:1fr}.listy ol{display:flex;flex-wrap:wrap;gap:4px}}
 @media print{body{background:#fff}.top,.hlaska,.listy,.panel,.zalozky{display:none!important}main{padding:0}.editor{display:block}.stred{border:0;padding:0}.a4{border:0;max-width:none;padding:0}.chybi{color:transparent}@page{size:A4 portrait;margin:10mm}}
+/* ---------- editor výkresu ---------- */
+.editor-vykres{grid-template-columns:170px minmax(0,1fr) 330px}
+.editor-vykres .stred{padding:8px}
+.ed{display:flex;flex-direction:column;gap:6px}
+.ed-nastroje{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ed-nastroje .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+.nast{padding:5px 8px;border:1px solid var(--line);background:#fff;border-radius:var(--r);font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.nast:hover:not(:disabled){border-color:#888}.nast:disabled{opacity:.4;cursor:default}
+.nast.akt{background:var(--brand);border-color:var(--brand);color:#fff}
+.prep{display:inline-flex;align-items:center;gap:3px;font-size:13px}
+.ed-nastroje select{width:auto;padding:3px 4px;font-size:13px}
+.ed-scena{position:relative;height:calc(100vh - 210px);min-height:420px;border:1px solid var(--line);background:#8d8b86;outline:none;overflow:hidden}
+.ed-scena:focus-visible{outline:2px solid #1e5fd0}
+.ed-svg{position:absolute;inset:0;touch-action:none;user-select:none;-webkit-user-select:none}
+.ed-napoveda{position:absolute;left:8px;bottom:6px;right:8px;pointer-events:none;color:#fff;font-size:12px;text-shadow:0 1px 2px #000}
+.ed-plovouci{position:absolute;right:10px;top:10px;display:flex;gap:6px}.ed-plovouci[hidden]{display:none}
+.ed-stav{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}.ed-stav .varuj{color:var(--cer);font-weight:700}
+.varuj{color:var(--cer)}
+.vel .vel-r{display:flex;gap:4px}.vel .vel-r input{width:100%}.vel input[type=range]{width:100%}
+.barvy-vyber{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.barva{width:22px;height:22px;border:2px solid #fff;outline:1px solid #888;border-radius:50%;cursor:pointer;padding:0}.barva.akt{outline:2px solid #1e5fd0}.barva.zadna{background:#fff;font-size:12px}
+.barvy-vyber input[type=color]{width:30px;height:24px;padding:0;border:1px solid #bbb;background:#fff}
+.vrstvy{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:4px}
+.vrstvy li{display:flex;gap:3px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:3px}.vrstvy li.akt{border-color:var(--brand);background:#fdf3f2}
+.vrstvy input[type=text]{flex:1;min-width:0;padding:3px 5px}
+.ikona{border:0;background:none;cursor:pointer;padding:2px 4px;font-size:14px}
+.zn-nahled{width:28px;height:28px;object-fit:contain;vertical-align:middle}
+.panel .btn.mal{margin:2px 2px 2px 0}
+@media (max-width:1100px){.editor-vykres{grid-template-columns:1fr}.ed-scena{height:62vh}}
+
+.listy-sprava summary{cursor:pointer;font-size:13px;color:var(--muted);margin:4px 0}
+@media (max-width:1100px){.nast{padding:4px 6px;font-size:12px}.listy h2{display:none}}

@@ -73,10 +73,12 @@ function kontrolaKarty(k, p, chyba, upoz) {
 
 function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog) {
   const v = list.vykres;
-  if (!v.meritko.overeno) upoz('MERITKO', `${p}.vykres.meritko`, `List „${list.nazev}“: měřítko není ověřeno – zadejte kalibraci podle známé délky. Délky tras jsou orientační.`);
+  if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
   if (v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
-  if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda.`);
+  if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
+  if (!v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
   if (prazdne(v.razitko.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: razítko bez zpracovatele.`);
+  if (!v.prvky.length) upoz('VYKRES_PRAZDNY', `${p}.vykres.prvky`, `List „${list.nazev}“: výkres je prázdný.`);
   for (const pr of v.prvky) {
     if (pr.znackaId && mameKatalog && !ids.has(pr.znackaId)) chyba('ZNACKA_NEEXISTUJE', `${p}.vykres.prvky[${pr.id}]`, `Prvek odkazuje na neexistující značku ${pr.znackaId} – označeno ke kontrole.`);
     if (pr.kKontrole) upoz('PRVEK_KE_KONTROLE', `${p}.vykres.prvky[${pr.id}]`, 'Prvek je označen ke kontrole (nejednoznačné mapování starší značky).');

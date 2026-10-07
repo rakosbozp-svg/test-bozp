@@ -47,13 +47,22 @@ export const novyList = (typ, nazev) => {
   if (typ === 'text') list.text = '';
   if (typ === 'situace' || typ === 'pudorys' || typ === 'schema') {
     list.vykres = {
-      format: 'A4', orientace: 'na_sirku', pozadi: null,       // pozadi: importovaný podklad {nazev, mime, data}
-      meritko: { pomer: typ === 'situace' ? 1000 : 100, overeno: false, kalibrace: null },
-      severka: { uhel: null },                                  // null = neurčeno
-      sit10m: false,
-      vrstvy: [{ id: 'zaklad', nazev: 'Podklad', viditelna: true, zamcena: false }],
-      prvky: [],                                                // {id, druh, vrstva, ...geometrie a vlastnosti}
-      legenda: [],                                              // id značek použitých ve výkresu
+      format: 'A4', orientace: 'na_sirku',
+      pozadi: null,                 // importovaný podklad {prilohaId, nazev, x, y, sirkaPx, vyskaPx, mNaPx, kryti, kalibrace, zamceno}
+      meritko: { pomer: typ === 'situace' ? 1000 : 100 },   // měřítko tisku 1 : pomer
+      okno: { x: 0, y: 0 },         // světová souřadnice (m) levého horního rohu rámu výkresu
+      severka: { uhel: null },      // úhel severky ve stupních po směru hodin od svislice; null = neurčeno
+      sit10m: true,                 // síť 10 × 10 m (metodika Hanuška 1996, kap. 2.3.1)
+      vrstvy: [
+        { id: 'zaklad', nazev: 'Stavby', viditelna: true, zamcena: false },
+        { id: 'komunikace', nazev: 'Komunikace a plochy', viditelna: true, zamcena: false },
+        { id: 'znacky', nazev: 'Značky', viditelna: true, zamcena: false },
+        { id: 'trasy', nazev: 'Trasy', viditelna: true, zamcena: false },
+        { id: 'popisky', nazev: 'Popisky', viditelna: true, zamcena: false },
+      ],
+      prvky: [],                    // viz js/kresleni/prvky.js
+      legenda: [],                  // id použitých značek (synchronizuje editor)
+      legendaZobrazit: true,
       razitko: { nazev: '', zpracoval: '', datum: '', schvalil: '' },
     };
   }
@@ -68,7 +77,8 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     vytvoreno: t, zmeneno: t,
     zdrojMetodiky: 'Vzor OK HZS Středočeského kraje; ověřit podle aktuální legislativy a s příslušným HZS',
     listy: [], revize: [], kontakty: [],
-    nastaveni: { velikostPrvku: 10 },
+    prilohy: {},                 // importované podklady {id: {nazev, mime, data(dataURL)}} – součást zálohy projektu
+    nastaveni: { velikostZnacky: 8, velikostTextu: 3 },   // výchozí velikosti nových prvků (mm na papíře, 1–500)
     poznamkyKOvereni: [],
   };
   if (typ === 'operativni_karta') {
@@ -147,7 +157,7 @@ export function migruj(data) {
   if (typeof data.schemaVersion !== 'number') throw new Error('Chybí schemaVersion – není to projekt Požárního plánovače');
   if (data.schemaVersion > SCHEMA_VERSION) throw new Error(`Projekt je z novější verze (${data.schemaVersion}), tato verze umí ${SCHEMA_VERSION}`);
   const p = data;
-  p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.nastaveni ||= { velikostPrvku: 10 };
+  p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
     if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});
@@ -162,6 +172,12 @@ function sloz(vychozi, data) {
   const out = { ...data };
   for (const k of Object.keys(vychozi)) out[k] = k in data ? sloz(vychozi[k], data[k]) : vychozi[k];
   return out;
+}
+
+// Odstraní importované podklady, na které už žádný list neodkazuje (po smazání listu nebo podkladu).
+export function uklidPrilohy(p) {
+  const pouzite = new Set(p.listy.map((l) => l.vykres?.pozadi?.prilohaId).filter(Boolean));
+  for (const id of Object.keys(p.prilohy || {})) if (!pouzite.has(id)) delete p.prilohy[id];
 }
 
 export const serializuj = (p) => JSON.stringify(p, null, 1);

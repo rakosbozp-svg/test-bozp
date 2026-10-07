@@ -30,7 +30,7 @@ export const METODIKA = `
 <details><summary>Výkres – povinné prvky</summary><ul>
 <li>Popisové pole s názvem objektu, osobou, razítkem a podpisem.</li><li>Síť 10 × 10 m pro odhad vzdáleností.</li><li>Světové strany (severka) a měřítko.</li>
 <li>Značka, která není v příloze č. 1 metodiky, se popíše v legendě na témže výkresu.</li><li>Značky se kreslí shodnou tloušťkou čar a velikost se přizpůsobí měřítku.</li></ul>
-<p class="zdroj">Hanuška 1996, kap. 2.3; vzor HZS SCK. <i>Výkresy aplikace zatím nepodporuje (krok 4).</i></p></details>
+<p class="zdroj">Hanuška 1996, kap. 2.3; vzor HZS SCK. <i>Aplikace nabízí barvy metodiky, síť 10 × 10 m, severku, měřítko, razítko a legendu; vše ověřuje zpracovatel.</i></p></details>
 <details><summary>Pravidla vyplnění karty (HZS SCK)</summary><ul>
 <li>Předpřipravená okénka nemažte; co nelze doplnit, vepište „NE“.</li><li>U chemických látek uveďte vhodná hasiva.</li><li>U FVE uveďte výkon v kWp.</li>
 <li>U vnějších hydrantů uveďte ověřený průtok v l/s.</li><li>V doporučení veliteli jen podstatné informace a co se stane při vypnutí energií.</li>

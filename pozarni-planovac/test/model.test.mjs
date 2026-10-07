@@ -55,7 +55,7 @@ test('migrace doplní chybějící pole a nic nesmaže', () => {
   assert.equal(m.listy[0].karta.nebezpeci[0].hasivo, 'prášek');
   assert.equal(m.listy[0].karta.fve.pritomna, null);
   assert.equal(m.listy[0].karta.objekt.provoz.pracovniDoba, '');
-  assert.equal(m.listy[1].vykres.sit10m, false);
+  assert.equal(m.listy[1].vykres.sit10m, true);
   assert.deepEqual(m.poznamkyKOvereni, []);
 });
 
@@ -77,7 +77,7 @@ test('kontrola úplnosti: prázdná karta má chyby, vyplněná NE je akceptová
   const kody = (n) => new Set(n.map((x) => x.kod));
   let n = zkontrolujUplnost(p, katalog.znacky);
   for (const kod of ['ID_OBJEKT', 'GPS', 'PRIJEZD', 'NEBEZPECI', 'VODA', 'DOPORUCENI', 'FVE_ROZHODNUTI', 'OSVEDCENI']) assert.ok(kody(n).has(kod), kod);
-  assert.ok(kody(n).has('MERITKO') && kody(n).has('SEVERKA') && kody(n).has('LEGENDA') && kody(n).has('REVIZE_CHYBI'));
+  assert.ok(kody(n).has('SEVERKA') && kody(n).has('LEGENDA') && kody(n).has('REVIZE_CHYBI'));
   assert.ok(souhrn(n).chyby > 10);
 
   const k = p.listy[0].karta;
@@ -103,10 +103,13 @@ test('kontrola: odkaz na neexistující značku a ověřené měřítko', () => 
   const p = M.novyProjekt();
   const v = p.listy[1].vykres;
   v.prvky.push({ id: 'p1', druh: 'znacka', znackaId: 'DZP-999' }, { id: 'p2', druh: 'znacka', znackaId: 'DZP-001' });
-  v.meritko.overeno = true;
   const n = zkontrolujUplnost(p, katalog.znacky);
   assert.equal(n.filter((x) => x.kod === 'ZNACKA_NEEXISTUJE').length, 1);
-  assert.ok(!n.some((x) => x.kod === 'MERITKO'));
+  assert.ok(!n.some((x) => x.kod === 'MERITKO'), 'bez podkladu se kreslí v metrech – měřítko je ověřené');
+  v.pozadi = { prilohaId: 'x', kalibrace: null };
+  assert.ok(zkontrolujUplnost(p).some((x) => x.kod === 'MERITKO'));
+  v.pozadi.kalibrace = { delkaM: 5 };
+  assert.ok(!zkontrolujUplnost(p).some((x) => x.kod === 'MERITKO'));
 });
 
 test('referenční projekt Litice se načte a obsahuje jen potvrzená FVE data', () => {

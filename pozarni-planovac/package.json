@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test/model.test.mjs",
-    "test:e2e": "node --test test/e2e.test.mjs",
+    "test": "node --test test/model.test.mjs test/prvky.test.mjs test/render.test.mjs",
+    "test:e2e": "node --test test/e2e.test.mjs test/editor.e2e.test.mjs",
     "znacky": "python3 tools/build_znacky.py",
     "litice": "node tools/vytvor_litice.mjs"
   }
