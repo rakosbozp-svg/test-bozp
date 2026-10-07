@@ -9,7 +9,8 @@ import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam } from './dialogy.js';
 import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
-import { nactiObrazek, vlozPodklad } from './kresleni/podklad.js';
+import { vlozPodklad } from './kresleni/podklad.js';
+import { importujSoubor, vlozVektor } from './kresleni/import/index.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const app = $('#app'), topAkce = $('#top-akce'), hlaska = $('#hlaska');
@@ -110,11 +111,14 @@ function dashboard() {
   $('#d-podklad').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
-      const ob = await nactiObrazek(f), p = M.novyProjekt({ nazev: f.name.replace(/\.[^.]+$/, ''), typ: 'operativni_karta' });
-      vlozPodklad(p, p.listy.find((l) => l.typ === 'situace').vykres, ob);
-      const r = await U.uloz(p); if (!r.ok) throw new Error(r.chyba);
-      location.hash = `#/p/${p.id}/${p.listy.find((l) => l.typ === 'situace').id}`;
-    } catch (err) { ohlas(`Import podkladu selhal: ${err.message}`); }
+      const r = await importujSoubor(f); e.target.value = '';
+      if (!r) return;
+      const p = M.novyProjekt({ nazev: f.name.replace(/\.[^.]+$/, ''), typ: 'operativni_karta' }), sit = p.listy.find((l) => l.typ === 'situace');
+      if (r.typ === 'raster') vlozPodklad(p, sit.vykres, r.obrazek); else vlozVektor(sit.vykres, r.vysledek);
+      const u = await U.uloz(p); if (!u.ok) throw new Error(u.chyba);
+      location.hash = `#/p/${p.id}/${sit.id}`;
+      if (r.souhrn) oznam(r.souhrn.join('\n') || 'Hotovo.', { titul: 'Import dokončen' });
+    } catch (err) { await oznam(`Import podkladu selhal: ${err.message}`); }
   };
   $('#d-litice').onclick = async () => {
     try {

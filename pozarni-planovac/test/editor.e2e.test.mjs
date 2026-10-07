@@ -325,3 +325,106 @@ test('dashboard: import podkladu založí plán s podkladem; telefon bez vodorov
   assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'žádný vodorovný posuvník na telefonu');
   assert.deepEqual(chyby, []);
 });
+
+const potvrdDialog = async (p) => { const h = await p.waitForSelector('.dlg[open]'); await p.click('.dlg [data-vysledek=ok]'); await p.waitForFunction((el) => !el.isConnected, h); };
+const fixtura = (n) => join(dirname(fileURLToPath(import.meta.url)), 'fixtury', n);
+
+test('import DXF s jednotkami v hlavičce: stěny, dveře, kóty, texty, vrstvy; měřítko je ověřené', skip, async () => {
+  const p = await nova();
+  await p.setInputFiles('[data-podklad]', fixtura('hala_m.dxf'));
+  await p.waitForSelector('.dlg[open]');
+  assert.match(await p.locator('.dlg').textContent(), /Jednotky v souboru:\s*metry/);
+  await potvrdDialog(p);                                              // dialog importu
+  await p.waitForSelector('.dlg[open]'); assert.match(await p.locator('.dlg').textContent(), /Převedeno:/);
+  assert.match(await p.locator('.dlg').textContent(), /Dveře \(2\)/); await potvrdDialog(p);   // souhrn
+  assert.ok((await p.pocet('stena')) >= 2); assert.equal(await p.pocet('dvere'), 2);
+  assert.ok((await p.pocet('text')) >= 3);
+  assert.doesNotMatch(await p.txt('[data-st=meritko]'), /NEOVĚŘENO/);
+  await p.panel('vrstvy'); assert.ok((await p.locator('.vrstvy li').count()) >= 9, 'vrstvy z DXF');
+  // dveře mají označení ke kontrole ve vlastnostech
+  await p.panel('vlastnosti'); await p.nastroj('vyber'); const d = await p.stred('#svet [data-druh=dvere]'); await p.mouse.click(d[0], d[1]);
+  assert.match(await p.locator('#panel-obsah').textContent(), /nejistý/);
+  await p.getByRole('button', { name: 'Označit jako zkontrolované' }).click();
+  assert.doesNotMatch(await p.locator('#panel-obsah').textContent(), /nejistý/);
+  // undo vrátí celý import
+  await p.keyboard.press('Control+z'); await p.keyboard.press('Control+z');
+  assert.deepEqual(p.chyby, []);
+});
+
+test('import DXF bez jednotek: výběr jednotek, měřítko zůstane neověřené až do kalibrace známou délkou', skip, async () => {
+  const p = await nova();
+  await p.setInputFiles('[data-podklad]', fixtura('hala_bez_jednotek_mm.dxf'));
+  await p.waitForSelector('.dlg[open]');
+  assert.match(await p.locator('.dlg').textContent(), /neuvádí jednotky/);
+  assert.equal(await p.locator('.dlg input[name=jednotky]:checked').inputValue(), 'mm', 'předvybraný odhad');
+  await potvrdDialog(p); await potvrdDialog(p);
+  assert.match(await p.txt('[data-st=meritko]'), /NEOVĚŘENO/);
+  await p.panel('uplnost'); assert.match(await p.locator('#panel-obsah').textContent(), /měřítko importovaného výkresu není ověřeno/);
+  // kalibrace: horní strana haly (x 0–20 m ve výkresu) je ve skutečnosti 40 m → obsah se zdvojnásobí
+  await p.panel('vlastnosti'); await p.getByRole('button', { name: 'Kalibrovat podle známé délky' }).click();
+  await p.klid(); const a = await p.stred('#svet [data-druh=stena]');   // libovolné dva body na obvodu: použijeme zjištěné hrany obvodu
+  const bb = await p.locator('#svet [data-druh=stena]').first().boundingBox();
+  const levy = [bb.x + 1, bb.y + bb.height - 1], pravy = [bb.x + bb.width - 1, bb.y + bb.height - 1];   // spodní hrana obdélníku haly
+  void a;
+  await p.mouse.click(...levy); await p.mouse.click(...pravy); await p.dlg('40');
+  await p.waitForFunction(() => !/NEOVĚŘENO/.test(document.querySelector('[data-st=meritko]').textContent));
+  await p.panel('uplnost'); assert.doesNotMatch(await p.locator('#panel-obsah').textContent(), /měřítko importovaného výkresu/);
+  assert.deepEqual(p.chyby, []);
+});
+
+test('import SVG: měřítko tisku zadané uživatelem, neověřené; export obsahuje varování', skip, async () => {
+  const p = await nova();
+  const f = join(tmp, 'plan.svg');
+  writeFileSync(f, '<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210"><rect x="20" y="20" width="200" height="100" fill="none" stroke="#000"/><text x="30" y="40" font-size="6">Sklad</text></svg>');
+  await p.setInputFiles('[data-podklad]', f);
+  await p.waitForSelector('.dlg[open]'); await p.fill('.dlg input[name=n]', '200'); await potvrdDialog(p); await potvrdDialog(p);
+  assert.equal(await p.pocet('cara'), 1); assert.equal(await p.pocet('text'), 1);
+  assert.match(await p.txt('[data-st=meritko]'), /NEOVĚŘENO/);
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
+  const g = join(tmp, 'ex.svg'); await dl.saveAs(g); assert.match(readFileSync(g, 'utf8'), /MĚŘÍTKO NEOVĚŘENO/);
+  assert.deepEqual(p.chyby, []);
+});
+
+test('import PDF: vektorově (čáry a texty) i jako rastr; DWG a neznámý formát srozumitelně odmítne', skip, async () => {
+  const p = await nova();
+  // vektorové PDF vygeneruje samotný Chromium
+  const stranka = await p.context().newPage();
+  await stranka.setContent('<body style="margin:0"><svg width="800" height="500" xmlns="http://www.w3.org/2000/svg"><rect x="50" y="50" width="400" height="200" fill="none" stroke="black" stroke-width="2"/><line x1="50" y1="150" x2="450" y2="150" stroke="red"/><path d="M500 50 L700 50 L700 250" fill="none" stroke="blue"/><text x="80" y="120" font-size="30" font-family="Arial">Výrobní hala</text></svg></body>');
+  const pdf = join(tmp, 'plan.pdf'); writeFileSync(pdf, await stranka.pdf({ width: '800px', height: '500px', printBackground: true })); await stranka.close();
+  await p.setInputFiles('[data-podklad]', pdf);
+  await p.waitForSelector('.dlg[open]'); assert.match(await p.locator('.dlg').textContent(), /Import PDF/);
+  await p.fill('.dlg input[name=n]', '100'); await potvrdDialog(p);
+  await p.waitForSelector('.dlg[open]', { timeout: 60000 }); assert.match(await p.locator('.dlg').textContent(), /Převedeno/); await potvrdDialog(p);
+  assert.ok((await p.pocet('cara')) >= 3, 'čáry z PDF'); assert.ok((await p.pocet('text')) >= 1, 'text z PDF');
+  const t = await p.locator('#svet [data-druh=text]').first().textContent(); assert.match(t, /Výrobní hala/);
+  assert.match(await p.txt('[data-st=meritko]'), /NEOVĚŘENO/);
+  // rastr
+  await p.setInputFiles('[data-podklad]', pdf);
+  await p.waitForSelector('.dlg[open]'); await p.check('.dlg input[value=rastr]'); await potvrdDialog(p);
+  await p.waitForSelector('#svet [data-pozadi]', { timeout: 60000 });
+  // DWG
+  await p.setInputFiles('[data-podklad]', { name: 'plan.dwg', mimeType: 'application/octet-stream', buffer: Buffer.from('AC1027') });
+  await p.waitForSelector('.dlg[open]'); assert.match(await p.locator('.dlg').textContent(), /DWG nelze v prohlížeči bezpečně převést/); await potvrdDialog(p);
+  await p.setInputFiles('[data-podklad]', { name: 'x.docx', mimeType: 'application/zip', buffer: Buffer.from('x') });
+  await p.waitForSelector('.dlg[open]'); assert.match(await p.locator('.dlg').textContent(), /není podporován/); await potvrdDialog(p);
+  assert.deepEqual(p.chyby, []);
+});
+
+test('import skutečného CAD PDF (situace Litice, ~20 000 úseček): vektorově do rozumného času, texty zachovány', skip, async () => {
+  const p = await nova();
+  const lit = join(dirname(fileURLToPath(import.meta.url)), '..', 'podklady', 'priklady', 'Litice_situace_DZP_FVE.pdf');
+  await p.setInputFiles('[data-podklad]', lit);
+  await p.waitForSelector('.dlg[open]'); await p.fill('.dlg input[name=n]', '1000');
+  const t0 = Date.now(); await p.click('.dlg [data-vysledek=ok]');
+  await p.waitForSelector('.dlg[open]', { timeout: 120000 });
+  let titul = await p.locator('.dlg__titul').textContent();
+  if (/prvků/.test(titul)) { await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg[open]', { timeout: 120000 }); }
+  assert.match(await p.locator('.dlg').textContent(), /Převedeno/);
+  await potvrdDialog(p);
+  const ms = Date.now() - t0;
+  assert.ok(ms < 90000, `import trval ${ms} ms`);
+  assert.ok((await p.pocet('cara')) > 200, 'mnoho čar');
+  assert.ok((await p.locator('#svet [data-druh=text]').allTextContents()).some((x) => /Strojní dílny|Armovna|Přístřešek/.test(x)), 'texty ze situace');
+  console.log(`   (import Litice: ${ms} ms, čar ${await p.pocet('cara')}, ploch ${await p.pocet('plocha')}, textů ${await p.pocet('text')})`);
+  assert.deepEqual(p.chyby, []);
+});

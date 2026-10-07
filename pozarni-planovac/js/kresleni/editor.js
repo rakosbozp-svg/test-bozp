@@ -6,7 +6,8 @@ import { najdiZnacku, vyberZnacku } from '../znacky.js';
 import { naCislo } from '../formular.js';
 import { zeptejSe, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
-import { nactiObrazek, vlozPodklad } from './podklad.js';
+import { vlozPodklad } from './podklad.js';
+import { importujSoubor, vlozVektor, kalibrujVektor } from './import/index.js';
 
 const NASTROJE = [
   ['vyber', 'Výběr', 'Výběr a úprava prvků (V)'], ['posun', 'Plátno', 'Posun plátna (H) – nebo střední tlačítko / mezerník'],
@@ -141,7 +142,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     const celkem = P.celkovaDelkaTras(v.prvky); stav('trasy', celkem > 0 ? `trasy celkem ${P.formatDelky(celkem)}` : '');
     stav('vyber', S.vyber.size ? `vybráno: ${S.vyber.size}` : '');
     plovouci.hidden = !(S.kresleni && S.kresleni.body.length >= 1);
-    const n = { vyber: 'Klik vybere prvek, tažení vybere oblast, Shift přidá. Táhněte úchyty pro změnu velikosti a otočení.', stena: 'Klik přidá bod stěny. Dvojklik nebo Enter dokončí, Esc zruší.', trasa: 'Klik přidá bod trasy. Dvojklik / Enter dokončí. Délka se počítá v metrech.', cara: 'Klik přidá bod. Dvojklik / Enter dokončí.', plocha: 'Klik přidá vrchol plochy. Dvojklik / Enter dokončí (min. 3 body).', obdelnik: 'Táhněte z rohu do rohu.', elipsa: 'Táhněte z rohu do rohu.', volna: 'Táhněte pro volnou kresbu.', text: 'Klik umístí text.', znacka: S.zvolenaZnacka ? `Klik vloží značku ${S.zvolenaZnacka}. Esc ukončí.` : 'Vyberte značku…', dvere: 'Klik na stěnu připojí dveře; mimo stěnu je vloží volně (jdou pak přesunout ke stěně).', kalibrace: v.pozadi ? (S.kalibrace?.a ? 'Klikněte na druhý bod známé vzdálenosti.' : 'Klikněte na první bod známé vzdálenosti na podkladu.') : 'Nejdřív naimportujte podklad (tlačítko Podklad…).', posun: 'Táhněte plátno. Kolečko myši přibližuje k ukazateli.' };
+    const n = { vyber: 'Klik vybere prvek, tažení vybere oblast, Shift přidá. Táhněte úchyty pro změnu velikosti a otočení.', stena: 'Klik přidá bod stěny. Dvojklik nebo Enter dokončí, Esc zruší.', trasa: 'Klik přidá bod trasy. Dvojklik / Enter dokončí. Délka se počítá v metrech.', cara: 'Klik přidá bod. Dvojklik / Enter dokončí.', plocha: 'Klik přidá vrchol plochy. Dvojklik / Enter dokončí (min. 3 body).', obdelnik: 'Táhněte z rohu do rohu.', elipsa: 'Táhněte z rohu do rohu.', volna: 'Táhněte pro volnou kresbu.', text: 'Klik umístí text.', znacka: S.zvolenaZnacka ? `Klik vloží značku ${S.zvolenaZnacka}. Esc ukončí.` : 'Vyberte značku…', dvere: 'Klik na stěnu připojí dveře; mimo stěnu je vloží volně (jdou pak přesunout ke stěně).', kalibrace: (v.pozadi || (v.meritkoZdroj && !v.meritkoZdroj.overeno)) ? (S.kalibrace?.a ? 'Klikněte na druhý bod známé vzdálenosti.' : 'Klikněte na první bod známé vzdálenosti (rozměr, který znáte).') : 'Není co kalibrovat: naimportujte podklad nebo výkres s neověřeným měřítkem (tlačítko Import…).', posun: 'Táhněte plátno. Kolečko myši přibližuje k ukazateli.' };
     napoveda.innerHTML = n[S.nastroj] ? `<span>${esc(n[S.nastroj])}</span>` : '';
   }
 
@@ -170,6 +171,12 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       const bb = P.bboxPrvku(p, v.meritko.pomer, v.prvky); if (!bb) continue;
       const a = svetNaPapir([bb.x0, bb.y0]), z = svetNaPapir([bb.x1, bb.y1]);
       o.push(`<rect x="${a[0]}" y="${a[1]}" width="${z[0] - a[0]}" height="${z[1] - a[1]}" fill="none" ${st} stroke-dasharray="${4 * mp},${3 * mp}"/>`);
+    }
+    for (const p of v.prvky) {
+      if (!p.kKontrole || !vrstvaViditelna(p.vrstva)) continue;
+      const bb = P.bboxPrvku(p, v.meritko.pomer, v.prvky); if (!bb) continue;
+      const a = svetNaPapir([bb.x0, bb.y0]), z = svetNaPapir([bb.x1, bb.y1]), pad = 3 * mp;
+      o.push(`<rect x="${a[0] - pad}" y="${a[1] - pad}" width="${z[0] - a[0] + 2 * pad}" height="${z[1] - a[1] + 2 * pad}" fill="none" stroke="#f57c00" stroke-width="${sw}" stroke-dasharray="${3 * mp},${2 * mp}"/>`);
     }
     for (const h of uchyty()) {
       const [x, y] = svetNaPapir(h.w);
@@ -257,8 +264,19 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       P.pripojDvere(d, v.prvky, w0, tolM(14)); S.vyber = new Set([d.id]); commit(); return;
     }
     if (t === 'kalibrace') {
-      if (!v.pozadi) { vykresli(); return; }
-      if (!S.kalibrace) { S.kalibrace = { a: null }; }
+      const vektorNeoverene = !v.pozadi && v.meritkoZdroj && !v.meritkoZdroj.overeno;
+      if (!v.pozadi && !vektorNeoverene) { vykresli(); return; }
+      if (!S.kalibrace) S.kalibrace = { a: null };
+      if (vektorNeoverene) {
+        if (!S.kalibrace.a) { S.kalibrace = { a: w0, aSvet: w0 }; vykresli(); return; }
+        const A = S.kalibrace.a; S.kalibrace = null; vykresli();
+        zeptejSe('Skutečná vzdálenost mezi oběma body', '', { popisek: 'Vzdálenost v metrech (např. 12,5). Přeškáluje se celý obsah listu.' }).then((zad) => {
+          const m = zad === null ? NaN : naCislo(zad);
+          if (!(m > 0)) return;
+          try { kalibrujVektor(v, A, w0, m); S.nastroj = 'vyber'; commit(); naObsah(); } catch (err) { oznam(err.message); }
+        });
+        return;
+      }
       const pz = v.pozadi, px = [(w0[0] - pz.x) / pz.mNaPx, (w0[1] - pz.y) / pz.mNaPx];
       if (!S.kalibrace.a) { S.kalibrace = { a: px, aSvet: w0 }; vykresli(); return; }
       const a = S.kalibrace.a, aSvet = S.kalibrace.aSvet; S.kalibrace = null; vykresli();
@@ -401,8 +419,12 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   // ---------- podklad (PNG / JPG) ----------
   async function importPodkladu(soubor) {
     if (!soubor) return;
-    try { vlozPodklad(projekt, v, await nactiObrazek(soubor)); } catch (err) { oznam(err.message); return; }
-    S.nastroj = 'kalibrace'; S.kalibrace = null; commit();
+    let r;
+    try { r = await importujSoubor(soubor); } catch (err) { oznam(err.message); return; }
+    if (!r) return;
+    if (r.typ === 'raster') { vlozPodklad(projekt, v, r.obrazek); S.nastroj = 'kalibrace'; S.kalibrace = null; commit(); return; }
+    vlozVektor(v, r.vysledek); S.vyber = new Set(); S.nastroj = 'vyber'; commit(); naObsah();
+    oznam(r.souhrn.join('\n') || 'Hotovo.', { titul: 'Import dokončen' });
   }
 
   // ---------- export ----------

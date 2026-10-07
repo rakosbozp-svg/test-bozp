@@ -51,6 +51,7 @@ export const novyList = (typ, nazev) => {
       format: 'A4', orientace: 'na_sirku',
       pozadi: null,                 // importovaný podklad {prilohaId, nazev, x, y, sirkaPx, vyskaPx, mNaPx, kryti, kalibrace, zamceno}
       meritko: { pomer: typ === 'situace' ? 1000 : 100 },   // měřítko tisku 1 : pomer
+      meritkoZdroj: null,           // po vektorovém importu {zdroj, popis, overeno}; neověřené měřítko se kalibruje podle známé délky
       okno: { x: 0, y: 0 },         // světová souřadnice (m) levého horního rohu rámu výkresu
       severka: { uhel: null },      // úhel severky ve stupních po směru hodin od svislice; null = neurčeno
       sit10m: true,                 // síť 10 × 10 m (metodika Hanuška 1996, kap. 2.3.1)

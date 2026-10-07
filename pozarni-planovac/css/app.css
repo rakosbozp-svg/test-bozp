@@ -232,3 +232,5 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
   .chybi { color: transparent; }
   @page { size: A4 portrait; margin: 10mm; }
 }
+.dlg .chk { white-space: normal; align-items: flex-start; line-height: 1.4; }
+.dlg code { font-size: 12px; background: var(--bg-300); padding: 1px 4px; border-radius: var(--radius-sm); }

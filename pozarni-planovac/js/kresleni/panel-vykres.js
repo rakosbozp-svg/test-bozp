@@ -52,6 +52,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
       ${zaskrt('Síť 10 × 10 m', v.sit10m, zmen((c) => { v.sit10m = c; }))}
       ${pole('Severka – úhel (° po směru hodin, 0 = nahoru)', v.severka.uhel === null ? '' : zCisla(v.severka.uhel), zmen((t) => { const n = naCislo(t); v.severka.uhel = t.trim() === '' ? null : Number.isNaN(n) ? v.severka.uhel : n; }), { cislo: true, tip: 'Prázdné = severka neurčena' })}
       ${zaskrt('Zobrazit legendu značek', v.legendaZobrazit, zmen((c) => { v.legendaZobrazit = c; }))}
+      ${v.meritkoZdroj ? `<p class="${v.meritkoZdroj.overeno ? '' : 'varuj'}">${ikona(v.meritkoZdroj.overeno ? 'ok' : 'pozor', 14)} Měřítko importu: ${esc(v.meritkoZdroj.popis)} – ${v.meritkoZdroj.overeno ? 'ověřeno' : 'NEOVĚŘENO'}.</p>${v.meritkoZdroj.overeno ? '' : tlacitko('Kalibrovat podle známé délky', () => ed.nastavNastroj('kalibrace'))}` : ''}
       <h4>Razítko</h4>
       ${['nazev:Název objektu', 'zpracoval:Zpracoval', 'schvalil:Schválil'].map((x) => { const [k, n] = x.split(':'); return pole(n, v.razitko[k], zmen((t) => { v.razitko[k] = t; })); }).join('')}
       <label class="f"><span>Datum</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>
@@ -67,6 +68,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
         : `<p class="napoveda">Žádný podklad. Tlačítkem Podklad… v liště vložíte obrázek (PNG/JPG), pak ho zkalibrujete podle známé délky.</p>`}`;
   } else if (vyber.length > 1) {
     html = `<h3>Vybráno ${vyber.length} prvků</h3>${vrstvaVyber(ed, vyber, vyberHtml, zmen)}
+      ${vyber.every((p) => p.druh === 'cara') ? tlacitko('Převést čáry na stěny', () => { vyber.forEach((p) => ed.prevedDruh(p, 'stena')); ed.commit(); }) : ''}${vyber.every((p) => p.druh === 'stena') ? tlacitko('Převést stěny na čáry', () => { vyber.forEach((p) => ed.prevedDruh(p, 'cara')); ed.commit(); }) : ''}
       ${tlacitko('Duplikovat', () => ed.prvkyKopie())}${tlacitko('Smazat', () => ed.smazVyber(), 'nebezp')}<p class="napoveda">Táhněte úchyty pro změnu velikosti a otočení celého výběru.</p>`;
   } else {
     const p = vyber[0], v = ed.v, c = (fn) => zmen(fn);
@@ -92,7 +94,9 @@ export function vykresliPanelVykresu(druh, host, ed) {
         ${tlacitko(st ? 'Přepojit na nejbližší stěnu' : 'Připojit k nejbližší stěně', () => { if (!P.pripojDvere(p, v.prvky, [p.x, p.y])) { oznam('Ve výkresu není žádná stěna.'); return; } ed.commit(); })}`;
     }
     const maBarvu = 'barva' in p && p.druh !== 'plocha' && p.druh !== 'obdelnik' && p.druh !== 'elipsa' ? barvy('Barva', p.barva, c((x) => { p.barva = x; })) : '';
-    html = `<h3>${NAZVY[p.druh]}</h3>${typ}${maBarvu}${p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa' ? barvy('Barva obrysu', p.barva, c((x) => { p.barva = x; })) : ''}${vrstvaVyber(ed, vyber, vyberHtml, zmen)}
+    const kontrola = p.kKontrole ? `<p class="varuj">${ikona('pozor', 14)} Převod z importu je nejistý – zkontrolujte polohu a vlastnosti.</p>${tlacitko('Označit jako zkontrolované', () => { delete p.kKontrole; ed.commit(); })}` : '';
+    const prevod = p.druh === 'cara' ? tlacitko('Převést na stěnu', () => { ed.prevedDruh(p, 'stena'); ed.commit(); }) : p.druh === 'stena' ? tlacitko('Převést na čáru', () => { ed.prevedDruh(p, 'cara'); ed.commit(); }) : '';
+    html = `<h3>${NAZVY[p.druh]}</h3>${kontrola}${typ}${prevod}${maBarvu}${p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa' ? barvy('Barva obrysu', p.barva, c((x) => { p.barva = x; })) : ''}${vrstvaVyber(ed, vyber, vyberHtml, zmen)}
       ${tlacitko('Duplikovat', () => ed.prvkyKopie())}${tlacitko('Nahoru', () => zmenPoradi(ed, p, 1))}${tlacitko('Dolů', () => zmenPoradi(ed, p, -1))}${tlacitko('Smazat', () => ed.smazVyber(), 'nebezp')}`;
   }
   host.innerHTML = html;

@@ -220,8 +220,9 @@ export function vycentrujOkno(vykres) {
   vykres.okno = { x: (b.x0 + b.x1) / 2 - (ram.w * pomer) / 2000, y: (b.y0 + b.y1) / 2 - (ram.h * pomer) / 2000 };
 }
 
-// Měřítko je ověřené, když výkres nemá podklad (kreslí se přímo v metrech) nebo je podklad zkalibrován známou délkou.
-export const meritkoOvereno = (vykres) => (vykres.pozadi ? !!vykres.pozadi.kalibrace : true);
+// Měřítko je ověřené, když výkres nemá podklad (kreslí se přímo v metrech) nebo je podklad zkalibrován známou délkou;
+// po vektorovém importu musí být ověřené i měřítko importu (jednotky z hlavičky DXF, nebo kalibrace).
+export const meritkoOvereno = (vykres) => (vykres.pozadi ? !!vykres.pozadi.kalibrace : true) && (vykres.meritkoZdroj ? !!vykres.meritkoZdroj.overeno : true);
 
 export function kalibruj(pozadi, bodA, bodB, delkaM) {
   // bodA, bodB jsou v pixelech podkladu; délka v metrech musí být kladná.

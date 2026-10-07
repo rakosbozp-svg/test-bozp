@@ -74,6 +74,7 @@ function kontrolaKarty(k, p, chyba, upoz) {
 function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog) {
   const v = list.vykres;
   if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
+  if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: měřítko importovaného výkresu není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
   if (v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
   if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
   if (!v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);

@@ -43,7 +43,16 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
   Měřítko podkladu je do kalibrace označené jako NEOVĚŘENÉ (v editoru, v kontrole úplnosti i na razítku exportu).
   Úložiště: IndexedDB (kvůli podkladům), záložně localStorage. Podklady jsou součástí zálohy projektu.
 - Testy: `npm test` (jednotkové: model, prvky, render), `npm run test:e2e` (Chromium + Playwright: formulář i editor).
-- Zatím není: import DXF/SVG/PDF, export PDF, převod CAD textů, import kót, zobrazení více podlaží najednou.
+- **Importy (krok 6)**: DXF, SVG, PDF, PNG, JPG (z tlačítka Import… v editoru i z přehledu projektů).
+  - DXF (ASCII): čáry, polylinie včetně oblouků, kružnice, oblouky, elipsy, spliny (zjednodušeně), SOLID, texty a MTEXT (formátovací kódy, zalomení, Unicode `\U+`,
+    `%%c/%%d/%%p`, XML entity, kódová stránka ANSI_1250 aj.), bloky (vnořené, pole), kóty (z anonymních bloků), vrstvy (vypnuté a zmrazené se importují skryté),
+    barvy ACI. Jednotky se berou z `$INSUNITS`; když chybí, uživatel je musí zvolit (předvybraný je odhad z kót a rozměrů) a měřítko zůstane NEOVĚŘENÉ do kalibrace.
+    Vrstvy se jménem stěn se importují jako (tenké) stěny, bloky se jménem dveří jako dveře označené ke kontrole. HATCH, IMAGE a 3D se přeskočí a hlásí se.
+  - SVG: tvary, cesty (křivky, oblouky), transformace, texty. Měřítko tisku zadá uživatel, měřítko zůstane NEOVĚŘENÉ do kalibrace.
+  - PDF (pdf.js, `vendor/pdfjs`, Apache-2.0): buď vektorově (čáry, plochy s barvou, texty; navazující úsečky se sloučí), nebo jako rastrový podklad. Situace Litice (20 000 úseček) se převede za ~1 s.
+  - DWG se v prohlížeči nepřevádí (bezpečný převod není možný) – aplikace to řekne a poradí uložit DXF/PDF.
+  - Kalibrace neověřeného vektorového importu: nástroj Kalibrace, dva body a známá délka; přeškáluje celý obsah listu.
+- Zatím není: export PDF a Word, zobrazení více podlaží najednou, převod DXF HATCH (výplní).
 
 ## Plán práce
 1. datový model karty podle vzoru
@@ -51,7 +60,7 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 3. vyplňování karty s kontrolou úplnosti
 4. editor situace a půdorysu
 5. export PDF a Word (hotovo: SVG a PNG listu výkresu)
-6. import DXF/PDF/SVG
+6. import DXF/PDF/SVG (hotovo)
 
 Odborné údaje je nutné před vydáním DZP ověřit podle aktuální legislativy a s HZS.
 
