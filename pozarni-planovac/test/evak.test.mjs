@@ -50,3 +50,18 @@ test('PDF evakuačního plánu vznikne', async () => {
   const b = await exportujPdf(p, { listy: [p.listy[0].id], katalog: new Map() });
   assert.equal(Buffer.from(b.subarray(0, 5)).toString(), '%PDF-');
 });
+
+test('evakuační značky: náhrada z DZP se hlásí, nahraná značka chybu odstraní, DZP značka je chyba', async () => {
+  const { EVAK_SLOTY, stavSlotu } = await import('../js/evakznacky.js');
+  const p = M.novyProjekt({ typ: 'evakuacni_plan' });
+  assert.ok(p.evakZnacky && typeof p.evakZnacky === 'object');
+  const hasici = EVAK_SLOTY.find((s) => s.nazev.startsWith('Přenosný'));
+  assert.equal(stavSlotu(p, hasici), 'chybi');
+  const v = p.listy[1].vykres;
+  v.prvky.push({ id: 'z1', druh: 'znacka', x: 1, y: 1, znackaId: hasici.id, velikost: 8, vrstva: 'znacky' });
+  assert.ok(kody(p).includes('EVAK_ZNACKA_CHYBI'));
+  p.evakZnacky[hasici.id] = { png: 'data:image/png;base64,AAAA', soubor: 'hp.png' };
+  assert.ok(!kody(p).includes('EVAK_ZNACKA_CHYBI'));
+  v.prvky.push({ id: 'z2', druh: 'znacka', x: 2, y: 2, znackaId: 'DZP-001', velikost: 8, vrstva: 'znacky' });
+  assert.ok(kody(p).includes('EVAK_ZNACKA_DZP'));
+});

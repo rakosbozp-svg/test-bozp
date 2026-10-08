@@ -6,6 +6,7 @@ import { nahledKarty } from './nahled.js';
 import { vykresliEvak, pripojEvak, nahledEvak } from './evakuace.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
 import { METODIKA_EVAK } from './evakuace.js';
+import { katalogProjektu } from './evakznacky.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
@@ -142,7 +143,7 @@ function dashboard() {
 
 // ---------- export PDF ----------
 async function exportPdfDialog() {
-  const p = S.p, katMapa = new Map(katalog.map((z) => [z.id, z]));
+  const p = S.p, katMapa = new Map(katalogProjektu(p, katalog).map((z) => [z.id, z]));
   const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
   const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text' };
   const dlg = await formular({
@@ -229,7 +230,7 @@ function obsah(list) {
     $('#t-text').oninput = (e) => { list.text = e.target.value; uloz(); };
   } else {
     S.ed = vytvorEditor({
-      host, projekt: S.p, list, katalog,
+      host, projekt: S.p, list, katalog: katalogProjektu(S.p, katalog),
       naZmenu: () => { uloz(); if (S.panel === 'uplnost') panel(); },
       naVyber: () => { if (S.panel === 'vlastnosti' || S.panel === 'vrstvy') panel(); },
     });

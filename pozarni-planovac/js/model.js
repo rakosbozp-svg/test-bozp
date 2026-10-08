@@ -90,6 +90,7 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     vytvoreno: t, zmeneno: t,
     zdrojMetodiky: 'Vzor OK HZS Středočeského kraje; ověřit podle aktuální legislativy a s příslušným HZS',
     listy: [], revize: [], kontakty: [],
+    evakZnacky: {},              // evakuační plán: nahrané značky {slotId: {png, soubor}} (viz js/evakznacky.js)
     prilohy: {},                 // importované podklady {id: {nazev, mime, data(dataURL)}} – součást zálohy projektu
     nastaveni: { velikostZnacky: 8, velikostTextu: 3 },   // výchozí velikosti nových prvků (mm na papíře, 1–500)
     poznamkyKOvereni: [],
@@ -178,7 +179,7 @@ export function migruj(data) {
   if (typeof data.schemaVersion !== 'number') throw new Error('Chybí schemaVersion – není to projekt Požárního plánovače');
   if (data.schemaVersion > SCHEMA_VERSION) throw new Error(`Projekt je z novější verze (${data.schemaVersion}), tato verze umí ${SCHEMA_VERSION}`);
   const p = data;
-  p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
+  p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
     if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});

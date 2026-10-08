@@ -3,6 +3,7 @@ import * as P from './prvky.js';
 import * as G from './geom.js';
 import { renderListu, esc } from './render.js';
 import { najdiZnacku, vyberZnacku } from '../znacky.js';
+import { vyberEvakZnacku, katalogEvak } from '../evakznacky.js';
 import { naCislo } from '../formular.js';
 import { zeptejSe, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
@@ -36,6 +37,8 @@ const bezCarky = (n, d = 2) => String(Math.round(n * 10 ** d) / 10 ** d).replace
 export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, naStav }) {
   const v = list.vykres;
   const zn = new Map(katalog.map((z) => [z.id, z]));
+  const evak = projekt.typ === 'evakuacni_plan';
+  const vyberZ = async () => { if (!evak) return vyberZnacku(); const id = await vyberEvakZnacku(projekt, () => { for (const z of katalogEvak(projekt)) zn.set(z.id, z); naZmenu(); }); return id; };
   const S = {
     nastroj: 'vyber', vyber: new Set(), vb: null, snapMriz: false, snapBody: true, ortho: false, krok: 1,
     kresleni: null, tah: null, ukazatele: new Map(), mezernik: false, schranka: [], vkladani: 0,
@@ -55,7 +58,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
       <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
       <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].map(tl).join('')}</div>
-      <div class="nast-skupina">${['text', ...(projekt.typ === 'evakuacni_plan' ? [] : ['znacka']), 'dvere', 'kalibrace'].map(tl).join('')}</div>
+      <div class="nast-skupina">${['text', 'znacka', 'dvere', 'kalibrace'].map(tl).join('')}</div>
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
       <div class="nast-skupina">
@@ -425,7 +428,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     v.prvky.push(...k); S.vyber = new Set(k.map((p) => p.id)); commit();
   }
   async function nastavNastroj(n) {
-    if (n === 'znacka') { const id = await vyberZnacku(); if (!id) return; S.zvolenaZnacka = id; }
+    if (n === 'znacka') { const id = await vyberZ(); if (!id) return; S.zvolenaZnacka = id; }
     S.nastroj = n; S.kresleni = null; S.tah = null; S.kalibrace = null; S.snapIndikator = null; vykresli();
   }
 
@@ -490,7 +493,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     prvkyKopie: () => { S.schranka = vybrane().map((p) => structuredClone(p)); S.vkladani = 0; vloz(); },
     nastavAktVrstvu(id) { S.aktVrstva = id; },
     stavNastroj: () => S.nastroj,
-    zmenaZnacky: async (p) => { const id = await vyberZnacku(); if (id) { p.znackaId = id; commit(); } },
+    zmenaZnacky: async (p) => { const id = await vyberZ(); if (id) { p.znackaId = id; commit(); } },
     zrusit() { document.removeEventListener('keydown', klavesa); document.removeEventListener('keyup', klavesaNahoru); ro.disconnect(); },
   };
 }

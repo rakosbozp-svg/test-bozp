@@ -2,6 +2,7 @@
 // (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
 
 import { kontrolaEvak } from './evakuace.js';
+import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
 
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const vyplneno = (v) => !prazdne(v);
@@ -14,7 +15,7 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
   const chyba = (kod, cesta, text) => add(HLADINY.CHYBA, kod, cesta, text);
   const upoz = (kod, cesta, text) => add(HLADINY.UPOZORNENI, kod, cesta, text);
 
-  const ids = new Set(katalogZnacek ? katalogZnacek.map((z) => z.id) : []);
+  const ids = new Set(projekt.typ === 'evakuacni_plan' ? EVAK_SLOTY.map((z) => z.id) : (katalogZnacek ? katalogZnacek.map((z) => z.id) : []));
 
   if (!projekt.listy.length) chyba('PROJ_BEZ_LISTU', 'listy', 'Projekt nemá žádný list.');
   if (!projekt.revize.length) upoz('REVIZE_CHYBI', 'revize', 'Chybí záznam o revizi dokumentace.');
@@ -26,7 +27,8 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
     const p = `listy[${list.id}]`;
     if (list.typ === 'karta') kontrolaKarty(list.karta, p, chyba, upoz);
     if (list.typ === 'evak_text') kontrolaEvak(list, projekt, chyba, upoz);
-    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, katalogZnacek !== null, evak);
+    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak);
+    if (evak && list.vykres) kontrolaEvakZnacek(list, projekt, p, chyba, upoz);
   }
   return n;
 }
@@ -95,3 +97,15 @@ export const souhrn = (nalezy) => ({
   chyby: nalezy.filter((x) => x.hladina === HLADINY.CHYBA).length,
   upozorneni: nalezy.filter((x) => x.hladina === HLADINY.UPOZORNENI).length,
 });
+
+// Evakuační plán: značky musí být v souladu s ISO 7010 (ČSN ISO 23601, čl. 5 k). Náhradní značky z DZP a chybějící značky se hlásí.
+function kontrolaEvakZnacek(list, projekt, p, chyba, upoz) {
+  const pouzite = new Set(list.vykres.prvky.filter((x) => jeEvakZnacka(x.znackaId)).map((x) => x.znackaId));
+  for (const id of pouzite) {
+    const slot = EVAK_SLOTY.find((s) => s.id === id); if (!slot) continue;
+    const st = stavSlotu(projekt, slot);
+    if (st === 'nahrada') upoz('EVAK_ZNACKA_NAHRADA', `${p}.vykres.prvky`, `List „${list.nazev}“: značka „${slot.nazev}“ je náhrada z ČAHD (${slot.dzp}), ne ISO 7010 – nahrajte oficiální značku.`);
+    if (st === 'chybi') chyba('EVAK_ZNACKA_CHYBI', `${p}.vykres.prvky`, `List „${list.nazev}“: značka „${slot.nazev}“ nemá obrázek – nahrajte ji.`);
+  }
+  if (list.vykres.prvky.some((x) => x.znackaId && !jeEvakZnacka(x.znackaId))) chyba('EVAK_ZNACKA_DZP', `${p}.vykres.prvky`, `List „${list.nazev}“: obsahuje značku DZP – do evakuačního plánu nepatří (použijte značky evakuačního plánu).`);
+}

@@ -457,6 +457,16 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   assert.ok(txt.includes('§ 33/2/b') && txt.includes('§ 33/2/c') && !txt.includes('Operativní karta'));
   await p.click('[data-z=nahled]'); assert.ok((await p.locator('#nahled-a4').textContent()).includes('A. Novák'));
   await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('.ed-scena');
-  assert.equal(await p.locator('[data-nastroj=znacka]').count(), 0);
+  // značky: vlastní knihovna evakuačního plánu (ne katalog DZP); nahrání souboru a vložení
+  await p.click('[data-nastroj=znacka]'); await p.waitForSelector('.znacky-dlg[open]');
+  assert.equal(await p.locator('.znacky-dlg .zd-bunka').count(), 13);
+  assert.ok(!(await p.locator('.znacky-dlg').textContent()).includes('Nadzemní požární hydrant'));
+  const png = join(tmp, 'hp.png'); writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  await p.setInputFiles('[data-slot=EVAK-003] input[type=file]', png);
+  await p.waitForSelector('[data-slot=EVAK-003] [data-odebrat]');
+  await p.click('[data-slot=EVAK-003] [data-vyber]'); await p.waitForSelector('.znacky-dlg', { state: 'detached' });
+  const bb = await p.locator('#svet').boundingBox(); await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  await p.waitForSelector('#svet [data-druh=znacka]');
+  await p.click('[data-p=uplnost]'); assert.ok(!(await p.locator('#panel-obsah').textContent()).includes('nemá obrázek'));
   assert.deepEqual(chyby, []); await ctx.close();
 });
