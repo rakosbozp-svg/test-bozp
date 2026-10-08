@@ -4,9 +4,10 @@
 // označená „ISO 7010 neověřeno“ – kontrola úplnosti na ni upozorní. Nic se nevymýšlí: chybějící značka zůstane prázdná.
 import { najdiZnacku } from './znacky.js';
 import { esc } from './formular.js';
+import { EVAK_DODANE } from './evakvychozi.js';
 
 export const EVAK_SLOTY = [
-  { id: 'EVAK-001', nazev: 'Nouzový (únikový) východ', dzp: null },
+  { id: 'EVAK-001', nazev: 'Nouzový východ – směr vlevo', dzp: null },
   { id: 'EVAK-002', nazev: 'Shromaždiště (místo soustředění evakuovaných)', dzp: 'DZP-042' },
   { id: 'EVAK-003', nazev: 'Přenosný hasicí přístroj', dzp: null },
   { id: 'EVAK-004', nazev: 'Požární hadice / nástěnný hydrant', dzp: 'DZP-007' },
@@ -19,12 +20,16 @@ export const EVAK_SLOTY = [
   { id: 'EVAK-011', nazev: 'Elektrické zařízení (rozvaděč)', dzp: null },
   { id: 'EVAK-012', nazev: 'Místo řízení evakuace', dzp: 'DZP-045' },
   { id: 'EVAK-013', nazev: 'Ústředna EPS', dzp: 'DZP-054' },
+  { id: 'EVAK-014', nazev: 'Nouzový východ – směr vpravo', dzp: null },
+  { id: 'EVAK-015', nazev: 'Směrová šipka (otáčí se na výkresu)', dzp: null },
+  { id: 'EVAK-016', nazev: 'Směrová šipka šikmá', dzp: null },
 ];
 export const jeEvakZnacka = (id) => typeof id === 'string' && id.startsWith('EVAK-');
 
-// Stav jednoho slotu v projektu: 'nahrano' | 'nahrada' (z DZP, ISO 7010 neověřeno) | 'chybi'.
+// Stav jednoho slotu v projektu: 'nahrano' (soubor nahraný v projektu) | 'dodano' (soubor dodaný uživatelem, součást aplikace) | 'nahrada' (z DZP, ISO 7010 neověřeno) | 'chybi'.
 export function stavSlotu(projekt, slot) {
   if (projekt?.evakZnacky?.[slot.id]?.png) return 'nahrano';
+  if (EVAK_DODANE[slot.id]) return 'dodano';
   if (slot.dzp && najdiZnacku(slot.dzp)) return 'nahrada';
   return 'chybi';
 }
@@ -35,6 +40,7 @@ export function katalogEvak(projekt) {
   for (const s of EVAK_SLOTY) {
     const st = stavSlotu(projekt, s);
     if (st === 'nahrano') o.push({ id: s.id, nazev: s.nazev, png: projekt.evakZnacky[s.id].png, zdroj: `Nahráno uživatelem (${projekt.evakZnacky[s.id].soubor || 'soubor'})`, overeno: false, stav: st });
+    else if (st === 'dodano') o.push({ id: s.id, nazev: s.nazev, png: EVAK_DODANE[s.id], zdroj: 'Dodáno uživatelem (soulad s ISO 7010 ověřuje uživatel)', overeno: false, stav: st });
     else if (st === 'nahrada') { const z = najdiZnacku(s.dzp); o.push({ id: s.id, nazev: s.nazev, png: z.png, zdroj: `Náhrada z ČAHD (${s.dzp}) – ISO 7010 neověřeno`, overeno: false, stav: st }); }
   }
   return o;
@@ -58,7 +64,7 @@ export function vyberEvakZnacku(projekt, naZmena) {
   return new Promise((resolve) => {
     projekt.evakZnacky ||= {};
     const dlg = document.createElement('dialog'); dlg.className = 'znacky-dlg';
-    const popis = { nahrano: 'Nahráno uživatelem', nahrada: 'Náhrada z ČAHD (DZP) – ISO 7010 neověřeno', chybi: 'Chybí – nahrajte oficiální značku' };
+    const popis = { nahrano: 'Nahráno v projektu', dodano: 'Dodáno uživatelem (lze přepsat vlastním souborem)', nahrada: 'Náhrada z ČAHD (DZP) – ISO 7010 neověřeno', chybi: 'Chybí – nahrajte oficiální značku' };
     const kresli = () => {
       dlg.innerHTML = `<form method="dialog" class="zd-hlava"><b>Značky evakuačního plánu</b><button value="zrusit" class="btn mal">Zavřít</button></form>
         <p class="napoveda">Norma ČSN ISO 23601 vyžaduje stejné značky jako v objektu (ISO 7010). Nahrajte oficiální soubory (PNG, JPG nebo SVG); značky ČAHD z DZP jsou jen náhradní.</p>

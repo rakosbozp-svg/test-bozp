@@ -459,7 +459,7 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('.ed-scena');
   // značky: vlastní knihovna evakuačního plánu (ne katalog DZP); nahrání souboru a vložení
   await p.click('[data-nastroj=znacka]'); await p.waitForSelector('.znacky-dlg[open]');
-  assert.equal(await p.locator('.znacky-dlg .zd-bunka').count(), 13);
+  assert.equal(await p.locator('.znacky-dlg .zd-bunka').count(), 16);
   assert.ok(!(await p.locator('.znacky-dlg').textContent()).includes('Nadzemní požární hydrant'));
   const png = join(tmp, 'hp.png'); writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
   await p.setInputFiles('[data-slot=EVAK-003] input[type=file]', png);
