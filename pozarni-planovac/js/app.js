@@ -20,7 +20,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const app = $('#app'), topAkce = $('#top-akce'), hlaska = $('#hlaska');
 let katalog = [];
 const S = { p: null, listId: null, zalozka: 'formular', panel: 'uplnost', stav: '', ed: null };
-const VYKRES = ['situace', 'pudorys', 'schema'];
+const VYKRES = ['situace', 'pudorys', 'schema', 'evak_plan'];
 
 function ohlas(text, trvale = false) {
   hlaska.hidden = !text; hlaska.textContent = text || '';
@@ -145,7 +145,7 @@ function dashboard() {
 async function exportPdfDialog() {
   const p = S.p, katMapa = new Map(katalogProjektu(p, katalog).map((z) => [z.id, z]));
   const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
-  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text' };
+  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text', evak_plan: 'evakuační plán – podlaží' };
   const dlg = await formular({
     titul: 'Export do PDF',
     html: `<p class="dlg__text">Vyberte listy, které se zahrnou do jednoho PDF (v pořadí, v jakém jsou v projektu). Karty a texty se vykreslí s vloženým písmem, výkresy jako vektory.</p>

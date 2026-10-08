@@ -16,7 +16,7 @@ const NASTROJE = [
   ['stena', 'Stěna', 'Kreslení stěn: klik = bod, dvojklik / Enter = konec'], ['cara', 'Čára', 'Čára nebo lomená čára (hranice požárního úseku, plot…)'],
   ['trasa', 'Úniková cesta', 'Úniková cesta – délka se počítá v metrech'], ['plocha', 'Nástupní plocha a komunikace pro techniku', 'Uzavřená plocha: nástupní plocha a komunikace pro techniku'],
   ['obdelnik', 'Obdélník', 'Obdélník tažením'], ['elipsa', 'Elipsa', 'Elipsa tažením'], ['volna', 'Volně', 'Volná kresba'],
-  ['text', 'Text', 'Textový popisek'], ['znacka', 'Značka', 'Vložení značky z katalogu'], ['dvere', 'Dveře', 'Dveře – klik na stěnu je připojí'], ['kalibrace', 'Kalibrace', 'Kalibrace měřítka podkladu podle známé délky'],
+  ['text', 'Text', 'Textový popisek'], ['znacka', 'Značka', 'Vložení značky z katalogu'], ['dvere', 'Dveře', 'Dveře – klik na stěnu je připojí'], ['jstezde', 'Jste zde', 'Bod „Jste zde“ na plánu (klik = umístění, další klik = přesun; štítek upravíte ve vlastnostech listu)'], ['kalibrace', 'Kalibrace', 'Kalibrace měřítka podkladu podle známé délky'],
 ];
 const NAPOVEDA = [
   'K BODŮM – kurzor se „chytí“ na koncové body a rohy už nakreslených prvků (vyznačí se oranžovým kroužkem). Čáry a stěny tak na sebe přesně navazují. Doporučeno nechat zapnuté.',
@@ -29,7 +29,7 @@ const NAPOVEDA = [
   'Ctrl+Z zpět · Ctrl+Y znovu · Ctrl+C / V kopírovat a vložit · Ctrl+D duplikovat · Ctrl+A vybrat vše · šipky posun (Shift = větší krok)',
   'Kolečko myši přibližuje k ukazateli, střední tlačítko nebo mezerník posouvá plátno, na dotyku dva prsty.',
 ].join('\n');
-const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', dvere: 'dvere', kalibrace: 'kalibrace' };
+const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', jstezde: 'stit', dvere: 'dvere', kalibrace: 'kalibrace' };
 const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
 const KROKY = [0.1, 0.5, 1, 5, 10];
 const bezCarky = (n, d = 2) => String(Math.round(n * 10 ** d) / 10 ** d).replace('.', ',');
@@ -58,7 +58,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
       <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
       <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].map(tl).join('')}</div>
-      <div class="nast-skupina">${['text', 'znacka', 'dvere', 'kalibrace'].map(tl).join('')}</div>
+      <div class="nast-skupina">${['text', 'znacka', ...(v.evakPlan ? ['jstezde'] : []), 'dvere', 'kalibrace'].map(tl).join('')}</div>
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
       <div class="nast-skupina">
@@ -141,7 +141,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
 
   // ---------- vykreslení ----------
   const symbolHref = (id) => zn.get(id)?.png || '';
-  const mkO = (extra = {}) => ({ objektNazev: projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || '', nazevListu: list.nazev, znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
+  const mkO = (extra = {}) => ({ objektNazev: projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
   let planovano = false;
   function vykresli() { if (planovano) return; planovano = true; requestAnimationFrame(() => { planovano = false; vykresliTed(); }); }
   function vykresliTed() {
@@ -275,6 +275,11 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       zeptejSe('Text popisku', '', { popisek: 'Text popisku (víc řádků upravíte ve vlastnostech)' }).then((txt) => { if (txt) pridej(P.novyPrvek('text', { x: snap(w0)[0], y: snap(w0)[1], text: txt, vyska: velikostTextu(), vrstva: vrstvaPro('text') })); }); return;
     }
     if (t === 'znacka') { if (!S.zvolenaZnacka) return; const b = snap(w0); pridej(P.novyPrvek('znacka', { x: b[0], y: b[1], znackaId: S.zvolenaZnacka, velikost: velikost(), vrstva: vrstvaPro('znacka') })); return; }
+    if (t === 'jstezde') {
+      if (!v.evakPlan) return;
+      const b = snap(w0), o = v.evakPlan.jsteZde;
+      v.evakPlan.jsteZde = { x: b[0], y: b[1], dx: o?.dx ?? 22, dy: o?.dy ?? -16, text: o?.text || 'Jste zde' }; commit(); return;
+    }
     if (t === 'dvere') {
       const d = P.novyPrvek('dvere', { vrstva: vrstvaPro('dvere'), x: w0[0], y: w0[1] }); v.prvky.push(d);
       P.pripojDvere(d, v.prvky, w0, tolM(14)); S.vyber = new Set([d.id]); commit(); return;

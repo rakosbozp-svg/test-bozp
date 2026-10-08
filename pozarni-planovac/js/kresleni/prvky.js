@@ -2,6 +2,7 @@
 // (1–500, krok 0,1); jejich skutečná velikost = mm × měřítko / 1000. Čisté funkce, bez DOM, testovatelné v Node.
 import { dist, rad, deg, delkaLomene, nejblizsiNaLomene, bodNaLomene, bodVPolygonu, otoc, bbox, spojBbox } from './geom.js';
 import { normalizujVelikost } from '../model.js';
+import { rozlozeniEvak } from './evakplan.js';
 
 export const DRUHY = ['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna', 'text', 'znacka', 'dvere'];
 export const TYPY_DVERI = ['jednokridle', 'dvoukridle', 'vrata'];
@@ -196,6 +197,7 @@ export function synchronizujLegendu(vykres) { vykres.legenda = pouziteZnacky(vyk
 
 // Rozložení listu A4 (mm): rám výkresu a razítko dole.
 export function rozlozeniListu(vykres) {
+  if (vykres.evakPlan) return rozlozeniEvak(vykres);   // list evakuačního plánu: A3 a větší, vlastní rozvržení (ČSN ISO 23601)
   const na = vykres.orientace === 'na_vysku';
   const W = na ? 210 : 297, H = na ? 297 : 210, M = 10, R = 24;
   return { W, H, ram: { x: M, y: M, w: W - 2 * M, h: H - 2 * M - R }, razitko: { x: M, y: H - M - R, w: W - 2 * M, h: R } };
@@ -248,10 +250,10 @@ export class Historie {
   get lzeVpred() { return this.i < this.s.length - 1; }
 }
 
-export const snimek = (v) => JSON.stringify({ prvky: v.prvky, vrstvy: v.vrstvy, okno: v.okno, pomer: v.meritko.pomer, pozadi: v.pozadi });
+export const snimek = (v) => JSON.stringify({ prvky: v.prvky, vrstvy: v.vrstvy, okno: v.okno, pomer: v.meritko.pomer, pozadi: v.pozadi, evakPlan: v.evakPlan });
 export function obnovZeSnimku(v, text) {
   const s = JSON.parse(text);
-  v.prvky = s.prvky; v.vrstvy = s.vrstvy; v.okno = s.okno; v.meritko.pomer = s.pomer; v.pozadi = s.pozadi;
+  v.prvky = s.prvky; v.vrstvy = s.vrstvy; v.okno = s.okno; v.meritko.pomer = s.pomer; v.pozadi = s.pozadi; if (s.evakPlan) v.evakPlan = s.evakPlan;
 }
 
 export { dist, delkaLomene };

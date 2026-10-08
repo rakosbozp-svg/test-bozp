@@ -78,8 +78,8 @@ export function kontrolaEvak(list, projekt, chyba, upoz) {
   for (const s of e.shromazdiste) if (prazdne(s.popis)) chyba('EVAK_C_SHROMAZDISTE_POPIS', `${p}.shromazdiste[${s.id}]`, '§ 33/2/c: místo soustředění bez popisu.');
 
   // § 33/2/f – grafické znázornění směru únikových cest v jednotlivých podlažích
-  const grafika = projekt.listy.filter((l) => l.typ === 'pudorys');
-  if (!grafika.length) chyba('EVAK_F_GRAFIKA', 'listy', '§ 33/2/f: chybí grafické znázornění směru únikových cest (přidejte list Půdorys).');
+  const grafika = projekt.listy.filter((l) => l.typ === 'evak_plan' || l.typ === 'pudorys');
+  if (!grafika.length) chyba('EVAK_F_GRAFIKA', 'listy', '§ 33/2/f: chybí grafické znázornění směru únikových cest (přidejte list Evakuační plán – podlaží).');
   for (const l of grafika) if (!l.vykres.prvky.some((x) => x.druh === 'trasa')) chyba('EVAK_F_TRASA', `listy[${l.id}].vykres.prvky`, `§ 33/2/f: list „${l.nazev}“ neobsahuje žádnou únikovou cestu.`);
 
   if (prazdne(e.overeni.datum)) upoz('EVAK_OVERENI', `${p}.overeni.datum`, '§ 33/4: není uvedeno ověření úplnosti a správnosti plánu cvičným požárním poplachem.');
@@ -87,7 +87,7 @@ export function kontrolaEvak(list, projekt, chyba, upoz) {
   if (prazdne(e.zpracoval.cisloOsvedceni)) upoz('OSVEDCENI', `${p}.zpracoval.cisloOsvedceni`, 'Chybí číslo osvědčení/oprávnění zpracovatele.');
   if (prazdne(e.schvalil.jmeno)) upoz('EVAK_SCHVALIL', `${p}.schvalil.jmeno`, 'Chybí osoba, která plán schválila.');
   upoz('EVAK_ROZSAH_POVINNOSTI', 'projekt', 'Ověřte, zda je plán pro objekt povinný (§ 33 odst. 3: složité podmínky pro zásah, vysoké požární nebezpečí, nebo to stanoví dokumentace PO).');
-  upoz('EVAK_NORMA', 'projekt', 'Grafický vzhled podle ČSN ISO 23601 (nezávazná) aplikace zatím nekontroluje – text normy není k dispozici. Plán vyvěšte na viditelném a trvale přístupném místě v každém podlaží (§ 33/5).');
+  upoz('EVAK_NORMA', 'projekt', 'Grafické listy se kontrolují podle ČSN ISO 23601 (nezávazná) jen v rozsahu uvedeném v kontrole; norma není zde ověřena v plném znění. Plán vyvěšte na viditelném a trvale přístupném místě v každém podlaží (§ 33/5).');
 }
 
 // ---------- formulář ----------
@@ -116,7 +116,7 @@ export function vykresliEvak(list, host) {
     sekce(ce),
     seznam(list, 'shromazdiste', 'c) Místa soustředění evakuovaných', '§ 33 odst. 2 písm. c)', (s) => inp('shromazdiste', s, 'popis', 'Místo soustředění (popis a umístění)'), '+ Přidat místo', 'Zatím žádné místo.'),
     sekce(po), sekce(ma),
-    `<section class="sek sek-seda" id="sek-grafika"><h3>f) Grafické znázornění směru únikových cest</h3><p class="napoveda">§ 33 odst. 2 písm. f) – kreslí se na listech Půdorys (jeden list na podlaží; nástroj Úniková cesta). Použijte list typu Půdorys v levém panelu.</p></section>`,
+    `<section class="sek sek-seda" id="sek-grafika"><h3>f) Grafické znázornění směru únikových cest</h3><p class="napoveda">§ 33 odst. 2 písm. f) – kreslí se na listech „Evakuační plán – podlaží“ (jeden list na podlaží; nástroj Úniková cesta). Přidejte je v levém panelu.</p></section>`,
     sekce(ov), sekce(pod)].join('')}`;
 }
 
@@ -150,7 +150,7 @@ export function evakJakoText(e, projekt) {
   if (!prazdne(e.zvirata)) o.push(`Zvířata: ${e.zvirata}`);
   o.push('', 'd) PRVNÍ POMOC', h(e.prvniPomoc), '');
   o.push('e) EVAKUOVANÝ MATERIÁL', `Místo soustředění: ${h(e.material)}`, `Střežení: ${h(e.materialStrezeni)}`, '');
-  const grafika = (projekt?.listy || []).filter((l) => l.typ === 'pudorys');
+  const grafika = (projekt?.listy || []).filter((l) => l.typ === 'evak_plan' || l.typ === 'pudorys');
   o.push('f) GRAFICKÉ ZNÁZORNĚNÍ SMĚRU ÚNIKOVÝCH CEST', grafika.length ? `Viz grafické listy: ${grafika.map((l) => l.nazev).join('; ')}.` : '…', '');
   o.push('OVĚŘENÍ A ULOŽENÍ', `Ověřeno cvičným požárním poplachem dne: ${h(e.overeni.datum)}${e.overeni.poznamka ? ` (${e.overeni.poznamka})` : ''}`, `Plán je uložen: ${h(e.ulozeni)}`, '');
   o.push(`Zpracoval: ${h(e.zpracoval.jmeno)}, č. osvědčení: ${h(e.zpracoval.cisloOsvedceni)}, datum: ${h(e.zpracoval.datum)}`, `Schválil: ${h(e.schvalil.jmeno)}${e.schvalil.funkce ? `, ${e.schvalil.funkce}` : ''}, datum: ${h(e.schvalil.datum)}`);

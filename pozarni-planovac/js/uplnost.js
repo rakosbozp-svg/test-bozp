@@ -3,6 +3,7 @@
 
 import { kontrolaEvak } from './evakuace.js';
 import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
+import { KATEGORIE, MIN_ZNACKA_MM, ID_VYCHOD, ID_SHROMAZDISTE } from './kresleni/evakplan.js';
 
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const vyplneno = (v) => !prazdne(v);
@@ -29,6 +30,7 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
     if (list.typ === 'evak_text') kontrolaEvak(list, projekt, chyba, upoz);
     if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak);
     if (evak && list.vykres) kontrolaEvakZnacek(list, projekt, p, chyba, upoz);
+    if (list.typ === 'evak_plan') kontrolaEvakPlanu(list, projekt, p, chyba, upoz);
   }
   return n;
 }
@@ -85,7 +87,7 @@ function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false) {
   if (!evak && v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
   if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
   if (!evak && !v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
-  if (prazdne(v.razitko.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: razítko bez zpracovatele.`);
+  if (!evak && prazdne(v.razitko.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: razítko bez zpracovatele.`);
   if (!v.prvky.length) upoz('VYKRES_PRAZDNY', `${p}.vykres.prvky`, `List „${list.nazev}“: výkres je prázdný.`);
   for (const pr of v.prvky) {
     if (pr.znackaId && mameKatalog && !ids.has(pr.znackaId)) chyba('ZNACKA_NEEXISTUJE', `${p}.vykres.prvky[${pr.id}]`, `Prvek odkazuje na neexistující značku ${pr.znackaId} – označeno ke kontrole.`);
@@ -108,4 +110,27 @@ function kontrolaEvakZnacek(list, projekt, p, chyba, upoz) {
     if (st === 'chybi') chyba('EVAK_ZNACKA_CHYBI', `${p}.vykres.prvky`, `List „${list.nazev}“: značka „${slot.nazev}“ nemá obrázek – nahrajte ji.`);
   }
   if (list.vykres.prvky.some((x) => x.znackaId && !jeEvakZnacka(x.znackaId))) chyba('EVAK_ZNACKA_DZP', `${p}.vykres.prvky`, `List „${list.nazev}“: obsahuje značku DZP – do evakuačního plánu nepatří (použijte značky evakuačního plánu).`);
+}
+
+// List „Evakuační plán – podlaží“: požadavky ČSN ISO 23601 (nezávazná; výtah v podklady/evakuace/ISO23601_pozadavky.md).
+function kontrolaEvakPlanu(list, projekt, p, chyba, upoz) {
+  const v = list.vykres, e = v.evakPlan, n = `List „${list.nazev}“`, cesta = `${p}.vykres.evakPlan`;
+  const objekt = e.objekt || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '';
+  const kat = KATEGORIE[e.kategorie] || KATEGORIE.velky;
+  if (v.format === 'A4' && e.kategorie !== 'mistnost') chyba('EVAK_FORMAT', `${cesta}.format`, `${n}: formát A4 je podle normy jen pro plány v jednotlivých místnostech, jinak min. A3.`);
+  if (v.meritko.pomer > kat.limit) chyba('EVAK_MERITKO', `${cesta}.kategorie`, `${n}: měřítko 1 : ${v.meritko.pomer} je menší než nejmenší povolené 1 : ${kat.limit} (${kat.nazev}).`);
+  const povinne = [[objekt, 'EVAK_OBJEKT', 'Název objektu'], [e.podlazi, 'EVAK_PODLAZI', 'Označení podlaží'], [e.zhotovitel, 'EVAK_ZHOTOVITEL', 'Zhotovitel plánu'],
+    [e.datum, 'EVAK_DATUM', 'Datum vyhotovení'], [e.cisloPlanu, 'EVAK_CISLO_PLANU', 'Číslo plánu'], [e.cisloRevize, 'EVAK_REVIZE', 'Číslo revize']];
+  for (const [val, kod, nazev] of povinne) if (prazdne(val)) chyba(kod, cesta, `${n}: chybí údaj „${nazev}“ (ČSN ISO 23601, čl. 7.6).`);
+  if (prazdne(e.pokynyPozar)) chyba('EVAK_POKYNY_POZAR', cesta, `${n}: chybí bezpečnostní pokyny pro případ požáru (čl. 7.4).`);
+  if (prazdne(e.pokynyEvakuace)) chyba('EVAK_POKYNY_EVAK', cesta, `${n}: chybí bezpečnostní pokyny pro evakuaci (čl. 7.4).`);
+  if (!e.jsteZde) chyba('EVAK_JSTE_ZDE', cesta, `${n}: chybí bod „Jste zde“ (čl. 5 a).`);
+  if (!v.legendaZobrazit) chyba('EVAK_LEGENDA', cesta, `${n}: legenda je vypnutá – plán ji musí obsahovat (čl. 7.5).`);
+  const znacky = v.prvky.filter((x) => x.druh === 'znacka');
+  if (!znacky.some((x) => ID_VYCHOD.includes(x.znackaId))) chyba('EVAK_VYCHOD', `${p}.vykres.prvky`, `${n}: chybí nouzový východ (čl. 7.3 b).`);
+  if (!znacky.some((x) => x.znackaId === ID_SHROMAZDISTE)) chyba('EVAK_SHROMAZDISTE', `${p}.vykres.prvky`, `${n}: chybí shromaždiště v plánu (čl. 5 n, 7.2 a).`);
+  const male = znacky.filter((x) => x.velikost < MIN_ZNACKA_MM);
+  if (male.length) chyba('EVAK_ZNACKA_VELIKOST', `${p}.vykres.prvky[${male[0].id}]`, `${n}: ${male.length}× značka menší než ${MIN_ZNACKA_MM} mm (čl. 6 c).`);
+  upoz('EVAK_BARVY', cesta, `${n}: barvy (bezpečnostní zelená a modrá, světle zelená cesta) jsou přibližné hodnoty sRGB – před tiskem ověřte podle ISO 3864-4.`);
+  upoz('EVAK_UMISTENI', cesta, `${n}: plán musí být pevně upevněn u vstupů na podlaží, výtahů a schodišť; orientace plánu odpovídá pohledu osoby před plánem (čl. 5 j, 9). Při změně objektu plán přezkoumejte (čl. 10).`);
 }

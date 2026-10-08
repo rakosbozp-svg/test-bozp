@@ -1,5 +1,6 @@
 // Vykreslení listu výkresu do SVG (mm na papíře). Stejný kód pro editor i pro export (SVG/PNG/PDF).
-import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky } from './prvky.js';
+import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky, bboxVsech } from './prvky.js';
+import { trasaEvakSvg, jsteZdeSvg, slozEvakSvg, MIN_STENA_MM, MIN_PRICKA_MM } from './evakplan.js';
 import { delkaLomene } from './geom.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -36,13 +37,14 @@ function prvekSvg(p, ctx) {
   const dash = { carkovana: `${f(k(3))},${f(k(1.5))}`, carkocara: `${f(k(5))},${f(k(1.2))},${f(k(1))},${f(k(1.2))}` };
   const id = `data-id="${p.id}" data-druh="${p.druh}"`;
   switch (p.druh) {
-    case 'stena': return `<polyline ${id} points="${pts(p.body)}" fill="none" stroke="${p.barva}" stroke-width="${f(Math.max(p.tloustkaM, k(0.5)))}" stroke-linejoin="miter" stroke-linecap="square"/>`;
-    case 'cara': return `<polyline ${id} points="${pts(p.body)}" fill="none" stroke="${p.barva}" stroke-width="${f(k(p.tloustka))}" ${dash[p.styl] ? `stroke-dasharray="${dash[p.styl]}"` : ''} stroke-linejoin="round"/>`;
+    case 'stena': return `<polyline ${id} points="${pts(p.body)}" fill="none" stroke="${p.barva}" stroke-width="${f(Math.max(p.tloustkaM, k(ctx.evak ? MIN_STENA_MM : 0.5)))}" stroke-linejoin="miter" stroke-linecap="square"/>`;
+    case 'cara': return `<polyline ${id} points="${pts(p.body)}" fill="none" stroke="${p.barva}" stroke-width="${f(k(ctx.evak ? Math.max(p.tloustka, MIN_PRICKA_MM) : p.tloustka))}" ${dash[p.styl] ? `stroke-dasharray="${dash[p.styl]}"` : ''} stroke-linejoin="round"/>`;
     case 'volna': return `<polyline ${id} points="${pts(p.body)}" fill="none" stroke="${p.barva}" stroke-width="${f(k(p.tloustka))}" stroke-linejoin="round" stroke-linecap="round"/>`;
     case 'plocha': return `<polygon ${id} points="${pts(p.body)}" fill="${p.vypln || 'none'}" fill-opacity="${p.kryti}" stroke="${p.barva}" stroke-width="${f(k(p.tloustka))}" stroke-linejoin="round"/>`;
     case 'obdelnik': return `<rect ${id} x="${f(p.cx - p.w / 2)}" y="${f(p.cy - p.h / 2)}" width="${f(p.w)}" height="${f(p.h)}" fill="${p.vypln || 'none'}" fill-opacity="${p.kryti}" stroke="${p.barva}" stroke-width="${f(k(p.tloustka))}" transform="rotate(${f(p.uhel || 0)} ${f(p.cx)} ${f(p.cy)})"/>`;
     case 'elipsa': return `<ellipse ${id} cx="${f(p.cx)}" cy="${f(p.cy)}" rx="${f(p.rx)}" ry="${f(p.ry)}" fill="${p.vypln || 'none'}" fill-opacity="${p.kryti}" stroke="${p.barva}" stroke-width="${f(k(p.tloustka))}" transform="rotate(${f(p.uhel || 0)} ${f(p.cx)} ${f(p.cy)})"/>`;
     case 'trasa': {
+      if (ctx.evak) return trasaEvakSvg(p, k, id);
       const b = p.body, n = b.length; if (n < 2) return '';
       let arrow = '';
       if (p.sipka) {
@@ -117,7 +119,7 @@ function razitko(v, o, L) {
 export function renderListu(v, o) {
   const L = rozlozeniListu(v), pomer = v.meritko.pomer, s = 1000 / pomer, k = (mm) => mm / s;
   const ram = L.ram, ox = ram.x - v.okno.x * s, oy = ram.y - v.okno.y * s;
-  const ctx = { s, k, pomer, prvky: v.prvky, znacka: (id) => (o.znacky.has(id) ? o.symbolHref(id) : null) };
+  const ctx = { s, k, pomer, prvky: v.prvky, evak: !!v.evakPlan, znacka: (id) => (o.znacky.has(id) ? o.symbolHref(id) : null) };
   const oo = { ...o, nazevZnacky: (id) => o.znacky.get(id)?.nazev || id };
   const sirkaSvete = ram.w / s, vyskaSvete = ram.h / s;
 
@@ -136,6 +138,10 @@ export function renderListu(v, o) {
   const vrstvy = v.vrstvy.filter((l) => l.viditelna).map((l) => `<g data-vrstva="${l.id}">${v.prvky.filter((p) => p.vrstva === l.id).map((p) => prvekSvg(p, ctx)).join('')}</g>`).join('');
   const bezVrstvy = v.prvky.filter((p) => !v.vrstvy.some((l) => l.id === p.vrstva)).map((p) => prvekSvg(p, ctx)).join('');   // osiřelé prvky se nesmí ztratit
 
+  if (v.evakPlan) {
+    const jz = v.evakPlan.jsteZde ? jsteZdeSvg(v.evakPlan.jsteZde, k) : '';
+    return slozEvakSvg({ v, L, o: { ...oo, pouziteZnacky: pouziteZnacky(v.prvky) }, svet: `${pozadi}${grid}${vrstvy}${bezVrstvy}${jz}`, pravitko: pravitko(L, s, k), ox, oy, s, bb: bboxVsech(v.prvky, pomer), objekt: o.objektNazev });
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${L.W} ${L.H}" width="${L.W}mm" height="${L.H}mm" font-family="Arial,sans-serif">` +
     `<defs><clipPath id="ramClip"><rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}"/></clipPath></defs>` +
     `<rect width="${L.W}" height="${L.H}" fill="#fff"/>` +

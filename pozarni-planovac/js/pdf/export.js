@@ -60,7 +60,7 @@ export async function exportujPdf(projekt, volby = {}) {
   };
   for (const id of bajty.keys()) emb.set(id, await pdfDoc.embedPng(bajty.get(id)));
 
-  const objekt = projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || '';
+  const objekt = projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '';
   for (const l of vybrane) {
     if (l.typ === 'karta') await vykresliKartu(ctxZaklad, l, projekt);
     else if (l.typ === 'text') await vykresliTextovyList(ctxZaklad, l);

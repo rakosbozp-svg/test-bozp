@@ -449,7 +449,7 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await p.fill('#d-novy [name=nazev]', 'Evakuace test'); await p.selectOption('#d-novy [name=typ]', 'evakuacni_plan'); await p.click('#d-novy button');
   await p.waitForSelector('.editor');
   assert.ok((await p.locator('.nazev-projektu + .rk-badge').textContent()).includes('ne DZP'));
-  assert.deepEqual(await p.locator('#l-typ option').evaluateAll((o) => o.map((x) => x.value)), ['evak_text', 'pudorys', 'schema', 'text']);
+  assert.deepEqual(await p.locator('#l-typ option').evaluateAll((o) => o.map((x) => x.value)), ['evak_text', 'evak_plan', 'text']);
   await p.fill('[data-pole="organizator.jmeno"]', 'A. Novák');
   await p.click('#sek-osoby [data-akce=pridej]'); await p.fill('#sek-osoby [data-klic=jmeno]', 'B. Dvořák');
   await p.click('[data-p=uplnost]');
@@ -468,5 +468,16 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   const bb = await p.locator('#svet').boundingBox(); await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
   await p.waitForSelector('#svet [data-druh=znacka]');
   await p.click('[data-p=uplnost]'); assert.ok(!(await p.locator('#panel-obsah').textContent()).includes('nemá obrázek'));
+  // list Evakuační plán – podlaží: A3, záhlaví, Jste zde, údaje z panelu, export PDF
+  await p.click('[data-nastroj=jstezde]'); await p.mouse.click(bb.x + bb.width * 0.4, bb.y + bb.height * 0.4);
+  await p.waitForSelector('#svet [data-jstezde]');
+  const svgTxt = await p.locator('.ed-svg svg').innerHTML(); assert.ok(svgTxt.includes('ÚNIKOVÝ PLÁN') && svgTxt.includes('BEZPEČNOSTNÍ POKYNY'));
+  await p.click('[data-p=vlastnosti]');
+  await p.click('[data-nastroj=vyber]'); const sb = await p.locator('.ed-scena').boundingBox(); await p.mouse.click(sb.x + sb.width * 0.85, sb.y + sb.height * 0.3);
+  const podl = p.locator('.panel label:has-text("Označení podlaží") input'); await podl.fill('1. NP'); await podl.press('Tab');
+  await p.waitForFunction(() => document.querySelector('.ed-svg svg')?.innerHTML.includes('1. NP'));
+  await p.click('[data-p=uplnost]'); assert.ok((await p.locator('#panel-obsah').textContent()).includes('Číslo plánu'));
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.click('[data-akce=export-pdf]')]);
+  const f = join(tmp, 'evak.pdf'); await dl.saveAs(f); assert.equal(readFileSync(f).subarray(0, 5).toString(), '%PDF-');
   assert.deepEqual(chyby, []); await ctx.close();
 });

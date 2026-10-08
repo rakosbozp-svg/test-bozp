@@ -4,6 +4,7 @@ import { esc } from './render.js';
 import { naCislo, zCisla } from '../formular.js';
 import { zeptejSe, potvrd, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
+import { FORMATY, KATEGORIE } from './evakplan.js';
 import { normalizujVelikost, VELIKOST_MIN, VELIKOST_MAX, VELIKOST_KROK } from '../model.js';
 
 const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Úniková cesta', plocha: 'Nástupní plocha a komunikace pro techniku', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
@@ -45,17 +46,18 @@ export function vykresliPanelVykresu(druh, host, ed) {
     const v = ed.v, nast = ed.projekt.nastaveni;
     const pz = v.pozadi, pr = pz && ed.projekt.prilohy[pz.prilohaId];
     html = `<h3>List</h3>
-      ${vyberHtml('Orientace A4', [['na_sirku', 'Na šířku'], ['na_vysku', 'Na výšku']], v.orientace, zmen((t) => { v.orientace = t; }))}
+      ${v.evakPlan ? evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) : ''}
+      ${vyberHtml(v.evakPlan ? 'Orientace' : 'Orientace A4', [['na_sirku', 'Na šířku'], ['na_vysku', 'Na výšku']], v.orientace, zmen((t) => { v.orientace = t; }))}
       ${vyberHtml('Měřítko tisku', [...new Set([...P.MERITKA, v.meritko.pomer])].sort((a, b) => a - b).map((m) => [String(m), `1 : ${m}`]), String(v.meritko.pomer), zmen((t) => { zmenMeritko(ed, Number(t)); }))}
       ${tlacitko('Navrhnout měřítko podle obsahu', () => { const n = P.navrhniMeritko(v); if (!n) return oznam('Výkres je prázdný – není z čeho měřítko navrhnout.'); v.meritko.pomer = n; P.vycentrujOkno(v); ed.commit(); })}
       ${tlacitko('Vycentrovat obsah v rámu', () => { P.vycentrujOkno(v); ed.commit(); })}
-      ${zaskrt('Síť 10 × 10 m', v.sit10m, zmen((c) => { v.sit10m = c; }))}
-      ${pole('Severka – úhel (° po směru hodin, 0 = nahoru)', v.severka.uhel === null ? '' : zCisla(v.severka.uhel), zmen((t) => { const n = naCislo(t); v.severka.uhel = t.trim() === '' ? null : Number.isNaN(n) ? v.severka.uhel : n; }), { cislo: true, tip: 'Prázdné = severka neurčena' })}
+      ${v.evakPlan ? '' : zaskrt('Síť 10 × 10 m', v.sit10m, zmen((c) => { v.sit10m = c; }))}
+      ${v.evakPlan ? '' : pole('Severka – úhel (° po směru hodin, 0 = nahoru)', v.severka.uhel === null ? '' : zCisla(v.severka.uhel), zmen((t) => { const n = naCislo(t); v.severka.uhel = t.trim() === '' ? null : Number.isNaN(n) ? v.severka.uhel : n; }), { cislo: true, tip: 'Prázdné = severka neurčena' })}
       ${zaskrt('Zobrazit legendu značek', v.legendaZobrazit, zmen((c) => { v.legendaZobrazit = c; }))}
       ${v.meritkoZdroj ? `<p class="${v.meritkoZdroj.overeno ? '' : 'varuj'}">${ikona(v.meritkoZdroj.overeno ? 'ok' : 'pozor', 14)} Měřítko importu: ${esc(v.meritkoZdroj.popis)} – ${v.meritkoZdroj.overeno ? 'ověřeno' : 'NEOVĚŘENO'}.</p>${v.meritkoZdroj.overeno ? '' : tlacitko('Kalibrovat podle známé délky', () => ed.nastavNastroj('kalibrace'))}` : ''}
-      <h4>Razítko</h4>
+      ${v.evakPlan ? '' : `<h4>Razítko</h4>
       ${['nazev:Název objektu', 'zpracoval:Zpracoval', 'schvalil:Schválil'].map((x) => { const [k, n] = x.split(':'); return pole(n, v.razitko[k], zmen((t) => { v.razitko[k] = t; })); }).join('')}
-      <label class="f"><span>Datum</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>
+      <label class="f"><span>Datum</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>`}
       <h4>Výchozí velikosti nových prvků</h4>
       ${velikost('Značka', nast.velikostZnacky, (n) => { nast.velikostZnacky = normalizujVelikost(n); ed.uloz(); })}
       ${velikost('Text', nast.velikostTextu, (n) => { nast.velikostTextu = normalizujVelikost(n); ed.uloz(); })}
@@ -131,4 +133,30 @@ function zmenPoradi(ed, p, smer) {
 function zmenMeritko(ed, pomer) {
   const v = ed.v, { ram } = P.rozlozeniListu(v), cx = v.okno.x + (ram.w * v.meritko.pomer) / 2000, cy = v.okno.y + (ram.h * v.meritko.pomer) / 2000;
   v.meritko.pomer = pomer; v.okno = { x: cx - (ram.w * pomer) / 2000, y: cy - (ram.h * pomer) / 2000 };
+}
+
+
+// Nastavení listu „Evakuační plán – podlaží“ (údaje záhlaví, popisového pole, pokynů, „Jste zde“, přehledového plánu).
+function evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) {
+  const e = v.evakPlan, jz = e.jsteZde;
+  const plocha = (label, hodnota, fn) => `<label class="f"><span>${label}</span><textarea rows="5" data-h="${reg(fn)}">${esc(hodnota)}</textarea></label>`;
+  return `<h4>Evakuační plán</h4>
+    ${vyberHtml('Formát (min. A3; A4 jen pro plán v místnosti)', Object.keys(FORMATY).map((k) => [k, k]), v.format, zmen((t) => { v.format = t; }))}
+    ${vyberHtml('Kategorie objektu (nejmenší měřítko)', Object.entries(KATEGORIE).map(([k, x]) => [k, x.nazev]), e.kategorie, zmen((t) => { e.kategorie = t; }))}
+    ${pole('Název objektu', e.objekt, zmen((t) => { e.objekt = t; }))}
+    ${pole('Označení podlaží (např. 1. NP)', e.podlazi, zmen((t) => { e.podlazi = t; }))}
+    ${pole('Zhotovitel', e.zhotovitel, zmen((t) => { e.zhotovitel = t; }))}
+    <label class="f"><span>Datum vyhotovení</span><input type="date" value="${esc(e.datum)}" data-h="${reg(zmen((t) => { e.datum = t; }))}"></label>
+    ${pole('Číslo plánu', e.cisloPlanu, zmen((t) => { e.cisloPlanu = t; }))}
+    ${pole('Číslo revize', e.cisloRevize, zmen((t) => { e.cisloRevize = t; }))}
+    ${vyberHtml('Přehledový plán', [['auto', 'Automaticky (je-li zobrazena jen část)'], ['ano', 'Vždy'], ['ne', 'Nezobrazovat (malý objekt)']], e.prehled, zmen((t) => { e.prehled = t; }))}
+    <p class="napoveda">Texty bezpečnostních pokynů zadejte ručně – v příkladech normy se čísla linek liší, proto se nepředvyplňují.</p>
+    ${plocha('Bezpečnostní pokyny – POŽÁR (každý pokyn na nový řádek)', e.pokynyPozar, zmen((t) => { e.pokynyPozar = t; }))}
+    ${plocha('Bezpečnostní pokyny – EVAKUACE', e.pokynyEvakuace, zmen((t) => { e.pokynyEvakuace = t; }))}
+    <h4>Jste zde</h4>
+    ${jz ? `${pole('Text štítku', jz.text, zmen((t) => { jz.text = t || 'Jste zde'; }))}
+      ${pole('Posun štítku vodorovně (mm)', zCisla(jz.dx), zmen((t) => { const n = naCislo(t); if (!Number.isNaN(n) && n !== null) jz.dx = n; }), { cislo: true })}
+      ${pole('Posun štítku svisle (mm)', zCisla(jz.dy), zmen((t) => { const n = naCislo(t); if (!Number.isNaN(n) && n !== null) jz.dy = n; }), { cislo: true })}
+      ${tlacitko('Odebrat „Jste zde“', () => { e.jsteZde = null; ed.commit(); }, 'nebezp')}`
+      : '<p class="napoveda">Nástrojem „Jste zde“ klikněte na místo, kde je plán vyvěšen.</p>'}`;
 }

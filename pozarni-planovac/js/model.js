@@ -3,19 +3,20 @@
 // Pravidlo vzoru: pole se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
 
 import { prazdnaEvak } from './evakuace.js';
+import { prazdnyEvakPlan } from './kresleni/evakplan.js';
 
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
 
-export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'evak_text'];
-export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text' };
+export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'evak_text', 'evak_plan'];
+export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text', evak_plan: 'Evakuační plán – podlaží' };
 export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan', 'evakuacni_plan'];
 export const TYPY_DOKUMENTU_NAZVY = { operativni_karta: 'Operativní karta (DZP)', operativni_plan: 'Operativní plán (DZP)', evakuacni_plan: 'Požární evakuační plán' };
 // Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (půdorys a text jsou společné).
 export const LISTY_PRO_DOKUMENT = {
   operativni_karta: ['karta', 'situace', 'pudorys', 'schema', 'text'],
   operativni_plan: ['karta', 'situace', 'pudorys', 'schema', 'text'],
-  evakuacni_plan: ['evak_text', 'pudorys', 'schema', 'text'],
+  evakuacni_plan: ['evak_text', 'evak_plan', 'text'],
 };
 export const jeEvakuace = (p) => p?.typ === 'evakuacni_plan';
 export const STAV_OVERENI = ['neoveren', 'overeno'];
@@ -57,11 +58,11 @@ export const novyList = (typ, nazev) => {
   if (typ === 'karta') list.karta = prazdnaKarta();
   if (typ === 'text') list.text = '';
   if (typ === 'evak_text') list.evak = prazdnaEvak();
-  if (typ === 'situace' || typ === 'pudorys' || typ === 'schema') {
+  if (typ === 'situace' || typ === 'pudorys' || typ === 'schema' || typ === 'evak_plan') {
     list.vykres = {
       format: 'A4', orientace: 'na_sirku',
       pozadi: null,                 // importovaný podklad {prilohaId, nazev, x, y, sirkaPx, vyskaPx, mNaPx, kryti, kalibrace, zamceno}
-      meritko: { pomer: typ === 'situace' ? 1000 : 100 },   // měřítko tisku 1 : pomer
+      meritko: { pomer: typ === 'situace' ? 1000 : 100 },   // měřítko tisku 1 : pomer   // měřítko tisku 1 : pomer
       meritkoZdroj: null,           // po vektorovém importu {zdroj, popis, overeno}; neověřené měřítko se kalibruje podle známé délky
       okno: { x: 0, y: 0 },         // světová souřadnice (m) levého horního rohu rámu výkresu
       severka: { uhel: null },      // úhel severky ve stupních po směru hodin od svislice; null = neurčeno
@@ -78,6 +79,7 @@ export const novyList = (typ, nazev) => {
       legendaZobrazit: true,
       razitko: { nazev: '', zpracoval: '', datum: '', schvalil: '' },
     };
+    if (typ === 'evak_plan') { list.vykres.format = 'A3'; list.vykres.sit10m = false; list.vykres.evakPlan = prazdnyEvakPlan(); }   // A3 je minimum podle ČSN ISO 23601
   }
   return list;
 };
@@ -101,8 +103,7 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
   }
   if (typ === 'evakuacni_plan') {
     p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 (požární evakuační plán); vzhled plánu ČSN ISO 23601 zatím neověřen';
-    const pud = novyList('pudorys', 'Únikové cesty – 1. podlaží'); pud.vykres.sit10m = false;   // síť 10 × 10 m je pravidlo metodiky DZP
-    p.listy.push(novyList('evak_text', 'Evakuační plán – text'), pud);
+    p.listy.push(novyList('evak_text', 'Evakuační plán – text'), novyList('evak_plan', 'Únikový plán – 1. podlaží'));
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
   return p;
@@ -184,7 +185,7 @@ export function migruj(data) {
   for (const l of p.listy) {
     if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});
     if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
-    if (['situace', 'pudorys', 'schema'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
+    if (['situace', 'pudorys', 'schema', 'evak_plan'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
   return p;
 }
