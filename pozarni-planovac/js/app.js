@@ -80,7 +80,10 @@ function aktualniRezim() {
   try { const r = localStorage.getItem('pp-rezim'); if (REZIMY[r]) return r; } catch { /* bez úložiště */ }
   return 'dzp';
 }
-function nastavLogo(rezim) { const el = $('#logo small'); if (el) el.textContent = REZIMY[rezim].nazev; const a = $('#logo'); if (a) a.href = `#/${rezim}`; }
+function nastavLogo(rezim) {
+  const el = $('#logo small'); if (el) el.textContent = REZIMY[rezim].nazev; const a = $('#logo'); if (a) a.href = `#/${rezim}`;
+  document.querySelectorAll('#rezim [data-rezim]').forEach((x) => { if (x.dataset.rezim === rezim) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+}
 
 function dashboard() {
   S.ed?.zrusit(); S.ed = null;
@@ -88,10 +91,7 @@ function dashboard() {
   const rezim = aktualniRezim(), R = REZIMY[rezim]; nastavLogo(rezim);
   const vse = U.seznam(), sez = vse.filter((x) => rezimProjektu(x.typ) === rezim), jine = vse.length - sez.length, posl = U.posledni();
   const poslProj = sez.find((x) => x.id === posl) || sez[0];
-  const volba = (k) => { const x = REZIMY[k], pocet = vse.filter((y) => rezimProjektu(y.typ) === k).length;
-    return `<a class="rezim rk-card rk-card--interactive ${k === rezim ? 'akt' : ''}" href="#/${k}" data-rezim="${k}" ${k === rezim ? 'aria-current="page"' : ''}><div class="rk-card__top"><span class="rk-tile">${ikona(x.ikona, 22)}</span>${k === rezim ? '<span class="rezim__stav">Zvoleno</span>' : ''}</div><div class="rk-card__title">${x.dlouhy}</div><div class="rk-card__body">${x.popis}<br><small>${pocet ? `${pocet} ${pocet === 1 ? 'projekt' : pocet < 5 ? 'projekty' : 'projektů'} v tomto prohlížeči` : 'zatím žádný projekt'}</small></div></a>`; };
   app.innerHTML = `<section class="dash dash--${rezim}">
-    <nav class="rezimy" aria-label="Co chcete zpracovat">${volba('dzp')}${volba('evakuace')}</nav>
     <header class="dash__hero rk-sh">
       <div class="rk-eyebrow">${R.hero[0]}</div>
       <h1 class="rk-sh__title dash__nadpis">${R.hero[1]}</h1>

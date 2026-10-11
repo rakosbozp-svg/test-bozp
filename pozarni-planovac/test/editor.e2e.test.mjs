@@ -447,9 +447,10 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
   await p.goto(URL_);
   // úvodní stránka: volba režimu; v DZP se evakuační plán nezakládá, v režimu Evakuační plány ano
-  assert.equal(await p.locator('.rezim.akt').getAttribute('data-rezim'), 'dzp');
+  assert.equal(await p.locator('#rezim [aria-current=page]').getAttribute('data-rezim'), 'dzp');
   assert.ok(!(await p.locator('#d-novy select option').allTextContents()).some((t) => t.includes('evakuační')));
-  await p.click('[data-rezim=evakuace]'); await p.waitForSelector('.dash--evakuace');
+  await p.click('#rezim [data-rezim=evakuace]'); await p.waitForSelector('.dash--evakuace');
+  assert.equal(await p.locator('#rezim [aria-current=page]').getAttribute('data-rezim'), 'evakuace');
   assert.ok((await p.locator('.dash__nadpis').textContent()).includes('Únikové plány'));
   assert.equal(await p.locator('#d-litice').count(), 0);
   await p.fill('#d-novy [name=nazev]', 'Evakuace test'); await p.click('#d-novy button');
@@ -488,7 +489,7 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   // logo vrací do režimu evakuačních plánů; projekt je jen v jeho seznamu
   await p.click('#logo'); await p.waitForSelector('.dash--evakuace');
   assert.equal(await p.locator('.projekty li a').count(), 1);
-  await p.click('[data-rezim=dzp]'); await p.waitForSelector('.dash--dzp');
+  await p.click('#rezim [data-rezim=dzp]'); await p.waitForSelector('.dash--dzp');
   assert.equal(await p.locator('.projekty li a').count(), 0); assert.ok((await p.locator('.dash').textContent()).includes('Evakuační plány (1)'));
   assert.deepEqual(chyby, []); await ctx.close();
 });

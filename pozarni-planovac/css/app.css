@@ -236,11 +236,10 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .dlg .chk { white-space: normal; align-items: flex-start; line-height: 1.4; }
 .dlg code { font-size: 12px; background: var(--bg-300); padding: 1px 4px; border-radius: var(--radius-sm); }
 
-/* Úvodní volba režimu: DZP × evakuační plány */
-.rezimy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); padding-top: var(--space-5); }
-.rezim { text-decoration: none; color: inherit; border: 2px solid var(--line); }
-.rezim.akt { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.rezim .rk-card__top { display: flex; justify-content: space-between; align-items: center; }
-.rezim__stav { font: 600 12px/1 var(--font-body, inherit); color: var(--accent-ink); background: var(--accent-soft); padding: 4px 8px; border-radius: 999px; }
-.rezim .rk-card__body small { color: var(--ink-muted); }
-@media (max-width: 640px) { .rezimy { grid-template-columns: 1fr; } }
+/* Přepínač druhu dokumentace v horní liště: DZP × evakuační plány */
+.rezim-prepinac { margin-left: auto; display: inline-flex; padding: 3px; gap: 2px; background: var(--bg-200); border: 1px solid var(--line); border-radius: 999px; }
+.rezim-prepinac a { padding: 7px 14px; border-radius: 999px; color: var(--ink-muted); text-decoration: none; font: 600 14px/1 var(--font-sans); white-space: nowrap; }
+.rezim-prepinac a:hover { color: var(--ink); }
+.rezim-prepinac a[aria-current="page"] { background: var(--inverse); color: var(--on-inverse); }
+.rezim-prepinac a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 640px) { .rezim-prepinac a { padding: 6px 10px; font-size: 13px; } }
