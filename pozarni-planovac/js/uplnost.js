@@ -2,6 +2,7 @@
 // (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
 
 import { kontrolaEvak } from './evakuace.js';
+import { kontrolaOp, kontrolaOpZaklad, kontrolaOpText } from './operativniplan.js';
 import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
 import { KATEGORIE, MIN_ZNACKA_MM, ID_VYCHOD, ID_SHROMAZDISTE } from './kresleni/evakplan.js';
 
@@ -21,6 +22,7 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
   if (!projekt.listy.length) chyba('PROJ_BEZ_LISTU', 'listy', 'Projekt nemá žádný list.');
   if (!projekt.revize.length) upoz('REVIZE_CHYBI', 'revize', 'Chybí záznam o revizi dokumentace.');
   const evak = projekt.typ === 'evakuacni_plan';
+  if (projekt.typ === 'operativni_plan') kontrolaOp(projekt, chyba, upoz);
   if (!evak) upoz('LEGISLATIVA', 'projekt', 'Před vydáním ověřte DZP podle aktuální legislativy, PBŘ, skutečného stavu objektu a požadavků HZS.');
   else if (!projekt.listy.some((l) => l.typ === 'evak_text')) chyba('EVAK_BEZ_TEXTU', 'listy', 'Chybí textová část evakuačního plánu (přidejte list Evakuační plán – text).');
 
@@ -28,6 +30,8 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
     const p = `listy[${list.id}]`;
     if (list.typ === 'karta') kontrolaKarty(list.karta, p, chyba, upoz);
     if (list.typ === 'evak_text') kontrolaEvak(list, projekt, chyba, upoz);
+    if (list.typ === 'op_zaklad') kontrolaOpZaklad(list, chyba, upoz);
+    if (list.typ === 'op_text') kontrolaOpText(list, chyba, upoz);
     if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak);
     if (evak && list.vykres) kontrolaEvakZnacek(list, projekt, p, chyba, upoz);
     if (list.typ === 'evak_plan') kontrolaEvakPlanu(list, projekt, p, chyba, upoz);

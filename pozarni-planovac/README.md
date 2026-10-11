@@ -80,3 +80,10 @@ Při zakládání projektu lze zvolit „Požární evakuační plán“. Má vl
 
 ## Úvodní stránka: volba DZP × evakuační plány
 V horní liště vpravo se přepíná režim **Dokumentace zdolávání požárů** nebo **Požární evakuační plány** (adresy `#/dzp` a `#/evakuace`, volba se pamatuje v prohlížeči). Podle režimu se mění nadpis, zakládání nového projektu, import podkladu (DZP → situace, evakuace → list podlaží) i seznam uložených projektů; logo vrací do režimu otevřeného projektu. Referenční projekt Litice je jen v režimu DZP.
+
+## Operativní plán (DZP)
+Druh dokumentace „Operativní plán“ (režim DZP) se zakládá podle Metodického návodu (Hanuška 1996, kap. 2 a příloha č. 3) se čtyřmi listy:
+- **Základní text OP** – operativně taktická studie (rozsah příloh, důvody složitých podmínek podle kap. 2.1.1, osoby, signalizace, dojezd, jednotka podniku, voda, stupeň poplachu), nejsložitější varianta požáru, výpočet SaP (zda se provádí, důvod, výpis z PPP, výsledek) a závěr. Součástí je **nepovinný hrubý odhad SaP** podle Pomůcky ČAHD 11/2011 (intenzita 10/8/4 l·min⁻¹·m⁻², Qhp = Sh·Ip nebo Oh·Ip, Nhpr = Qhp/qpr, NHA ≈ 1,25·k·Npr ze vzoru Hanuška) – výslovně nenahrazuje výpočet podle části druhé metodiky.
+- **Vyjímatelná příloha – text** – operativně taktická charakteristika (budovy, osoby, činnosti, látky, SHZ/EPS, rozvody, složité podmínky; vodní zdroje a hasiva; komunikace), doporučení pro velitele zásahu a důležitá telefonní čísla.
+- **Situace podniku** a **Půdorys** – stávající editor výkresů; lze přidat další půdorysy, schéma, operativní kartu a text.
+Kontrola úplnosti hlídá povinné části (kap. 2.1–2.3), náhled i export PDF obsahují textové listy. Klik na nález otevře příslušný list.

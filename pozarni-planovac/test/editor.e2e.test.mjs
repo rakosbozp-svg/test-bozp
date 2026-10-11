@@ -493,3 +493,29 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   assert.equal(await p.locator('.projekty li a').count(), 0); assert.ok((await p.locator('.dash').textContent()).includes('Evakuační plány (1)'));
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('operativní plán: listy podle metodiky, formulář, hrubý odhad SaP, náhled, skok z kontroly na jiný list, PDF', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 }, acceptDownloads: true });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'OP test'); await p.selectOption('#d-novy [name=typ]', 'operativni_plan'); await p.click('#d-novy button');
+  await p.waitForSelector('#sek-ots');
+  assert.deepEqual(await p.locator('#listy small').allTextContents(), ['OP – základní text', 'OP – textová část přílohy', 'Situace', 'Půdorys']);
+  const roz = p.locator('[data-pole="ots.rozsahPriloh"]'); await roz.fill('Situace podniku, půdorys haly'); await roz.press('Tab');
+  await p.check('[data-pole="ots.slozitePodminky"][value=latky]');
+  await p.click('#sek-odhad [data-akce=pridej]');
+  await p.fill('#sek-odhad [data-klic=hodnota]', '120');
+  await p.waitForFunction(() => document.querySelector('#sek-odhad output')?.textContent.includes('6 proudů'));
+  await p.click('[data-p=uplnost]');
+  const txt = await p.locator('#panel-obsah').textContent();
+  assert.ok(!txt.includes('chybí rozsah vyjímatelných příloh') && txt.includes('chybí místo vzniku'));
+  await p.locator('#panel-obsah button:has-text("chybí vodní zdroje")').click();
+  await p.waitForSelector('#sek-voda');
+  await p.click('#listy li:nth-child(1) a'); await p.waitForSelector('#sek-ots');
+  await p.click('[data-z=nahled]'); const nah = await p.locator('#nahled-a4').textContent();
+  assert.ok(nah.includes('Situace podniku, půdorys haly') && nah.includes('6 proudů'));
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), (async () => { await p.click('#a-pdf'); await p.waitForSelector('.dlg[open]'); await p.click('.dlg [data-vysledek=ok]'); })()]);
+  const f = join(tmp, 'op.pdf'); await dl.saveAs(f); assert.equal(readFileSync(f).subarray(0, 5).toString(), '%PDF-');
+  assert.deepEqual(chyby, []); await ctx.close();
+});
