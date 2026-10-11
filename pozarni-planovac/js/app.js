@@ -10,6 +10,8 @@ import { katalogProjektu } from './evakznacky.js';
 import { SCHEMA_ZAKLAD, SCHEMA_TEXT, METODIKA_OP } from './operativniplan.js';
 import { vykresliSchema, pripojSchema, schemaJakoText, nahledSchema } from './textlisty.js';
 import { navrhZKarty, navrhZPlanu, pouzijNavrh } from './prebirani.js';
+import { vykresliSap, pripojSap } from './sapUI.js';
+import { sapJakoText } from './sap.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
@@ -174,7 +176,7 @@ function dashboard() {
 async function exportPdfDialog() {
   const p = S.p, katMapa = new Map(katalogProjektu(p, katalog).map((z) => [z.id, z]));
   const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
-  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text', evak_plan: 'evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy' };
+  const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text', evak_plan: 'evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy', op_sap: 'OP – výpočet SaP' };
   const dlg = await formular({
     titul: 'Export do PDF',
     html: `<p class="dlg__text">Vyberte listy, které se zahrnou do jednoho PDF (v pořadí, v jakém jsou v projektu). Karty a texty se vykreslí s vloženým písmem, výkresy jako vektory.</p>
@@ -289,7 +291,7 @@ function editor() {
 
 function zalozky(list) {
   const host = $('#zalozky-formular'); if (!host) return;
-  if (!['karta', 'evak_text', 'op_zaklad', 'op_text'].includes(list?.typ)) { host.innerHTML = ''; host.hidden = true; return; }
+  if (!['karta', 'evak_text', 'op_zaklad', 'op_text', 'op_sap'].includes(list?.typ)) { host.innerHTML = ''; host.hidden = true; return; }
   host.hidden = false;
   host.innerHTML = `<button role="tab" data-z="formular" class="${S.zalozka === 'formular' ? 'akt' : ''}">Formulář</button><button role="tab" data-z="nahled" class="${S.zalozka === 'nahled' ? 'akt' : ''}">Náhled A4</button>`;
   host.querySelectorAll('[data-z]').forEach((b) => { b.onclick = () => { S.zalozka = b.dataset.z; zalozky(list); obsah(list); panel(); }; });
@@ -306,6 +308,19 @@ function obsah(list) {
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
     };
     kresli();
+  } else if (list.typ === 'op_sap') {
+    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('OPERATIVNÍ PLÁN – výpočet SaP', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), část druhá.', sapJakoText(list.opSap))}</div>`; return; }
+    const kresli = () => { vykresliSap(list, host); };
+    kresli();
+    pripojSap(list, host, {
+      onZmena: () => { uloz(); panel(true); },
+      prekresli: () => { const y = window.scrollY; kresli(); window.scrollTo(0, y); },
+      zapisShrnuti: async (t) => {
+        const z = S.p.listy.find((l) => l.typ === 'op_zaklad'); if (!z) return oznam('Projekt nemá základní text OP.');
+        if (z.opZaklad.sap.vysledek?.trim() && !(await potvrd('Přepsat výsledek SaP v základním textu?', { ano: 'Přepsat', popis: z.opZaklad.sap.vysledek }))) return;
+        z.opZaklad.sap.vysledek = t; if (z.opZaklad.sap.provadi === null) z.opZaklad.sap.provadi = true; uloz(true); panel(true); ohlas('Shrnutí výpočtu SaP zapsáno do základního textu OP.');
+      },
+    });
   } else if (OP_LISTY[list.typ]) {
     const [klic, schema, nadpis, pozn, uvod] = OP_LISTY[list.typ], data = list[klic], prefix = `listy[${list.id}].${klic}`;
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema(nadpis, pozn, schemaJakoText(data, schema))}</div>`; return; }

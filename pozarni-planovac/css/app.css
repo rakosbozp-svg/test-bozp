@@ -249,3 +249,11 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .dlg .moznost span { display: block; }
 .dlg .moznost .varuj { color: var(--warn); font-weight: 600; }
 .dlg .moznosti { max-height: 55vh; overflow: auto; }
+
+/* Výpočet SaP */
+.sap-kroky { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sap-kroky td { border-top: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+.sap-kroky .oddil th { text-align: left; padding: 12px 8px 4px; font: 700 13px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .04em; color: var(--ink-muted); }
+.sap-kroky .vzorec { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.sap-kroky .hodnota { font-weight: 700; white-space: nowrap; }
+.sap-shrnuti { margin: var(--space-3) 0; }

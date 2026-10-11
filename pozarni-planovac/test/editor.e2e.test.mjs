@@ -501,7 +501,7 @@ test('operativní plán: listy podle metodiky, formulář, hrubý odhad SaP, ná
   await p.goto(URL_);
   await p.fill('#d-novy [name=nazev]', 'OP test'); await p.selectOption('#d-novy [name=typ]', 'operativni_plan'); await p.click('#d-novy button');
   await p.waitForSelector('#sek-ots');
-  assert.deepEqual(await p.locator('#listy small').allTextContents(), ['OP – základní text', 'OP – textová část přílohy', 'Situace', 'Půdorys']);
+  assert.deepEqual(await p.locator('#listy small').allTextContents(), ['OP – základní text', 'OP – výpočet SaP', 'OP – textová část přílohy', 'Situace', 'Půdorys']);
   const roz = p.locator('[data-pole="ots.rozsahPriloh"]'); await roz.fill('Situace podniku, půdorys haly'); await roz.press('Tab');
   await p.check('[data-pole="ots.slozitePodminky"][value=latky]');
   await p.click('#sek-odhad [data-akce=pridej]');
@@ -531,7 +531,7 @@ test('přebírání údajů: z operativní karty do operativního plánu a zpět
   await p.waitForSelector('[data-pole="objekt.nazev"]');
   const v = async (sel, t) => { const l = p.locator(sel); await l.fill(t); await l.press('Tab'); };
   await v('[data-pole="objekt.nazev"]', 'Hala montáže'); await v('[data-pole="doporuceni"]', 'Vypnout hlavní vypínač v trafostanici.');
-  await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('#sek-voda');
+  await p.click('#listy li:nth-child(3) a'); await p.waitForSelector('#sek-voda');
   await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]');
   assert.ok((await p.locator('.dlg [name=zdroj] option').first().textContent()).includes('tento projekt'));
   await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg[open] .moznost');
@@ -542,9 +542,32 @@ test('přebírání údajů: z operativní karty do operativního plánu a zpět
   assert.equal(await p.locator('[data-pole="doporuceni"]').inputValue(), 'Vypnout hlavní vypínač v trafostanici.');
   // zpět: v plánu upravím obsazení osobami a převezmu ho do karty
   await v('[data-pole="udaje.osoby"]', '40 osob ve 2 směnách');
-  await p.click('#listy li:nth-child(5) a'); await p.waitForSelector('[data-pole="objekt.obsazeniOsobami"]');
+  await p.click('#listy li:nth-child(6) a'); await p.waitForSelector('[data-pole="objekt.obsazeniOsobami"]');
   await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]'); await p.click('.dlg [data-vysledek=ok]');
   await p.waitForSelector('.dlg[open] .moznost'); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
   await p.waitForFunction(() => document.querySelector('[data-pole="objekt.obsazeniOsobami"]')?.value === '40 osob ve 2 směnách');
+  assert.deepEqual(chyby, []); await ctx.close();
+});
+
+test('výpočet SaP: vstupy, průběžný přepočet se vzorci, zápis shrnutí do základního textu', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'SaP'); await p.selectOption('#d-novy [name=typ]', 'operativni_plan'); await p.click('#d-novy button');
+  await p.waitForSelector('#sek-ots'); await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('#sek-sap-doby');
+  await p.fill('[data-sap=tZP]', '5'); await p.fill('[data-sap=tOH]', '2');
+  for (const [n, druh, L, t] of [['HZS', 'profi', '3', '3'], ['JSDH', 'dobro', '6', '5']]) {
+    await p.click('[data-sap-akce=pridej]'); const r = p.locator('#sek-sap-jednotky .polozka').last();
+    await r.locator('[data-klic=nazev]').fill(n); await r.locator('[data-klic=druh]').selectOption(druh); await r.locator('[data-klic=L]').fill(L); await r.locator('[data-klic=tBR]').fill(t);
+  }
+  await p.selectOption('[data-sap=prostor]', '1.1');
+  await p.waitForFunction(() => document.querySelector('#sap-vysledky')?.textContent.includes('Počet proudů'));
+  const txt = await p.locator('#sap-vysledky').textContent();
+  assert.ok(txt.includes('16 min') && txt.includes('tVR = tZP + tOH') && txt.includes('24,6 m'));
+  await p.click('[data-sap-akce=zapsat]');
+  await p.click('#listy li:nth-child(1) a'); await p.waitForSelector('#sek-ots');
+  assert.match(await p.locator('[data-pole="sap.vysledek"]').inputValue(), /Výpočet SaP \(Hanuška 1996, část druhá\): Qp = /);
+  assert.equal(await p.locator('[data-pole="sap.provadi"]').inputValue(), 'ano');
   assert.deepEqual(chyby, []); await ctx.close();
 });

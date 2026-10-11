@@ -126,7 +126,7 @@ export function kontrolaOp(projekt, chyba, upoz) {
   if (!typy.has('pudorys')) upoz('OP_PUDORYS_CHYBI', 'listy', 'Operativní plán: není žádný půdorys (kap. 2.3.3) – ověřte, zda není potřeba.');
 }
 
-export function kontrolaOpZaklad(list, chyba, upoz) {
+export function kontrolaOpZaklad(list, chyba, upoz, projekt = null) {
   const d = list.opZaklad, p = `listy[${list.id}].opZaklad`;
   if (nic(d.ots.rozsahPriloh)) chyba('OP_OTS_ROZSAH', `${p}.ots.rozsahPriloh`, 'Operativně taktická studie: chybí rozsah vyjímatelných příloh (kap. 2.1.1).');
   if (nic(d.ots.slozitePodminky)) upoz('OP_OTS_PODMINKY', `${p}.ots.slozitePodminky`, 'Operativně taktická studie: nejsou označeny důvody složitých podmínek pro zásah.');
@@ -138,7 +138,7 @@ export function kontrolaOpZaklad(list, chyba, upoz) {
   if (d.sap.provadi === true) {
     if (nic(d.sap.vysledek)) chyba('OP_SAP_VYSLEDEK', `${p}.sap.vysledek`, 'Výpočet SaP: chybí výsledek výpočtu.');
     if (nic(d.sap.ppp)) upoz('OP_SAP_PPP', `${p}.sap.ppp`, 'Výpočet SaP: chybí výpis z požárního poplachového plánu pro porovnání.');
-    upoz('OP_SAP_METODIKA', `${p}.sap`, 'Výpočet SaP proveďte podle části druhé metodiky (Hanuška 1996); hrubý odhad z pomůcky ČAHD jej nenahrazuje. Aplikace výpočet neověřuje.');
+    if (projekt && !projekt.listy.some((l) => l.typ === 'op_sap')) upoz('OP_SAP_LIST', `${p}.sap`, 'Výpočet SaP: projekt nemá list „OP – výpočet SaP“ (výpočet podle části druhé metodiky). Výsledek zadaný ručně aplikace neověřuje.');
   }
 }
 

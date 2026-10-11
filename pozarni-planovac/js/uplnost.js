@@ -2,6 +2,8 @@
 // (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
 
 import { kontrolaEvak } from './evakuace.js';
+import { kontrolaGrafikyDzp } from './grafikaDzp.js';
+import { vypocetSaP } from './sap.js';
 import { kontrolaOp, kontrolaOpZaklad, kontrolaOpText } from './operativniplan.js';
 import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
 import { KATEGORIE, MIN_ZNACKA_MM, ID_VYCHOD, ID_SHROMAZDISTE } from './kresleni/evakplan.js';
@@ -23,6 +25,7 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
   if (!projekt.revize.length) upoz('REVIZE_CHYBI', 'revize', 'Chybí záznam o revizi dokumentace.');
   const evak = projekt.typ === 'evakuacni_plan';
   if (projekt.typ === 'operativni_plan') kontrolaOp(projekt, chyba, upoz);
+  if (!evak) kontrolaGrafikyDzp(projekt, upoz);
   if (!evak) upoz('LEGISLATIVA', 'projekt', 'Před vydáním ověřte DZP podle aktuální legislativy, PBŘ, skutečného stavu objektu a požadavků HZS.');
   else if (!projekt.listy.some((l) => l.typ === 'evak_text')) chyba('EVAK_BEZ_TEXTU', 'listy', 'Chybí textová část evakuačního plánu (přidejte list Evakuační plán – text).');
 
@@ -30,7 +33,8 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
     const p = `listy[${list.id}]`;
     if (list.typ === 'karta') kontrolaKarty(list.karta, p, chyba, upoz);
     if (list.typ === 'evak_text') kontrolaEvak(list, projekt, chyba, upoz);
-    if (list.typ === 'op_zaklad') kontrolaOpZaklad(list, chyba, upoz);
+    if (list.typ === 'op_zaklad') kontrolaOpZaklad(list, chyba, upoz, projekt);
+    if (list.typ === 'op_sap') kontrolaSap(list, projekt, upoz);
     if (list.typ === 'op_text') kontrolaOpText(list, chyba, upoz);
     if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak);
     if (evak && list.vykres) kontrolaEvakZnacek(list, projekt, p, chyba, upoz);
@@ -137,4 +141,13 @@ function kontrolaEvakPlanu(list, projekt, p, chyba, upoz) {
   if (male.length) chyba('EVAK_ZNACKA_VELIKOST', `${p}.vykres.prvky[${male[0].id}]`, `${n}: ${male.length}× značka menší než ${MIN_ZNACKA_MM} mm (čl. 6 c).`);
   upoz('EVAK_BARVY', cesta, `${n}: barvy (bezpečnostní zelená a modrá, světle zelená cesta) jsou přibližné hodnoty sRGB – před tiskem ověřte podle ISO 3864-4.`);
   upoz('EVAK_UMISTENI', cesta, `${n}: plán musí být pevně upevněn u vstupů na podlaží, výtahů a schodišť; orientace plánu odpovídá pohledu osoby před plánem (čl. 5 j, 9). Při změně objektu plán přezkoumejte (čl. 10).`);
+}
+
+// List výpočtu SaP: nehlásí chyby (výpočet je nepovinný), jen chybějící vstupy, pokud se SaP podle základního textu provádí.
+function kontrolaSap(list, projekt, upoz) {
+  const provadi = projekt.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad.sap.provadi;
+  if (provadi === false) return;
+  const { chybi } = vypocetSaP(list.opSap);
+  if (chybi.length) upoz('OP_SAP_VSTUPY', `listy[${list.id}].opSap`, `Výpočet SaP „${list.nazev}“ není úplný – chybí: ${chybi.join('; ')}.`);
+  upoz('OP_SAP_OVERIT', `listy[${list.id}].opSap`, 'Výpočet SaP je pomůcka podle metodiky (Hanuška 1996, část druhá); vstupy i výsledek ověřte. Pozn.: doba volného rozvoje počítá s bojovým rozvinutím první jednotky (ve vzorci zdroje je index „Po“, ve vysvětlivce a schématu „Pr“).');
 }

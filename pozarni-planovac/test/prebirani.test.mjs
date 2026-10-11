@@ -17,7 +17,7 @@ const vyplnenaKarta = () => {
 };
 
 test('karta → operativní plán: návrh převede údaje, nebezpečí, vodu, PBZ, uzávěry, FVE i kontakty', () => {
-  const p = M.novyProjekt({ typ: 'operativni_plan' }), cile = { opZaklad: p.listy[0].opZaklad, opText: p.listy[1].opText };
+  const p = M.novyProjekt({ typ: 'operativni_plan' }), cile = { opZaklad: p.listy.find((l) => l.typ === 'op_zaklad').opZaklad, opText: p.listy.find((l) => l.typ === 'op_text').opText };
   const n = navrhZKarty(vyplnenaKarta(), cile);
   const vse = new Set(n.map((_, i) => i));
   assert.ok(n.every((x) => x.stavajici === null));
@@ -32,7 +32,7 @@ test('karta → operativní plán: návrh převede údaje, nebezpečí, vodu, PB
 });
 
 test('neprázdné pole se označí k přepsání a bez výběru se nepřepíše', () => {
-  const p = M.novyProjekt({ typ: 'operativni_plan' }), cile = { opText: p.listy[1].opText };
+  const p = M.novyProjekt({ typ: 'operativni_plan' }), cile = { opText: p.listy.find((l) => l.typ === 'op_text').opText };
   cile.opText.doporuceni = 'Můj vlastní text';
   const n = navrhZKarty(vyplnenaKarta(), cile), i = n.findIndex((x) => x.cesta === 'doporuceni');
   assert.equal(n[i].stavajici, 'Můj vlastní text');
@@ -41,7 +41,7 @@ test('neprázdné pole se označí k přepsání a bez výběru se nepřepíše'
 });
 
 test('operativní plán → karta: jen jednoznačná pole vybrané budovy', () => {
-  const p = M.novyProjekt({ typ: 'operativni_plan' }), t = p.listy[1].opText, z = p.listy[0].opZaklad;
+  const p = M.novyProjekt({ typ: 'operativni_plan' }), t = p.listy.find((l) => l.typ === 'op_text').opText, z = p.listy.find((l) => l.typ === 'op_zaklad').opZaklad;
   t.objekty.push({ id: 'a', nazev: 'Sklad', podlazi: '1 NP', vyska: '9', pudorys: '40 x 30', konstrukce: 'ocel', useky: '1', vyuziti: 'sklad' }, { id: 'b', nazev: 'Lakovna', vyuziti: 'lakování' });
   t.udaje.osoby = '10 osob'; t.doporuceni = 'Pozor na ředidla'; z.ots.stupenPoplachu = 'I.';
   const k = M.novyList('karta').karta, n = navrhZPlanu({ opText: t, opZaklad: z }, t.objekty[1], k);

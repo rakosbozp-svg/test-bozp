@@ -5,18 +5,19 @@
 import { prazdnaEvak } from './evakuace.js';
 import { prazdnyEvakPlan } from './kresleni/evakplan.js';
 import { prazdnyOpZaklad, prazdnyOpText } from './operativniplan.js';
+import { prazdnySap } from './sap.js';
 
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
 
-export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'evak_text', 'evak_plan', 'op_zaklad', 'op_text'];
-export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text', evak_plan: 'Evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy' };
+export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'evak_text', 'evak_plan', 'op_zaklad', 'op_text', 'op_sap'];
+export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text', evak_plan: 'Evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy', op_sap: 'OP – výpočet SaP' };
 export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan', 'evakuacni_plan'];
 export const TYPY_DOKUMENTU_NAZVY = { operativni_karta: 'Operativní karta (DZP)', operativni_plan: 'Operativní plán (DZP)', evakuacni_plan: 'Požární evakuační plán' };
 // Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (půdorys a text jsou společné).
 export const LISTY_PRO_DOKUMENT = {
   operativni_karta: ['karta', 'situace', 'pudorys', 'schema', 'text'],
-  operativni_plan: ['op_zaklad', 'op_text', 'situace', 'pudorys', 'schema', 'karta', 'text'],
+  operativni_plan: ['op_zaklad', 'op_sap', 'op_text', 'situace', 'pudorys', 'schema', 'karta', 'text'],
   evakuacni_plan: ['evak_text', 'evak_plan', 'text'],
 };
 export const jeEvakuace = (p) => p?.typ === 'evakuacni_plan';
@@ -61,6 +62,7 @@ export const novyList = (typ, nazev) => {
   if (typ === 'evak_text') list.evak = prazdnaEvak();
   if (typ === 'op_zaklad') list.opZaklad = prazdnyOpZaklad();
   if (typ === 'op_text') list.opText = prazdnyOpText();
+  if (typ === 'op_sap') list.opSap = prazdnySap();
   if (typ === 'situace' || typ === 'pudorys' || typ === 'schema' || typ === 'evak_plan') {
     list.vykres = {
       format: 'A4', orientace: 'na_sirku',
@@ -105,7 +107,7 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
   if (typ === 'operativni_plan') {   // Hanuška 1996, kap. 2: základní text + vyjímatelná příloha (text, situace, půdorys)
-    p.listy.push(novyList('op_zaklad', 'Základní text OP'), novyList('op_text', 'Vyjímatelná příloha – text'), novyList('situace', 'Situace podniku'), novyList('pudorys', 'Půdorys'));
+    p.listy.push(novyList('op_zaklad', 'Základní text OP'), novyList('op_sap', 'Výpočet SaP'), novyList('op_text', 'Vyjímatelná příloha – text'), novyList('situace', 'Situace podniku'), novyList('pudorys', 'Půdorys'));
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
   if (typ === 'evakuacni_plan') {
@@ -143,7 +145,7 @@ export const kopirujList = (p, id) => {
   kopie.nazev = `${orig.nazev} (kopie)`;
   const prefix = (it) => { if (it && it.id) it.id = uid('p'); };
   if (kopie.vykres) kopie.vykres.prvky.forEach(prefix);
-  for (const d of [kopie.opZaklad, kopie.opText]) if (d) for (const v of Object.values(d)) if (Array.isArray(v)) v.forEach(prefix);
+  for (const d of [kopie.opZaklad, kopie.opText, kopie.opSap]) if (d) for (const v of Object.values(d)) if (Array.isArray(v)) v.forEach(prefix);
   if (kopie.evak) { kopie.evak.osoby.forEach(prefix); kopie.evak.shromazdiste.forEach(prefix); }
   if (kopie.karta) { kopie.karta.nebezpeci.forEach(prefix); kopie.karta.vodniZdroje.forEach(prefix); }
   p.listy.splice(orig.poradi + 1, 0, kopie);
@@ -195,6 +197,7 @@ export function migruj(data) {
     if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
     if (l.typ === 'op_zaklad') l.opZaklad = sloz(prazdnyOpZaklad(), l.opZaklad || {});
     if (l.typ === 'op_text') l.opText = sloz(prazdnyOpText(), l.opText || {});
+    if (l.typ === 'op_sap') l.opSap = sloz(prazdnySap(), l.opSap || {});
     if (['situace', 'pudorys', 'schema', 'evak_plan'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
   return p;

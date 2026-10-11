@@ -90,6 +90,6 @@ export function schemaJakoText(data, schema) {
 }
 
 export function nahledSchema(nadpis, pozn, text) {
-  const t = text.split('\n').map((r) => (/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9 ().,–-]{6,}$/.test(r) ? `<h4>${esc(r)}</h4>` : r === '' ? '' : `<p>${esc(r).replace(/…/g, '<span class="chybi">…</span>')}</p>`)).join('');
+  const t = text.split('\n').map((r) => (/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9 ().,–-]{4,}$/.test(r) ? `<h4>${esc(r)}</h4>` : r === '' ? '' : `<p>${esc(r).replace(/…/g, '<span class="chybi">…</span>')}</p>`)).join('');
   return `<article class="a4 evak-nahled"><h2>${esc(nadpis)}</h2><p class="napoveda">${esc(pozn)}</p>${t}</article>`;
 }
