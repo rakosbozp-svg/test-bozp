@@ -243,3 +243,9 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .rezim-prepinac a[aria-current="page"] { background: var(--inverse); color: var(--on-inverse); }
 .rezim-prepinac a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 @media (max-width: 640px) { .rezim-prepinac a { padding: 6px 10px; font-size: 13px; } }
+
+/* Přebírání údajů karta ↔ operativní plán */
+.prevzit-lista { display: flex; justify-content: flex-end; margin-bottom: var(--space-3); }
+.dlg .moznost span { display: block; }
+.dlg .moznost .varuj { color: var(--warn); font-weight: 600; }
+.dlg .moznosti { max-height: 55vh; overflow: auto; }

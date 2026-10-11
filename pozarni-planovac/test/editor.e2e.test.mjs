@@ -519,3 +519,32 @@ test('operativní plán: listy podle metodiky, formulář, hrubý odhad SaP, ná
   const f = join(tmp, 'op.pdf'); await dl.saveAs(f); assert.equal(readFileSync(f).subarray(0, 5).toString(), '%PDF-');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('přebírání údajů: z operativní karty do operativního plánu a zpět', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'OP přebírání'); await p.selectOption('#d-novy [name=typ]', 'operativni_plan'); await p.click('#d-novy button');
+  await p.waitForSelector('#sek-ots');
+  await p.selectOption('#l-typ', 'karta'); await p.click('#l-pridej'); await dlg(p, 'Karta haly');
+  await p.waitForSelector('[data-pole="objekt.nazev"]');
+  const v = async (sel, t) => { const l = p.locator(sel); await l.fill(t); await l.press('Tab'); };
+  await v('[data-pole="objekt.nazev"]', 'Hala montáže'); await v('[data-pole="doporuceni"]', 'Vypnout hlavní vypínač v trafostanici.');
+  await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('#sek-voda');
+  await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]');
+  assert.ok((await p.locator('.dlg [name=zdroj] option').first().textContent()).includes('tento projekt'));
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg[open] .moznost');
+  assert.ok((await p.locator('.dlg').textContent()).includes('Doporučení pro velitele zásahu'));
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForSelector('#sek-udaje [data-klic=nazev]');
+  assert.equal(await p.locator('#sek-udaje [data-klic=nazev]').inputValue(), 'Hala montáže');
+  assert.equal(await p.locator('[data-pole="doporuceni"]').inputValue(), 'Vypnout hlavní vypínač v trafostanici.');
+  // zpět: v plánu upravím obsazení osobami a převezmu ho do karty
+  await v('[data-pole="udaje.osoby"]', '40 osob ve 2 směnách');
+  await p.click('#listy li:nth-child(5) a'); await p.waitForSelector('[data-pole="objekt.obsazeniOsobami"]');
+  await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]'); await p.click('.dlg [data-vysledek=ok]');
+  await p.waitForSelector('.dlg[open] .moznost'); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForFunction(() => document.querySelector('[data-pole="objekt.obsazeniOsobami"]')?.value === '40 osob ve 2 směnách');
+  assert.deepEqual(chyby, []); await ctx.close();
+});

@@ -9,6 +9,7 @@ import { METODIKA_EVAK } from './evakuace.js';
 import { katalogProjektu } from './evakznacky.js';
 import { SCHEMA_ZAKLAD, SCHEMA_TEXT, METODIKA_OP } from './operativniplan.js';
 import { vykresliSchema, pripojSchema, schemaJakoText, nahledSchema } from './textlisty.js';
+import { navrhZKarty, navrhZPlanu, pouzijNavrh } from './prebirani.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
@@ -191,6 +192,57 @@ async function exportPdfDialog() {
   } catch (err) { ohlas(''); await oznam(`PDF se nepodařilo vytvořit: ${err.message}`); }
 }
 
+// ---------- přebírání údajů karta ↔ operativní plán ----------
+const TLACITKO_PREVZIT = (odkud) => `<div class="prevzit-lista"><button type="button" class="btn" data-prevzit="1">${ikona('kopie', 16)}Převzít údaje ${odkud}…</button></div>`;
+function obal(host, akce) { const puv = host.onclick; host.onclick = (e) => { if (e.target.closest('[data-prevzit]')) { akce(); return; } puv?.(e); }; }
+
+// Zdroje: listy daného typu v tomto projektu a v ostatních projektech DZP uložených v prohlížeči.
+function zdroje(typ) {
+  const o = [];
+  const z = (p, vlastni) => p.listy.filter((l) => l.typ === typ).forEach((l) => o.push({ klic: `${p.id}|${l.id}`, nazev: vlastni ? `${l.nazev} (tento projekt)` : `${p.nazev} – ${l.nazev}`, p, l }));
+  z(S.p, true);
+  for (const m of U.seznam()) { if (m.id === S.p.id || m.typ === 'evakuacni_plan') continue; const p = U.nacti(m.id); if (p) z(p, false); }
+  return o;
+}
+const vyberZdroje = (zd) => `<label class="rk-field"><span class="rk-field__label">Zdroj</span><select class="rk-field__control" name="zdroj">${zd.map((x) => `<option value="${esc(x.klic)}">${esc(x.nazev)}</option>`).join('')}</select></label>`;
+const zkrat = (v) => { const t = typeof v === 'string' ? v : Object.values(v).filter(Boolean).join(', '); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
+
+async function potvrdNavrh(navrh, titul) {
+  if (!navrh.length) { await oznam('Ve zdroji nejsou žádné nové údaje k převzetí (prázdná pole se nepřebírají, shodné hodnoty se přeskočí).', { titul }); return null; }
+  const r = await formular({ titul, ano: 'Převzít vybrané',
+    html: `<p class="dlg__text">Zaškrtnuté údaje se zapíšou do formuláře. Pole, která už mají hodnotu, jsou předem odškrtnutá – zaškrtnutím je přepíšete.</p>
+      <div class="moznosti">${navrh.map((x, i) => `<label class="moznost"><input type="checkbox" name="n_${i}" ${x.stavajici ? '' : 'checked'}><div><b>${esc(x.popis)}</b><span>${esc(zkrat(x.hodnota))}</span>${x.stavajici ? `<span class="varuj">Přepíše: ${esc(zkrat(x.stavajici))}</span>` : ''}</div></label>`).join('')}</div>` });
+  if (!r.ok) return null;
+  return new Set(navrh.map((_, i) => i).filter((i) => r.pole[`n_${i}`]));
+}
+
+async function prevzitDoPlanu() {
+  const zd = zdroje('karta'), titul = 'Převzít z operativní karty';
+  if (!zd.length) { await oznam('V tomto prohlížeči není žádná operativní karta (v tomto ani jiném projektu DZP).', { titul }); return 0; }
+  const r = await formular({ titul, ano: 'Pokračovat', html: `<p class="dlg__text">Údaje karty se převedou do textové části přílohy a základního textu OP. Nebezpečí, vodní zdroje a PBZ se převedou jako text.</p>${vyberZdroje(zd)}` });
+  if (!r.ok) return 0;
+  const src = zd.find((x) => x.klic === r.pole.zdroj), cile = { opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad };
+  const navrh = navrhZKarty(src.l.karta, cile), vyb = await potvrdNavrh(navrh, titul);
+  if (!vyb) return 0;
+  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); ohlas(`Převzato ${n} údajů z karty „${src.l.nazev}“.`); return n;
+}
+
+async function prevzitDoKarty(list) {
+  const zd = zdroje('op_text'), titul = 'Převzít z operativního plánu';
+  if (!zd.length) { await oznam('V tomto prohlížeči není žádný operativní plán s textovou částí přílohy.', { titul }); return 0; }
+  const r = await formular({ titul, ano: 'Pokračovat', html: `<p class="dlg__text">Do karty se převezmou jen jednoznačná pole: údaje vybrané budovy, obsazení osobami, doporučení pro velitele a stupeň poplachu. Nebezpečí, vodní zdroje a PBZ jsou v kartě strukturované – z textu plánu je nelze spolehlivě rozložit, doplňte je ručně.</p>${vyberZdroje(zd)}` });
+  if (!r.ok) return 0;
+  const src = zd.find((x) => x.klic === r.pole.zdroj), opText = src.l.opText, opZaklad = src.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad;
+  let budova = opText.objekty[0] || null;
+  if (opText.objekty.length > 1) {
+    const b = await formular({ titul, ano: 'Pokračovat', html: `<label class="rk-field"><span class="rk-field__label">Budova, pro kterou je karta</span><select class="rk-field__control" name="budova">${opText.objekty.map((o) => `<option value="${esc(o.id)}">${esc(o.nazev || '(bez názvu)')}</option>`).join('')}</select></label>` });
+    if (!b.ok) return 0; budova = opText.objekty.find((o) => o.id === b.pole.budova);
+  }
+  const navrh = navrhZPlanu({ opText, opZaklad }, budova, list.karta), vyb = await potvrdNavrh(navrh, titul);
+  if (!vyb) return 0;
+  const n = pouzijNavrh(navrh, vyb, { karta: list.karta }); uloz(true); ohlas(`Převzato ${n} údajů z plánu „${src.p.nazev}“.`); return n;
+}
+
 // ---------- editor ----------
 const OP_LISTY = {   // typ listu → [klíč dat, schéma, nadpis náhledu, poznámka, úvod formuláře]
   op_zaklad: ['opZaklad', SCHEMA_ZAKLAD, 'OPERATIVNÍ PLÁN – základní text', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), kap. 2.1 a příloha č. 3.', '<p class="napoveda">Základní text je koncept a podklad pro vyjímatelné přílohy; zpracovává se v jednom vyhotovení a ukládá se odděleně od příloh (Hanuška 1996, kap. 2.1).</p>'],
@@ -248,16 +300,16 @@ function obsah(list) {
   if (!list) { host.innerHTML = '<p class="prazdno">Projekt nemá žádný list. Přidejte ho vlevo.</p>'; return; }
   if (list.typ === 'karta') {
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledKarty(list, S.p)}</div>`; return; }
-    const kresli = () => { vykresliKartu(list, host); pripoj(list, host, naZmenu); panel(true); };
+    const kresli = () => { vykresliKartu(list, host); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); pripoj(list, host, naZmenu); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
     const naZmenu = (prekreslit) => {
       uloz();
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
     };
-    vykresliKartu(list, host); pripoj(list, host, naZmenu);
+    kresli();
   } else if (OP_LISTY[list.typ]) {
     const [klic, schema, nadpis, pozn, uvod] = OP_LISTY[list.typ], data = list[klic], prefix = `listy[${list.id}].${klic}`;
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema(nadpis, pozn, schemaJakoText(data, schema))}</div>`; return; }
-    const kresli = () => { vykresliSchema(data, schema, prefix, host, uvod); pripojSchema(data, schema, host, naZmenu); };
+    const kresli = () => { vykresliSchema(data, schema, prefix, host, TLACITKO_PREVZIT('z operativní karty') + uvod); pripojSchema(data, schema, host, naZmenu); obal(host, () => prevzitDoPlanu().then((n) => n && kresli())); };
     const naZmenu = (prekreslit) => { uloz(); if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } panel(true); };
     kresli();
   } else if (list.typ === 'evak_text') {

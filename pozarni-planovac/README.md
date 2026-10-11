@@ -87,3 +87,6 @@ Druh dokumentace „Operativní plán“ (režim DZP) se zakládá podle Metodic
 - **Vyjímatelná příloha – text** – operativně taktická charakteristika (budovy, osoby, činnosti, látky, SHZ/EPS, rozvody, složité podmínky; vodní zdroje a hasiva; komunikace), doporučení pro velitele zásahu a důležitá telefonní čísla.
 - **Situace podniku** a **Půdorys** – stávající editor výkresů; lze přidat další půdorysy, schéma, operativní kartu a text.
 Kontrola úplnosti hlídá povinné části (kap. 2.1–2.3), náhled i export PDF obsahují textové listy. Klik na nález otevře příslušný list.
+
+### Přebírání údajů karta ↔ operativní plán
+V listech OP je tlačítko **Převzít údaje z operativní karty…**, v kartě **Převzít údaje z operativního plánu…**. Zdrojem může být list v tomto projektu i v jiném projektu DZP uloženém v prohlížeči. Aplikace ukáže návrh (co se kam zapíše); prázdná pole jsou předvybraná, pole s hodnotou jsou odškrtnutá a označená „Přepíše“. Do plánu se převádí: budova (charakter objektu), osoby, nebezpečí s hasivy, PBZ, uzávěry/vypínače a FVE, vodní zdroje (s průtokem a ověřením), příjezd a omezení, doporučení, kontakty, stupeň poplachu. Do karty jen jednoznačná pole (vybraná budova, osoby, doporučení, stupeň poplachu) – nebezpečí, vodní zdroje a PBZ jsou v kartě strukturované a z textu plánu se nerozkládají. Údaje se kopírují jednorázově, nejsou trvale propojené.
