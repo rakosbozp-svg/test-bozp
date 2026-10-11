@@ -61,40 +61,66 @@ function smeruj() {
 window.addEventListener('hashchange', smeruj);
 
 // ---------- dashboard ----------
+// Úvodní stránka má dva oddělené režimy: DZP (pro hasiče) a evakuační plány (pro osoby v objektu). Volba je v adrese (#/dzp, #/evakuace)
+// a pamatuje se v prohlížeči; logo vrací do naposledy zvoleného režimu.
+const REZIMY = {
+  dzp: { nazev: 'DZP', dlouhy: 'Dokumentace zdolávání požárů', ikona: 'plamen', popis: 'Operativní karty a plány pro velitele zásahu (HZS).',
+    hero: ['Dokumentace zdolávání požárů', 'Operativní karty a plány, které velitel zásahu přečte za minutu', 'Vyplníte kartu podle vzoru HZS, nakreslíte situaci a půdorys a aplikace pohlídá úplnost. Odborné údaje i právní soulad vždy ověřuje zpracovatel s HZS.'],
+    novy: ['Nová DZP', 'Založte operativní kartu podle vzoru HZS', 'Pojmenujte projekt a vyberte, zda vytváříte kartu, nebo složitější plán.', 'např. DZP Litice', 'Založit DZP'],
+    typy: ['operativni_karta', 'operativni_plan'] },
+  evakuace: { nazev: 'Evakuační plány', dlouhy: 'Požární evakuační plány', ikona: 'sipka', popis: 'Únikové plány podlaží a textová část pro osoby v objektu.',
+    hero: ['Požární evakuační plány', 'Únikové plány podlaží, podle kterých lidé najdou cestu ven', 'Textová část podle § 33 vyhlášky č. 246/2001 Sb. a grafické listy podlaží podle ČSN ISO 23601. Evakuační plán není DZP – oba druhy dokumentace se nemíchají.'],
+    novy: ['Nový evakuační plán', 'Založte požární evakuační plán', 'Vznikne textová část (§ 33) a první list podlaží A3. Další podlaží přidáte v editoru.', 'např. Evakuační plán – Hala 5', 'Založit evakuační plán'],
+    typy: ['evakuacni_plan'] },
+};
+const rezimProjektu = (typ) => (typ === 'evakuacni_plan' ? 'evakuace' : 'dzp');
+function aktualniRezim() {
+  const z = location.hash.split('/')[1];
+  if (REZIMY[z]) { try { localStorage.setItem('pp-rezim', z); } catch { /* bez úložiště */ } return z; }
+  try { const r = localStorage.getItem('pp-rezim'); if (REZIMY[r]) return r; } catch { /* bez úložiště */ }
+  return 'dzp';
+}
+function nastavLogo(rezim) { const el = $('#logo small'); if (el) el.textContent = REZIMY[rezim].nazev; const a = $('#logo'); if (a) a.href = `#/${rezim}`; }
+
 function dashboard() {
   S.ed?.zrusit(); S.ed = null;
   topAkce.innerHTML = '';
-  const sez = U.seznam(), posl = U.posledni();
-  const poslProj = sez.find((x) => x.id === posl);
-  app.innerHTML = `<section class="dash">
+  const rezim = aktualniRezim(), R = REZIMY[rezim]; nastavLogo(rezim);
+  const vse = U.seznam(), sez = vse.filter((x) => rezimProjektu(x.typ) === rezim), jine = vse.length - sez.length, posl = U.posledni();
+  const poslProj = sez.find((x) => x.id === posl) || sez[0];
+  const volba = (k) => { const x = REZIMY[k], pocet = vse.filter((y) => rezimProjektu(y.typ) === k).length;
+    return `<a class="rezim rk-card rk-card--interactive ${k === rezim ? 'akt' : ''}" href="#/${k}" data-rezim="${k}" ${k === rezim ? 'aria-current="page"' : ''}><div class="rk-card__top"><span class="rk-tile">${ikona(x.ikona, 22)}</span>${k === rezim ? '<span class="rezim__stav">Zvoleno</span>' : ''}</div><div class="rk-card__title">${x.dlouhy}</div><div class="rk-card__body">${x.popis}<br><small>${pocet ? `${pocet} ${pocet === 1 ? 'projekt' : pocet < 5 ? 'projekty' : 'projektů'} v tomto prohlížeči` : 'zatím žádný projekt'}</small></div></a>`; };
+  app.innerHTML = `<section class="dash dash--${rezim}">
+    <nav class="rezimy" aria-label="Co chcete zpracovat">${volba('dzp')}${volba('evakuace')}</nav>
     <header class="dash__hero rk-sh">
-      <div class="rk-eyebrow">Dokumentace zdolávání požárů</div>
-      <h1 class="rk-sh__title dash__nadpis">Operativní karty a plány, které velitel zásahu přečte za minutu</h1>
-      <p class="rk-sh__lead">Vyplníte kartu podle vzoru HZS, nakreslíte situaci a půdorys a aplikace pohlídá úplnost. Odborné údaje i právní soulad vždy ověřuje zpracovatel s HZS.</p>
+      <div class="rk-eyebrow">${R.hero[0]}</div>
+      <h1 class="rk-sh__title dash__nadpis">${R.hero[1]}</h1>
+      <p class="rk-sh__lead">${R.hero[2]}</p>
     </header>
     ${U.dostupne() ? '' : `<div class="varovani" role="alert">${ikona('pozor', 20)}<span>Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data). Projekt se neuloží – po úpravách použijte Stáhnout → Editovatelný projekt.</span></div>`}
     <section class="rk-callout">
       <div class="rk-callout__main">
-        <header class="rk-sh rk-sh--dark"><div class="rk-eyebrow">Nový plán</div>
-          <h2 class="rk-sh__title rk-sh__title--sm">Založte operativní kartu podle vzoru HZS</h2>
-          <p class="rk-sh__lead">Pojmenujte projekt a vyberte, zda vytváříte kartu, nebo složitější plán.</p></header>
+        <header class="rk-sh rk-sh--dark"><div class="rk-eyebrow">${R.novy[0]}</div>
+          <h2 class="rk-sh__title rk-sh__title--sm">${R.novy[1]}</h2>
+          <p class="rk-sh__lead">${R.novy[2]}</p></header>
         <form id="d-novy">
-          <label class="rk-field"><span class="rk-field__label">Název projektu</span><input class="rk-field__control" type="text" name="nazev" placeholder="např. DZP Litice" required></label>
-          <label class="rk-field"><span class="rk-field__label">Druh dokumentace</span><select class="rk-field__control" name="typ"><option value="operativni_karta">Operativní karta</option><option value="evakuacni_plan">Požární evakuační plán (není DZP)</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select></label>
-          <div class="rk-callout__action"><button class="rk-btn rk-btn--primary" type="submit"><span>Založit plán</span><span class="rk-btn__arrow">→</span></button></div>
+          <label class="rk-field"><span class="rk-field__label">Název projektu</span><input class="rk-field__control" type="text" name="nazev" placeholder="${R.novy[3]}" required></label>
+          ${rezim === 'dzp' ? '<label class="rk-field"><span class="rk-field__label">Druh dokumentace</span><select class="rk-field__control" name="typ"><option value="operativni_karta">Operativní karta</option><option value="operativni_plan">Operativní plán (zatím bez listů)</option></select></label>' : '<input type="hidden" name="typ" value="evakuacni_plan">'}
+          <div class="rk-callout__action"><button class="rk-btn rk-btn--primary" type="submit"><span>${R.novy[4]}</span><span class="rk-btn__arrow">→</span></button></div>
         </form>
       </div>
     </section>
     <div class="dlazdice">
       ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${poslProj.id}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
-      <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json ze zálohy (Stáhnout → Editovatelný projekt).</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
-      <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. Vektorové podklady se převedou na upravitelné prvky.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
-      <button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>
+      <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json ze zálohy (Stáhnout → Editovatelný projekt). Otevře se v režimu podle svého druhu.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
+      <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. ${rezim === 'dzp' ? 'Založí novou DZP a vloží podklad do situace.' : 'Založí nový evakuační plán a vloží podklad do listu podlaží.'}</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
+      ${rezim === 'dzp' ? `<button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>` : ''}
     </div>
     <section>
-      <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">Vaše projekty</h2></header>
+      <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">${rezim === 'dzp' ? 'Vaše DZP' : 'Vaše evakuační plány'}</h2></header>
       <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
-        <button class="btn mal" data-akce="kopie" data-id="${x.id}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || '<li class="prazdno">Zatím žádný uložený projekt.</li>'}</ul>
+        <button class="btn mal" data-akce="kopie" data-id="${x.id}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || `<li class="prazdno">Zatím žádný ${rezim === 'dzp' ? 'projekt DZP' : 'evakuační plán'}.</li>`}</ul>
+      ${jine ? `<p class="napoveda" style="margin-top:var(--space-3)">${rezim === 'dzp' ? `Evakuační plány (${jine}) najdete v režimu <a href="#/evakuace">Evakuační plány</a>.` : `Projekty DZP (${jine}) najdete v režimu <a href="#/dzp">DZP</a>.`}</p>` : ''}
       <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
     </section>
   </section>`;
@@ -117,14 +143,14 @@ function dashboard() {
     try {
       const r = await importujSoubor(f); e.target.value = '';
       if (!r) return;
-      const p = M.novyProjekt({ nazev: f.name.replace(/\.[^.]+$/, ''), typ: 'operativni_karta' }), sit = p.listy.find((l) => l.typ === 'situace');
+      const evak = rezim === 'evakuace', p = M.novyProjekt({ nazev: f.name.replace(/\.[^.]+$/, ''), typ: evak ? 'evakuacni_plan' : 'operativni_karta' }), sit = p.listy.find((l) => l.typ === (evak ? 'evak_plan' : 'situace'));
       if (r.typ === 'raster') vlozPodklad(p, sit.vykres, r.obrazek); else vlozVektor(sit.vykres, r.vysledek);
       const u = await U.uloz(p); if (!u.ok) throw new Error(u.chyba);
       location.hash = `#/p/${p.id}/${sit.id}`;
       if (r.souhrn) oznam(r.souhrn.join('\n') || 'Hotovo.', { titul: 'Import dokončen' });
     } catch (err) { await oznam(`Import podkladu selhal: ${err.message}`); }
   };
-  $('#d-litice').onclick = async () => {
+  if ($('#d-litice')) $('#d-litice').onclick = async () => {
     try {
       let text = globalThis.__LITICE__;
       if (!text) { const r = await fetch('data/litice.projekt.json'); if (!r.ok) throw new Error('soubor nenalezen'); text = await r.text(); }
@@ -169,6 +195,7 @@ const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti'
 
 function editor() {
   S.ed?.zrusit(); S.ed = null;
+  { const r = rezimProjektu(S.p.typ); nastavLogo(r); try { localStorage.setItem('pp-rezim', r); } catch { /* bez úložiště */ } }
   const p = S.p, list = p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
   topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span>${M.jeEvakuace(p) ? '<span class="rk-badge rk-badge--warning" title="Evakuační plán není DZP">Evakuační plán · ne DZP</span>' : ''}<span id="stav" class="stav">${esc(S.stav)}</span>

@@ -446,7 +446,13 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
   await p.goto(URL_);
-  await p.fill('#d-novy [name=nazev]', 'Evakuace test'); await p.selectOption('#d-novy [name=typ]', 'evakuacni_plan'); await p.click('#d-novy button');
+  // úvodní stránka: volba režimu; v DZP se evakuační plán nezakládá, v režimu Evakuační plány ano
+  assert.equal(await p.locator('.rezim.akt').getAttribute('data-rezim'), 'dzp');
+  assert.ok(!(await p.locator('#d-novy select option').allTextContents()).some((t) => t.includes('evakuační')));
+  await p.click('[data-rezim=evakuace]'); await p.waitForSelector('.dash--evakuace');
+  assert.ok((await p.locator('.dash__nadpis').textContent()).includes('Únikové plány'));
+  assert.equal(await p.locator('#d-litice').count(), 0);
+  await p.fill('#d-novy [name=nazev]', 'Evakuace test'); await p.click('#d-novy button');
   await p.waitForSelector('.editor');
   assert.ok((await p.locator('.nazev-projektu + .rk-badge').textContent()).includes('ne DZP'));
   assert.deepEqual(await p.locator('#l-typ option').evaluateAll((o) => o.map((x) => x.value)), ['evak_text', 'evak_plan', 'text']);
@@ -479,5 +485,10 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await p.click('[data-p=uplnost]'); assert.ok((await p.locator('#panel-obsah').textContent()).includes('Číslo plánu'));
   const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.click('[data-akce=export-pdf]')]);
   const f = join(tmp, 'evak.pdf'); await dl.saveAs(f); assert.equal(readFileSync(f).subarray(0, 5).toString(), '%PDF-');
+  // logo vrací do režimu evakuačních plánů; projekt je jen v jeho seznamu
+  await p.click('#logo'); await p.waitForSelector('.dash--evakuace');
+  assert.equal(await p.locator('.projekty li a').count(), 1);
+  await p.click('[data-rezim=dzp]'); await p.waitForSelector('.dash--dzp');
+  assert.equal(await p.locator('.projekty li a').count(), 0); assert.ok((await p.locator('.dash').textContent()).includes('Evakuační plány (1)'));
   assert.deepEqual(chyby, []); await ctx.close();
 });
