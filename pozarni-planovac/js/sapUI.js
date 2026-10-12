@@ -1,6 +1,6 @@
 // Formulář výpočtu SaP (list „OP – výpočet SaP“). Výsledek se přepočítává při každé změně a ukazuje vzorce s dosazenými hodnotami.
 import { esc, dostan, nastav, naCislo, zCisla } from './formular.js';
-import { PROSTORY, TABULKA1, DOBA_VYJEZDU, UHLY, DRUZSTVA, PROUDNICE, PRACE_MV, vypocetSaP, shrnutiSaP, novaJednotka } from './sap.js';
+import { PROSTORY, TABULKA1, DOBA_VYJEZDU, UHLY, DRUZSTVA, PROUDNICE, PRACE_MV, CAS_VYKON, vypocetSaP, shrnutiSaP, novaJednotka } from './sap.js';
 
 const vyber = (c, label, volby, d, sirka = '') => `<label class="f ${sirka}"><span>${esc(label)}</span><select data-sap="${c}">${volby.map(([k, n]) => `<option value="${esc(k)}" ${String(dostan(d, c)) === String(k) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
 const cis = (c, label, d, tip = '') => `<label class="f f-s"><span>${esc(label)}</span><input type="text" inputmode="decimal" data-sap="${c}" data-typ="cislo" value="${esc(zCisla(dostan(d, c)))}" ${tip ? `title="${esc(tip)}"` : ''}></label>`;
@@ -46,8 +46,8 @@ export function vykresliSap(list, host) {
     ${sek('ochlazovani', '4. Ochlazování a ochrana (nepovinné)', 'Kap. 5.2, tabulka č. 2: hořící nádrž 30 l/m/min (při hoření v jímce 60), sousední nádrž 12 l/m/min na polovinu obvodu.',
       `${cis('nadrzD', 'Hořící nádrž – průměr D (m)', d)}${vyber('nadrzIo', 'Intenzita – hořící nádrž', [['30', '30 l/m/min'], ['60', '60 l/m/min (hoření v jímce)']], d, 'f-s')}
       ${cis('sousedniD', 'Sousední nádrž – průměr D (m)', d)}${cis('sousedniIo', 'Intenzita – sousední (l/m/min)', d)}${cis('sousedniM', 'Počet sousedních nádrží m', d)}${cis('ochranaQ', 'Ochrana ostatních objektů (l/min)', d)}`)}
-    ${sek('technika', '5. Technika a voda', 'Kap. 5.4: možnosti družstva (tabulka v kap. 5.4); výkon čerpadla Qc – údaj vaší techniky (tab. 9 je z roku 1996). Vydatnost zdroje: zkouška hydrantu, tab. 7 a 8.',
-      `${vyber('druzstvo', 'Složení družstva', Object.entries(DRUZSTVA).map(([k, [q, n, t]]) => [k, `${k} – ${t}, až ${q} l/min`]), d)}${cis('Qc', 'Výkon čerpadla Qc (l/min)', d)}${cis('vydatnost', 'Vydatnost zdroje vody (l/min)', d)}`)}
+    ${sek('technika', '5. Technika a voda', 'Kap. 5.4: možnosti družstva (tabulka v kap. 5.4). Výkon čerpadla Qc: minimum podle vyhlášky č. 35/2007 Sb. (CAS 20 = 2 000, CAS 30 = 3 000 l/min) je bezpečný předpoklad; skutečný výkon vozu jednotky zjistěte u HZS / jednotky (tab. 9 metodiky je z roku 1996). Vydatnost zdroje: zkouška hydrantu, tab. 7 a 8.',
+      `${vyber('druzstvo', 'Složení družstva', Object.entries(DRUZSTVA).map(([k, [q, n, t]]) => [k, `${k} – ${t}, až ${q} l/min`]), d)}${vyber('QcVolba', 'Technika (výkon čerpadla)', Object.entries(CAS_VYKON).map(([k, [, n]]) => [k, n]), d)}${cis('Qc', 'Výkon čerpadla Qc (l/min)', d)}${cis('vydatnost', 'Vydatnost zdroje vody (l/min)', d)}`)}
     ${sek('dych', '6. Dýchací technika (nepovinné)', 'Kap. 5.5: To = 10·pL·VL/MV.',
       `${vyber('dych.pL', 'Tlak v lahvi pL', [['', '—'], ['20', '20 MPa'], ['30', '30 MPa']], d, 'f-s')}${cis('dych.VL', 'Objem lahve VL (l)', d)}${vyber('dych.prace', 'Druh práce (MV)', Object.entries(PRACE_MV).map(([k, x]) => [k, `${({ klid: 'klid', lehky: 'lehký pohyb', lehka: 'lehká práce', stredni: 'střední práce', tezka: 'těžká práce', max: 'nejvyšší vypětí' })[k]} (${x} l/min)`]), d)}`)}
     ${sek('dalkova', '7. Dálková doprava vody (nepovinné)', 'Kap. 5.7: Nč = (H + 0,01·Lh·Ht + 7,5)/65; kyvadlová doprava Nc = (T1+T2+T3)/T4 + (2 až 3).',
@@ -66,6 +66,8 @@ export function pripojSap(list, host, { onZmena, prekresli, zapisShrnuti }) {
     const el = e.target;
     if (e.type === 'change' && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text'))) return;   // jinak by překreslení výsledků při opuštění pole „spolklo“ klik
     const v = hodnota(el); if (v === undefined) return;
+    if (el.dataset.sap === 'QcVolba') { d.QcVolba = v; if (CAS_VYKON[v]?.[0]) d.Qc = CAS_VYKON[v][0]; onZmena(); prekresli(); return; }
+    if (el.dataset.sap === 'Qc') d.QcVolba = 'vlastni';
     if (el.dataset.sap) { nastav(d, el.dataset.sap, v); onZmena(); if (el.tagName === 'SELECT' && ['forma', 'zpusob'].includes(el.dataset.sap)) prekresli(); else obnov(); }
     else if (el.dataset.jed) { const j = d.jednotky.find((x) => x.id === el.dataset.jed); if (j) { j[el.dataset.klic] = v; onZmena(); obnov(); } }
   };

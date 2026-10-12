@@ -257,3 +257,6 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .sap-kroky .vzorec { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 .sap-kroky .hodnota { font-weight: 700; white-space: nowrap; }
 .sap-shrnuti { margin: var(--space-3) 0; }
+.listy-extra { border-top: 1px dashed var(--line); padding-top: 6px; }
+.kroky-dotazniku { margin: var(--space-2) 0 var(--space-3); padding-left: 1.2em; font-size: 14px; color: var(--ink-muted); }
+.prevzit-lista { gap: var(--space-2); flex-wrap: wrap; }

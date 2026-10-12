@@ -66,6 +66,9 @@ export const V_JIZDY = 45;                                                    //
 export const UHLY = { 180: 0.5, 90: 0.25, 60: 0.16, 45: 0.12, 30: 0.08 };     // kap. 4.2 b
 export const DRUZSTVA = { '1+2': [200, 1, 'proudnice: 1 C'], '1+3': [400, 1, '1 C nebo 1 B'], '1+5': [600, 2, '2 C nebo 1 C + 1 B'], '1+8': [800, 3, '3 C nebo 2 C + 1 B'] };   // kap. 5.4 [qA, npr]
 export const PROUDNICE = [['200', 'C 52 – hubice 12,5 (200 l/min)'], ['337', 'C 52 – hubice 16 (337 l/min)'], ['400', 'B 75 – hubice 18 (400 l/min)'], ['800', 'B 75 – hubice 25 (800 l/min)']];   // tab. 4
+// Minimální jmenovitý výkon čerpadla podle vyhlášky č. 35/2007 Sb. (CAS 20 / CAS 30, při 10 bar dle ČSN EN 1028-1).
+// Skutečný vůz může mít výkonnější čerpadlo (např. CAS 20/4000/240 s čerpadlem 3 000 l/min) – pak zadejte vlastní hodnotu.
+export const CAS_VYKON = { cas20: [2000, 'CAS 20 – min. 2 000 l/min (vyhl. 35/2007 Sb.)'], cas30: [3000, 'CAS 30 – min. 3 000 l/min (vyhl. 35/2007 Sb.)'], vlastni: [null, 'vlastní hodnota (výkon konkrétního vozu)'] };
 export const PRACE_MV = { klid: 13, lehky: 20, lehka: 25, stredni: 35, tezka: 45, max: 70 };   // kap. 5.5
 export const HT = { 400: { konopne: 8, izolovane: 4 }, 600: { konopne: 16, izolovane: 8 }, 800: { konopne: 32, izolovane: 16 } };   // kap. 5.7, m v.sl. / 100 m
 
@@ -78,7 +81,7 @@ export const prazdnySap = () => ({
   zpusob: 'plocha', Oh: null, h: 5,
   qprH: '200', qprO: '200', kH: 2, kO: 2,
   nadrzD: null, nadrzIo: 30, sousedniD: null, sousedniIo: 12, sousedniM: null, ochranaQ: null,
-  druzstvo: '1+5', Qc: 2500, vydatnost: null,
+  druzstvo: '1+5', QcVolba: 'vlastni', Qc: null, vydatnost: null,
   dych: { pL: null, VL: null, prace: 'stredni' },
   dalkova: { Lh: null, H: null, prutok: '600', hadice: 'izolovane' },
   kyvadlo: { L: null, Vnc: null, Qc: null, qv: null },
@@ -191,6 +194,7 @@ export function vypocetSaP(d) {
     const NA1 = nahoru(Qp / dr[0]), NA2 = nahoru(Npr / dr[1]);
     krok('SaP', `Počet automobilů (družstev ${d.druzstvo})`, `NA = Qp/qA = ${f(Qp, 0)}/${dr[0]}; NA = Npr/npr = ${Npr}/${dr[1]}`, `${NA1} podle dodávky, ${NA2} podle proudnic → ${Math.max(NA1, NA2)}`);
     let NAN = null;
+    if (Qc === null) chybi.push('výkon čerpadla Qc (vyberte CAS 20 / CAS 30 podle vyhl. 35/2007 Sb. nebo zadejte výkon konkrétního vozu)');
     if (Qc !== null) { NAN = nahoru((Nh * qh + No * qo) / (0.75 * Qc)); krok('SaP', 'Technika nutná k dodávce hasiva', `NA(N) = Σ(Npr·qpr)/(0,75·Qc) = ${f(Nh * qh + No * qo, 0)}/(0,75·${f(Qc, 0)})`, `${NAN}`); }
     const kH = kladne(d.kH) ?? 2, kO = kladne(d.kO) ?? 2, NHa = nahoru(1.25 * (kH * Nh + kO * No));
     krok('SaP', 'Přibližný počet hasičů', `NHa = 1,25·Σ(ki·Npri) = 1,25·(${f(kH)}·${Nh} + ${f(kO)}·${No})`, `${NHa}`);

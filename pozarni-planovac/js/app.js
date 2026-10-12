@@ -12,6 +12,9 @@ import { vykresliSchema, pripojSchema, schemaJakoText, nahledSchema } from './te
 import { navrhZKarty, navrhZPlanu, pouzijNavrh } from './prebirani.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
 import { sapJakoText } from './sap.js';
+import { vykresliDotaznik, pripojDotaznik } from './dotaznikUI.js';
+import { navrhZDotazniku, dotaznikJakoText } from './dotaznik.js';
+import { dotaznikDoPdf, dotaznikZPdf } from './pdf/dotaznikPdf.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
@@ -58,7 +61,7 @@ function smeruj() {
     const p = U.nacti(id);
     if (!p) { ohlas('Projekt nebyl nalezen v tomto prohlížeči.'); location.hash = '#/'; return; }
     if (!S.p || S.p.id !== id) { S.p = p; S.zalozka = 'formular'; }
-    S.listId = (listId && S.p.listy.some((l) => l.id === listId)) ? listId : S.p.listy[0]?.id ?? null;
+    S.listId = (listId === 'dotaznik' && !M.jeEvakuace(S.p)) || (listId && S.p.listy.some((l) => l.id === listId)) ? listId : S.p.listy[0]?.id ?? null;
     U.nastavPosledni(id);
     editor();
   } else { S.p = null; dashboard(); }
@@ -256,7 +259,7 @@ const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti'
 function editor() {
   S.ed?.zrusit(); S.ed = null;
   { const r = rezimProjektu(S.p.typ); nastavLogo(r); try { localStorage.setItem('pp-rezim', r); } catch { /* bez úložiště */ } }
-  const p = S.p, list = p.listy.find((l) => l.id === S.listId);
+  const p = S.p, list = S.listId === 'dotaznik' ? { id: 'dotaznik', typ: 'dotaznik', nazev: 'Dotazník pro klienta', virtualni: true } : p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
   topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span>${M.jeEvakuace(p) ? '<span class="rk-badge rk-badge--warning" title="Evakuační plán není DZP">Evakuační plán · ne DZP</span>' : ''}<span id="stav" class="stav">${esc(S.stav)}</span>
     ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">${ikona('tisk', 16)}Tisk / PDF</button>` : ''}
@@ -268,8 +271,9 @@ function editor() {
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">
     <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${p.id}/${l.id}">${esc(l.nazev)}<small>${M.TYPY_LISTU_NAZVY[l.typ] || l.typ}</small></a></li>`).join('')}</ol>
+      ${M.jeEvakuace(p) ? '' : `<ol class="listy-extra"><li class="${S.listId === 'dotaznik' ? 'akt' : ''}"><a href="#/p/${p.id}/dotaznik" id="l-dotaznik">Dotazník pro klienta<small>sběr údajů od klienta</small></a></li></ol>`}
       <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${(M.LISTY_PRO_DOKUMENT[p.typ] || M.TYPY_LISTU).map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
-      ${list ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
+      ${list && !list.virtualni ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
     <section class="stred">
       <div class="zalozky" id="zalozky-formular" role="tablist"></div>
       <div id="obsah"></div></section>
@@ -277,7 +281,7 @@ function editor() {
   </div>`;
 
   $('#l-pridej').onclick = async () => { const typ = $('#l-typ').value, n = await zeptejSe('Název nového listu', M.TYPY_LISTU_NAZVY[typ] || typ); if (n === null) return; const l = M.pridejList(p, typ, n.trim() || undefined); uloz(true); location.hash = `#/p/${p.id}/${l.id}`; };
-  if (list) {
+  if (list && !list.virtualni) {
     $('#l-prejm').onclick = async () => { const n = await zeptejSe('Nový název listu', list.nazev); if (n?.trim()) { M.prejmenujList(p, list.id, n.trim()); uloz(true); editor(); } };
     $('#l-kopie').onclick = () => { const k = M.kopirujList(p, list.id); uloz(true); location.hash = `#/p/${p.id}/${k.id}`; };
     $('#l-nahoru').onclick = () => { M.presunList(p, list.id, list.poradi - 1); uloz(true); editor(); };
@@ -291,7 +295,7 @@ function editor() {
 
 function zalozky(list) {
   const host = $('#zalozky-formular'); if (!host) return;
-  if (!['karta', 'evak_text', 'op_zaklad', 'op_text', 'op_sap'].includes(list?.typ)) { host.innerHTML = ''; host.hidden = true; return; }
+  if (!['karta', 'evak_text', 'op_zaklad', 'op_text', 'op_sap', 'dotaznik'].includes(list?.typ)) { host.innerHTML = ''; host.hidden = true; return; }
   host.hidden = false;
   host.innerHTML = `<button role="tab" data-z="formular" class="${S.zalozka === 'formular' ? 'akt' : ''}">Formulář</button><button role="tab" data-z="nahled" class="${S.zalozka === 'nahled' ? 'akt' : ''}">Náhled A4</button>`;
   host.querySelectorAll('[data-z]').forEach((b) => { b.onclick = () => { S.zalozka = b.dataset.z; zalozky(list); obsah(list); panel(); }; });
@@ -308,6 +312,30 @@ function obsah(list) {
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
     };
     kresli();
+  } else if (list.typ === 'dotaznik') {
+    const objekt = () => S.p.listy.find((l) => l.karta)?.karta.objekt.nazev || S.p.listy.find((l) => l.opText)?.opText.objekty[0]?.nazev || S.p.nazev;
+    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('DOTAZNÍK PRO KLIENTA', 'Odpovědi klienta; do karty a plánu je přenesete tlačítkem „Převzít odpovědi do projektu“.', dotaznikJakoText(S.p.dotaznik, objekt()))}</div>`; return; }
+    const kresli = () => vykresliDotaznik(S.p, host);
+    kresli();
+    pripojDotaznik(S.p, host, {
+      onZmena: () => uloz(),
+      stahniPdf: async () => { try { ohlas('Vytvářím PDF dotazníku…', true); const b = await dotaznikDoPdf(S.p.dotaznik, { objekt: objekt() }); stahniBajty(b, jmenoPdf(`Dotaznik_DZP_${objekt()}`)); ohlas('Dotazník je stažený – pošlete ho klientovi k vyplnění.'); } catch (err) { ohlas(''); oznam(`PDF dotazníku se nepodařilo vytvořit: ${err.message}`); } },
+      nactiPdf: async (soubor) => {
+        try {
+          const r = await dotaznikZPdf(new Uint8Array(await soubor.arrayBuffer())), n = Object.keys(r.odpovedi).length;
+          const prepis = Object.keys(r.odpovedi).filter((k) => S.p.dotaznik.odpovedi[k] !== undefined && String(S.p.dotaznik.odpovedi[k]) !== String(r.odpovedi[k])).length;
+          if (prepis && !(await potvrd(`Načíst ${n} odpovědí z PDF?`, { ano: 'Načíst', popis: `${prepis} už vyplněných odpovědí se přepíše hodnotou z PDF. Odpovědi, které PDF neobsahuje, zůstanou.` }))) return;
+          Object.assign(S.p.dotaznik.odpovedi, r.odpovedi); S.p.dotaznik.nacteno = new Date().toLocaleString('cs-CZ'); uloz(true); kresli();
+          ohlas(`Načteno ${n} odpovědí z vyplněného dotazníku.`);
+        } catch (err) { oznam(`Dotazník se nepodařilo načíst: ${err.message}`); }
+      },
+      prevzit: async () => {
+        const titul = 'Převzít odpovědi do projektu', cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: S.p };
+        const navrh = navrhZDotazniku(S.p.dotaznik.odpovedi, cile), vyb = await potvrdNavrh(navrh, titul);
+        if (!vyb) return;
+        const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dotazníku.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`);
+      },
+    });
   } else if (list.typ === 'op_sap') {
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('OPERATIVNÍ PLÁN – výpočet SaP', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), část druhá.', sapJakoText(list.opSap))}</div>`; return; }
     const kresli = () => { vykresliSap(list, host); };

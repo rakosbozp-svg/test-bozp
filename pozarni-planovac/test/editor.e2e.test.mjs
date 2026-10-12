@@ -571,3 +571,30 @@ test('výpočet SaP: vstupy, průběžný přepočet se vzorci, zápis shrnutí 
   assert.equal(await p.locator('[data-pole="sap.provadi"]').inputValue(), 'ano');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('dotazník pro klienta: stažení vyplnitelného PDF, načtení vyplněného PDF, převzetí do karty', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 }, acceptDownloads: true });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'Dotazník test'); await p.click('#d-novy button'); await p.waitForSelector('.editor');
+  await p.click('#l-dotaznik'); await p.waitForSelector('[data-odp=nazev]');
+  const v = p.locator('[data-odp=osoby]'); await v.fill('40 osob'); await v.press('Tab');
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.click('[data-dq=pdf]')]);
+  const f = join(tmp, 'dotaznik.pdf'); await dl.saveAs(f);
+  // „klient“ vyplní PDF (simulace přes pdf-lib)
+  const { nactiPdfLib } = await import('../js/pdf/export.js');
+  const L = await nactiPdfLib(), d = await L.PDFDocument.load(readFileSync(f)), form = d.getForm();
+  form.getTextField('nazev').setText('Hala montáže'); form.getTextField('vypinac').setText('Trafostanice – rozvaděč R1'); form.getDropdown('fve').select('ne');
+  const g = join(tmp, 'dotaznik-vyplneny.pdf'); writeFileSync(g, await d.save({ updateFieldAppearances: false }));
+  await p.setInputFiles('[data-dq=nacist]', g);
+  await p.waitForFunction(() => document.querySelector('[data-odp=nazev]')?.value === 'Hala montáže');
+  assert.equal(await p.locator('[data-odp=osoby]').inputValue(), '40 osob', 'odpověď mimo PDF zůstala');
+  await p.click('[data-dq=prevzit]'); await p.waitForSelector('.dlg[open] .moznost');
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.click('#listy li:nth-child(1) a'); await p.waitForSelector('[data-pole="objekt.nazev"]');
+  assert.equal(await p.locator('[data-pole="objekt.nazev"]').inputValue(), 'Hala montáže');
+  assert.equal(await p.locator('[data-pole="media.hlavniVypinacEl"]').inputValue(), 'Trafostanice – rozvaděč R1');
+  assert.equal(await p.locator('[data-fve=pritomna]').inputValue(), 'ne');
+  assert.deepEqual(chyby, []); await ctx.close();
+});

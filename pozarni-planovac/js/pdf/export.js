@@ -26,7 +26,7 @@ async function bajtyZ(rel) {
   const r = await fetch(new URL(rel, import.meta.url).href); if (!r.ok) throw new Error(`Nepodařilo se načíst ${rel}`); return new Uint8Array(await r.arrayBuffer());
 }
 const zBase64 = (b64) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
-async function nactiFonty() {
+export async function nactiFonty() {
   const v = globalThis.__FONTY__;                                          // jednosouborová sestava je má vložené
   if (v) return { regular: zBase64(v.regular), bold: zBase64(v.bold) };
   return { regular: await bajtyZ('../../vendor/fonts/Roboto-Regular.woff'), bold: await bajtyZ('../../vendor/fonts/Roboto-Bold.woff') };

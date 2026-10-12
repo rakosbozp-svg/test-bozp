@@ -4,7 +4,7 @@ import { prazdnySap, vypocetSaP, shrnutiSaP, sapJakoText, najdiProstor, PROSTORY
 
 const zaklad = () => {
   const d = prazdnySap();
-  Object.assign(d, { tZP: 5, tOH: 2, prostor: '1.1' });
+  Object.assign(d, { tZP: 5, tOH: 2, prostor: '1.1', Qc: 2000, QcVolba: 'cas20' });
   d.jednotky.push({ id: 'a', nazev: 'HZS', druh: 'profi', L: 3, tBR: 3 }, { id: 'b', nazev: 'JSDH', druh: 'dobro', L: 6, tBR: 5 });
   return d;
 };

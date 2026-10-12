@@ -96,3 +96,11 @@ Kalkulačka podle kap. 3–5 a tabulek č. 1, 2, 4 metodiky: dojezdy jednotek (t
 
 ### Kontrola grafické části DZP
 Situace: vodní zdroj, nástupní plocha (žlutá plocha nebo značka), hlavní uzávěry/vypínače, místo soustředění evakuovaných (Hanuška 2.3.2). Půdorys: únikové/zásahové cesty a vchody (2.3.3). Soulad s kartou: hydrant, vodní zdroje, uzávěr plynu/vody, vypínač, FVE (vypínač / TOTAL / CENTRAL STOP), EPS a nebezpečí uvedené v kartě musí mít značku ve výkresech. Vše jen jako upozornění – aplikace nečte text ani obsah podkladu (obrázek, DXF).
+
+## Dotazník pro klienta (DZP)
+V levém panelu projektu DZP (karta i operativní plán) je položka **Dotazník pro klienta** (`js/dotaznik.js`, 36 otázek v 7 oddílech). Ptá se jen na to, co v PBŘ a výkresech zpravidla není nebo se mohlo změnit: provoz a kontakty, změny proti projektu, hlavní vypínač a uzávěry, prostory pod napětím po vypnutí, FVE, nebezpečné látky a tlakové lahve, EPS a PCO, další PBZ, hydrant s ověřeným průtokem, jiné zdroje vody, organizace PO (zjištění a ohlášení požáru, jednotka podniku), příjezd a místa nebezpečná pro hasiče.
+- **Stáhnout PDF k vyplnění** – vyplnitelné PDF (formulářová pole, písmo s českou diakritikou). Vyplněné PDF se **načte zpět** (`js/pdf/dotaznikPdf.js`); naskenovaný papír je třeba opsat ručně.
+- **Převzít odpovědi do projektu** – stejný přehled jako u přebírání karta ↔ plán: odpovědi jdou do karty, operativního plánu a do „Poznámek k ověření“ (změny, shromaždiště, další PBZ…); neprázdná pole se bez zaškrtnutí nepřepíší, látky se rozdělí po řádcích do nebezpečí karty, hydrant se zapíše jako vodní zdroj.
+- Omezení: chování konkrétního prohlížeče PDF při psaní do polí (písmo) aplikace nezaručí; načtení hodnot zpět ověřují testy.
+
+Výpočet SaP: výběr techniky **CAS 20 / CAS 30** nastaví minimální výkon čerpadla podle vyhlášky č. 35/2007 Sb. (2 000 / 3 000 l/min); skutečný výkon vozu lze zadat ručně.
