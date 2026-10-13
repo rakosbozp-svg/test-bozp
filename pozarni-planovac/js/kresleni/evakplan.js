@@ -160,7 +160,7 @@ function prehledSvg(L, v, bb, o) {
     else if (p.druh === 'znacka' && p.znackaId === ID_SHROMAZDISTE) kres.push(`<image href="${esc(o.symbolHref(p.znackaId))}" x="${f(X(p.x) - 3)}" y="${f(Y(p.y) - 3)}" width="6" height="6" preserveAspectRatio="xMidYMid meet"/>`);
   }
   kres.push(`<rect x="${f(X(o0.x))}" y="${f(Y(o0.y))}" width="${f(vw * sc)}" height="${f(vh * sc)}" fill="${BARVY.modra}" fill-opacity=".18" stroke="${BARVY.modra}" stroke-width="0.6"/>`);
-  return `<g data-prehled="1">${ramecek(r, 'PŘEHLEDOVÝ PLÁN')}${kres.join('')}</g>`;
+  return `<g data-celkovy-plan="1">${ramecek(r, 'PŘEHLEDOVÝ PLÁN')}${kres.join('')}</g>`;
 }
 
 // Složí celý list (SVG v mm). svet = obsah světové skupiny (výkres, m), pravitko = měřítková úsečka (mm).

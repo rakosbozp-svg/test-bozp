@@ -62,10 +62,10 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
       <div class="nast-skupina">
-        <label class="prep" title="Kurzor se při kreslení a posouvání „chytí“ na koncové body a rohy už nakreslených prvků, takže na sebe čáry přesně navazují."><input type="checkbox" data-prep="snapBody" checked> K bodům</label>
-        <label class="prep" title="Body se zaokrouhlují na pravidelnou síť s krokem vpravo (např. po 1 m). Hodí se pro přesné rozměry."><input type="checkbox" data-prep="snapMriz"> K mřížce</label>
+        <label class="prep" title="Kurzor se při kreslení a posouvání „chytí“ na koncové body a rohy už nakreslených prvků, takže na sebe čáry přesně navazují."><input type="checkbox" data-volba="snapBody" checked> K bodům</label>
+        <label class="prep" title="Body se zaokrouhlují na pravidelnou síť s krokem vpravo (např. po 1 m). Hodí se pro přesné rozměry."><input type="checkbox" data-volba="snapMriz"> K mřížce</label>
         <select data-krok title="Krok mřížky v metrech – platí jen při zapnutém „K mřížce“" aria-label="Krok mřížky v metrech">${KROKY.map((k) => `<option value="${k}" ${k === S.krok ? 'selected' : ''}>${bezCarky(k, 1)} m</option>`).join('')}</select>
-        <label class="prep" title="Ortho: čára se při kreslení srovná na vodorovnou, svislou nebo 45°. Totéž udělá podržení klávesy Shift."><input type="checkbox" data-prep="ortho"> Ortho (rovně)</label>
+        <label class="prep" title="Ortho: čára se při kreslení srovná na vodorovnou, svislou nebo 45°. Totéž udělá podržení klávesy Shift."><input type="checkbox" data-volba="ortho"> Ortho (rovně)</label>
         ${ak('napoveda', 'info', 'Nápověda k přichytávání a zkratkám')}
       </div>
       <div class="nast-skupina">
@@ -476,7 +476,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
   });
   host.querySelector('.ed-nastroje').addEventListener('change', (e) => {
-    if (e.target.dataset.prep) S[e.target.dataset.prep] = e.target.checked;
+    if (e.target.dataset.volba) S[e.target.dataset.volba] = e.target.checked;
     if (e.target.dataset.krok !== undefined) S.krok = Number(e.target.value);
     if (e.target.dataset.podklad !== undefined) { importPodkladu(e.target.files[0]); e.target.value = ''; }
   });

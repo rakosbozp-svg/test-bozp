@@ -202,8 +202,8 @@ async function exportPdfDialog() {
 }
 
 // ---------- přebírání údajů karta ↔ operativní plán ----------
-const TLACITKO_PREVZIT = (odkud) => `<div class="prevzit-lista"><button type="button" class="btn" data-prevzit="1">${ikona('kopie', 16)}Převzít údaje ${odkud}…</button></div>`;
-function obal(host, akce) { const puv = host.onclick; host.onclick = (e) => { if (e.target.closest('[data-prevzit]')) { akce(); return; } puv?.(e); }; }
+const TLACITKO_PREVZIT = (odkud) => `<div class="prevzit-lista"><button type="button" class="btn" data-akce-prevzeti="1">${ikona('kopie', 16)}Převzít údaje ${odkud}…</button></div>`;
+function obal(host, akce) { const puv = host.onclick; host.onclick = (e) => { if (e.target.closest('[data-akce-prevzeti]')) { akce(); return; } puv?.(e); }; }
 
 // Zdroje: listy daného typu v tomto projektu a v ostatních projektech DZP uložených v prohlížeči.
 function zdroje(typ) {

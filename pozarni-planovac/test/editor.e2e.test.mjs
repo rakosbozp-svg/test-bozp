@@ -257,10 +257,10 @@ test('dotyk: kreslení klepnutím a tlačítko Dokončit', skip, async () => {
 
 test('přichytávání: mřížka a ortho', skip, async () => {
   const p = await nova();
-  await p.locator('[data-prep=snapMriz]').check(); await p.locator('[data-prep=snapBody]').uncheck();
+  await p.locator('[data-volba=snapMriz]').check(); await p.locator('[data-volba=snapBody]').uncheck();
   await p.nastroj('trasa'); await p.klik(4.3, 4.4); await p.klik(10.2, 4.6); await p.keyboard.press('Enter');
   await p.klid(); assert.match(await p.locator('#svet [data-druh=trasa] text').textContent(), /6,08 m/, 'body se přichytí na celé metry: (4;4)–(10;5)');
-  await p.locator('[data-prep=ortho]').check();
+  await p.locator('[data-volba=ortho]').check();
   await p.nastroj('trasa'); await p.klik(4.3, 9.4); await p.klik(10.4, 9.9); await p.keyboard.press('Enter');
   await p.klid(); assert.match(await p.locator('#svet [data-druh=trasa] text').last().textContent(), /6,00 m/, 'ortho: vodorovně');
   assert.deepEqual(p.chyby, []);
@@ -532,7 +532,7 @@ test('přebírání údajů: z operativní karty do operativního plánu a zpět
   const v = async (sel, t) => { const l = p.locator(sel); await l.fill(t); await l.press('Tab'); };
   await v('[data-pole="objekt.nazev"]', 'Hala montáže'); await v('[data-pole="doporuceni"]', 'Vypnout hlavní vypínač v trafostanici.');
   await p.click('#listy li:nth-child(3) a'); await p.waitForSelector('#sek-voda');
-  await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]');
+  await p.click('[data-akce-prevzeti]'); await p.waitForSelector('.dlg[open] [name=zdroj]');
   assert.ok((await p.locator('.dlg [name=zdroj] option').first().textContent()).includes('tento projekt'));
   await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg[open] .moznost');
   assert.ok((await p.locator('.dlg').textContent()).includes('Doporučení pro velitele zásahu'));
@@ -543,7 +543,7 @@ test('přebírání údajů: z operativní karty do operativního plánu a zpět
   // zpět: v plánu upravím obsazení osobami a převezmu ho do karty
   await v('[data-pole="udaje.osoby"]', '40 osob ve 2 směnách');
   await p.click('#listy li:nth-child(6) a'); await p.waitForSelector('[data-pole="objekt.obsazeniOsobami"]');
-  await p.click('[data-prevzit]'); await p.waitForSelector('.dlg[open] [name=zdroj]'); await p.click('.dlg [data-vysledek=ok]');
+  await p.click('[data-akce-prevzeti]'); await p.waitForSelector('.dlg[open] [name=zdroj]'); await p.click('.dlg [data-vysledek=ok]');
   await p.waitForSelector('.dlg[open] .moznost'); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
   await p.waitForFunction(() => document.querySelector('[data-pole="objekt.obsazeniOsobami"]')?.value === '40 osob ve 2 směnách');
   assert.deepEqual(chyby, []); await ctx.close();

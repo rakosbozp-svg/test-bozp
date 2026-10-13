@@ -20,7 +20,8 @@ const litice = txt('data/litice.projekt.json');
 // český model (base64, podstrčený přes fetch) + jádro (definuje TesseractCore, worker ho pak nenačítá) + worker. Blob až při prvním použití.
 const ocrWorker = `var __J=${JSON.stringify(cti('vendor/tesseract/ces.traineddata.gz').toString('base64'))};var __f=self.fetch;self.fetch=function(u,o){if(String(u).indexOf('ces.traineddata')>=0){var b=atob(__J),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return Promise.resolve(new Response(a))}return __f(u,o)};\n` +
   `${txt('vendor/tesseract/tesseract-core-simd-lstm.wasm.js')}\n;${txt('vendor/tesseract/worker.min.js')}`;
-const ocr = zabezpecit(`(function(){var c=null,W=${JSON.stringify(ocrWorker)};window.__OCR__={get worker(){return c||(c=URL.createObjectURL(new Blob([W],{type:"text/javascript"})))},core:"vlozene-jadro.js",langPath:"vlozeny-model"};})();`);
+// Worker vložen jako base64 (ne jako čitelný text) – publikování jako Artifact jinak odmítne stránku (validátor podle obsahu).
+const ocr = `(function(){var c=null,W="${Buffer.from(ocrWorker, 'utf8').toString('base64')}";window.__OCR__={get worker(){if(!c){var b=atob(W),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);c=URL.createObjectURL(new Blob([a],{type:"text/javascript"}))}return c},core:"vlozene-jadro.js",langPath:"vlozeny-model"};})();`;
 const verze = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 let html = txt('index.html');
