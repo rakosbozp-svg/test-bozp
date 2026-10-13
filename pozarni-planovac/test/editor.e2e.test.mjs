@@ -618,7 +618,7 @@ test('PBŘ (PDF s textem): načtení údajů s citací do karty, nenalezené úd
   await p.waitForSelector('.dlg[open] .moznost', { timeout: 30000 });
   const dialog = await p.locator('.dlg[open]').textContent();
   assert.ok(dialog.includes('pbr-test.pdf, str. 1: „Místo stavby: Zkušební 12'), 'citace se zdrojem a stranou');
-  assert.ok(dialog.includes('V PBŘ nezjištěno'));
+  assert.ok(dialog.includes('V dokumentech nezjištěno'));
   assert.equal(await p.locator('.dlg .moznost', { hasText: 'POŽÁRNÍ výška' }).locator('input').isChecked(), false, 'údaj k ověření není předem zaškrtnutý');
   await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
   assert.equal(await p.locator('[data-pole="objekt.adresa"]').inputValue(), 'Zkušební 12, 100 00 Praha');
@@ -627,5 +627,32 @@ test('PBŘ (PDF s textem): načtení údajů s citací do karty, nenalezené úd
   assert.equal(await p.locator('[data-pole="charakter.celkovaVyskaM"]').inputValue(), '');
   await p.click('#l-dotaznik'); await p.waitForSelector('.pbr-souhrn');
   assert.match(await p.locator('.pbr-souhrn').textContent(), /pbr-test\.pdf.*nezjištěno.*uzávěr vody/s);
+  assert.deepEqual(chyby, []); await ctx.close();
+});
+
+test('naskenované PBŘ: OCR v prohlížeči (offline) a převzetí údaje s citací a jistotou', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  // „sken“: text vykreslený do obrázku a vložený do PDF bez textové vrstvy
+  const q = await ctx.newPage(); await q.setViewportSize({ width: 1240, height: 900 });
+  await q.setContent(`<body style="margin:60px;font:28px/1.6 Arial;background:#fff;color:#111">POŽÁRNĚ BEZPEČNOSTNÍ ŘEŠENÍ<br>Požárně bezpečnostní řešení změny stavby.<br>Počet podlaží 2 NP<br>Konstrukce objektu smíšený<br>Z objektu je jeden směr nechráněné únikové cesty vedoucí do volného prostoru.</body>`);
+  const png = await q.screenshot(); await q.close();
+  const { nactiPdfLib } = await import('../js/pdf/export.js');
+  const L = await nactiPdfLib(), d = await L.PDFDocument.create(), img = await d.embedPng(png), s = d.addPage([620, 450]);
+  s.drawImage(img, { x: 0, y: 0, width: 620, height: 450 });
+  const f = join(tmp, 'pbr-sken.pdf'); writeFileSync(f, await d.save());
+
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'OCR test'); await p.click('#d-novy button'); await p.waitForSelector('[data-pole="objekt.adresa"]');
+  await p.setInputFiles('[data-pbr]', f);
+  await p.waitForSelector('.dlg[open] >> text=naskenované'); await p.click('.dlg [data-vysledek=ok]');
+  await p.waitForFunction(() => document.querySelector('.dlg[open] .moznost') && !document.querySelector('.dlg[open]').textContent.includes('naskenované'), null, { timeout: 90000 });
+  const dialog = await p.locator('.dlg[open]').textContent();
+  assert.match(dialog, /rozpoznáno OCR, jistota po stranách/);
+  assert.match(dialog, /pbr-sken\.pdf \(OCR, jistota \d+ %\), str\. 1: „Počet podlaží 2 NP“/);
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  assert.equal(await p.locator('[data-pole="charakter.podlazi"]').inputValue(), '2 NP');
+  assert.equal(await p.locator('[data-pole="charakter.konstrukce"]').inputValue(), 'smíšený konstrukční systém (dle PBŘ)');
   assert.deepEqual(chyby, []); await ctx.close();
 });

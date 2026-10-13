@@ -1,5 +1,5 @@
 // Sestaví celou aplikaci do JEDNOHO souboru dist/pozarni-planovac.html (bez serveru, otevře se dvojklikem).
-// Vloží JS (esbuild), CSS, katalog značek s obrázky, referenční projekt Litice a pdf.js worker. Použití: npm run build
+// Vloží JS (esbuild), CSS, katalog značek s obrázky, referenční projekt Litice, pdf.js worker a OCR (Tesseract.js + český model). Použití: npm run build
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -16,6 +16,11 @@ const kod = js.outputFiles[0].text;
 const kat = JSON.parse(txt('znacky/katalog.json')).znacky.map((z) => ({ id: z.id, nazev: z.nazev, zdroj: z.zdroj, png: `data:image/png;base64,${cti(z.png).toString('base64')}`, overeno: z.overeno }));
 const worker = cti('vendor/pdfjs/pdf.worker.min.mjs').toString('base64');
 const litice = txt('data/litice.projekt.json');
+// OCR (Tesseract.js, vendor/tesseract). Otevřeno z disku (file://) worker nevidí blob URL stránky, proto je jeden soběstačný worker:
+// český model (base64, podstrčený přes fetch) + jádro (definuje TesseractCore, worker ho pak nenačítá) + worker. Blob až při prvním použití.
+const ocrWorker = `var __J=${JSON.stringify(cti('vendor/tesseract/ces.traineddata.gz').toString('base64'))};var __f=self.fetch;self.fetch=function(u,o){if(String(u).indexOf('ces.traineddata')>=0){var b=atob(__J),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return Promise.resolve(new Response(a))}return __f(u,o)};\n` +
+  `${txt('vendor/tesseract/tesseract-core-simd-lstm.wasm.js')}\n;${txt('vendor/tesseract/worker.min.js')}`;
+const ocr = zabezpecit(`(function(){var c=null,W=${JSON.stringify(ocrWorker)};window.__OCR__={get worker(){return c||(c=URL.createObjectURL(new Blob([W],{type:"text/javascript"})))},core:"vlozene-jadro.js",langPath:"vlozeny-model"};})();`);
 const verze = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 let html = txt('index.html');
@@ -23,6 +28,7 @@ html = html.replace(/<link rel="stylesheet" href="css\/rakos.css">\s*<link rel="
 html = html.replace(/<script type="module" src="js\/app.js"><\/script>/, () =>
   `<script>window.__KATALOG__=${zabezpecit(JSON.stringify(kat))};window.__LITICE__=${zabezpecit(JSON.stringify(litice))};window.__SESTAVENO__=${JSON.stringify(verze)};window.__FONTY__=${JSON.stringify({ regular: cti('vendor/fonts/Roboto-Regular.woff').toString('base64'), bold: cti('vendor/fonts/Roboto-Bold.woff').toString('base64') })};` +
   `try{var b=atob("${worker}"),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.__PDFJS_WORKER_URL__=URL.createObjectURL(new Blob([u],{type:"text/javascript"}));}catch(e){}</script>\n` +
+  `<script>${ocr}</script>\n` +
   `<script>\n${zabezpecit(kod)}\n</script>`);
 if (!html.includes('window.__KATALOG__')) throw new Error('Sestavení selhalo: nepodařilo se vložit skript');
 // Varianta pro zveřejnění jako Artifact: bez <html>/<head>/<body> (obálku doplní platforma), jen <title>, písma, styl, obsah a skripty.

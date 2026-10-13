@@ -15,13 +15,13 @@ export function vykresliDotaznik(projekt, host, tlacitkoPbr = '') {
   const d = projekt.dotaznik, vyplneno = OTAZKY.filter((q) => d.odpovedi[q.id] !== undefined && d.odpovedi[q.id] !== '' && d.odpovedi[q.id] !== null).length;
   host.innerHTML = `<section class="sek sek-zluta"><h3>Dotazník pro klienta</h3>
     <p class="napoveda">Ptá se jen na to, co v PBŘ a výkresech zpravidla není nebo se mohlo změnit (skutečný stav, uzávěry a vypínače, nebezpečné látky, FVE, ověřený průtok hydrantu, provoz a kontakty, organizace PO). Konstrukce, požární úseky, únikové cesty a PBZ podle projektu čtěte z PBŘ a ověřte na místě.</p>
-    <ol class="kroky-dotazniku"><li>Má-li klient PBŘ v PDF, načtěte z něj nejdřív údaje do karty a plánu – v dotazníku pak víte, na co se ptát.</li><li>Stáhněte vyplnitelné PDF a pošlete ho klientovi.</li><li>Vrácené PDF načtěte – odpovědi se zapíšou sem (nebo je opište ručně z papírové verze).</li><li>Tlačítkem „Převzít odpovědi do projektu“ je přenesete do karty a operativního plánu – před zápisem uvidíte přehled a nic se bez souhlasu nepřepíše.</li></ol>
+    <ol class="kroky-dotazniku"><li>Máte-li od klienta PBŘ nebo průvodní / souhrnnou zprávu (PDF i naskenované, Word .docx), načtěte z nich nejdřív údaje do karty a plánu – v dotazníku pak víte, na co se ptát.</li><li>Stáhněte vyplnitelné PDF a pošlete ho klientovi.</li><li>Vrácené PDF načtěte – odpovědi se zapíšou sem (nebo je opište ručně z papírové verze).</li><li>Tlačítkem „Převzít odpovědi do projektu“ je přenesete do karty a operativního plánu – před zápisem uvidíte přehled a nic se bez souhlasu nepřepíše.</li></ol>
     <div class="prevzit-lista">${tlacitkoPbr}
       <button type="button" class="btn" data-dq="pdf">${ikona('stahnout', 16)}Stáhnout PDF k vyplnění</button>
       <label class="btn">${ikona('import', 16)}Načíst vyplněné PDF<input type="file" class="sr-only" accept="application/pdf,.pdf" data-dq="nacist"></label>
       <button type="button" class="btn" data-dq="prevzit">${ikona('kopie', 16)}Převzít odpovědi do projektu…</button>
     </div>
-    ${d.pbr ? `<div class="pbr-souhrn"><p><b>PBŘ „${esc(d.pbr.soubor)}“</b> načteno ${esc(d.pbr.datum)}.</p>${d.pbr.nenalezeno.length ? `<p>V PBŘ nezjištěno – zeptejte se klienta: ${esc(d.pbr.nenalezeno.join(', '))}.</p>` : ''}</div>` : ''}
+    ${d.pbr ? `<div class="pbr-souhrn"><p><b>Načteno z dokumentace</b> (${esc(d.pbr.soubor)}) ${esc(d.pbr.datum)}.</p>${d.pbr.nenalezeno.length ? `<p>V dokumentaci nezjištěno – zeptejte se klienta: ${esc(d.pbr.nenalezeno.join(', '))}.</p>` : ''}</div>` : ''}
     <p class="napoveda">Vyplněno ${vyplneno} z ${OTAZKY.length} otázek${d.nacteno ? ` · naposledy načteno z PDF ${esc(d.nacteno)}` : ''}.</p></section>
     ${SEKCE.map((s) => `<section class="sek sek-seda"><h3>${esc(s)}</h3><div class="mriz">${OTAZKY.filter((q) => q.sekce === s).map((q) => `<label class="f ${q.typ === 'area' ? '' : ''}"><span>${esc(q.text)}</span>${pole(q, d.odpovedi[q.id])}</label>`).join('')}</div></section>`).join('')}`;
 }

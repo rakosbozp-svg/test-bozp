@@ -10,7 +10,9 @@ import { katalogProjektu } from './evakznacky.js';
 import { SCHEMA_ZAKLAD, SCHEMA_TEXT, METODIKA_OP } from './operativniplan.js';
 import { vykresliSchema, pripojSchema, schemaJakoText, nahledSchema } from './textlisty.js';
 import { navrhZKarty, navrhZPlanu, pouzijNavrh } from './prebirani.js';
-import { radkyZPdf, rozborPbr, navrhZPbr } from './pbr.js';
+import { radkyZPdf, rozborPbr, navrhZPbr, slucRozbory } from './pbr.js';
+import { stranyZDocx } from './docx.js';
+import { ocrPdf } from './ocr.js';
 import { otevriPdf } from './kresleni/import/pdf.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
 import { sapJakoText } from './sap.js';
@@ -223,25 +225,44 @@ async function potvrdNavrh(navrh, titul, uvod = '') {
   return new Set(navrh.map((_, i) => i).filter((i) => r.pole[`n_${i}`]));
 }
 
-// PBŘ (PDF s textovou vrstvou) → návrh údajů pro kartu, přílohu OP a poznámky k ověření. Vše s citací, zápis až po potvrzení.
-async function nactiPbr(soubor) {
-  const titul = 'Údaje z PBŘ';
-  let stranky;
-  try { ohlas('Čtu PBŘ…', true); stranky = await radkyZPdf(await otevriPdf(await soubor.arrayBuffer())); ohlas(''); }
-  catch (err) { ohlas(''); await oznam(err.message, { titul }); return 0; }
-  if (stranky.flat().join('').replace(/\s/g, '').length < 300) { await oznam('PDF nemá textovou vrstvu (je naskenované). Aplikace OCR neumí – údaje opište z PBŘ ručně nebo si vyžádejte PBŘ v PDF s textem.', { titul }); return 0; }
-  const { nalezy, nenalezeno } = rozborPbr(stranky);
+// PBŘ a projektová dokumentace (PDF s textem, naskenované PDF přes OCR, DOCX) → návrh údajů pro kartu, přílohu OP a poznámky k ověření.
+// Vše s citací (soubor, strana), zápis až po potvrzení.
+async function nactiPbr(soubory) {
+  const titul = 'Údaje z PBŘ a dokumentace', vysledky = [], chyby = [];
+  for (const soubor of soubory) {
+    try {
+      const bajty = new Uint8Array(await soubor.arrayBuffer());
+      if (/\.docx$/i.test(soubor.name)) { ohlas(`Čtu ${soubor.name}…`, true); vysledky.push({ soubor: soubor.name, ...rozborPbr(await stranyZDocx(bajty), { odstavce: true }) }); continue; }
+      if (/\.doc$/i.test(soubor.name)) { chyby.push(`${soubor.name}: starý formát Word (.doc) aplikace nečte – uložte ho ve Wordu jako .docx nebo PDF.`); continue; }
+      ohlas(`Čtu ${soubor.name}…`, true);
+      const doc = await otevriPdf(bajty);
+      let stranky = await radkyZPdf(doc), jistoty = null;
+      if (stranky.flat().join('').replace(/\s/g, '').length < 300) {
+        ohlas('');
+        if (!(await potvrd(`„${soubor.name}“ je naskenované – nemá textovou vrstvu.`, { ano: 'Rozpoznat text (OCR)', popis: `Text se rozpozná přímo v prohlížeči (nic se neodesílá). Trvá to zhruba 3–5 s na stranu (${doc.numPages} str.). Rozpoznaný text může obsahovat chyby – údaje proto pečlivě zkontrolujte s citací.` }))) continue;
+        const r = await ocrPdf(doc, { prubeh: (t) => ohlas(t, true) }); stranky = r.stranky; jistoty = r.jistoty;
+      }
+      const v = rozborPbr(stranky, /pbr|pbř/i.test(soubor.name) ? { jePbr: true } : {});
+      // OCR: jistota strany, ze které údaj pochází; pod 75 % se nic předem nezaškrtne (čísla mohou být přečtená špatně)
+      if (jistoty) v.nalezy.forEach((n) => { n.ocr = jistoty[(n.strana || 1) - 1] ?? null; if (n.ocr !== null && n.ocr < 75) n.neoznacit = true; });
+      vysledky.push({ soubor: soubor.name, jistoty, ...v });
+    } catch (err) { console.error(err); chyby.push(`${soubor.name}: ${err?.message || String(err)}`); }
+  }
+  ohlas('');
+  if (!vysledky.length) { if (chyby.length) await oznam(chyby.join('\n'), { titul }); return 0; }
+  const { nalezy, nenalezeno } = slucRozbory(vysledky);
   const cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, projekt: S.p };
-  S.p.dotaznik.pbr = { soubor: soubor.name, datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
+  S.p.dotaznik.pbr = { soubor: vysledky.map((v) => v.soubor).join(', '), datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
   uloz();
-  const navrh = navrhZPbr(nalezy, cile, soubor.name);
-  const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů. Čteno podle typických formulací – u každého údaje je citace a strana PBŘ, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${nenalezeno.length ? `<p class="dlg__text"><b>V PBŘ nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
+  const navrh = navrhZPbr(nalezy, cile);
+  const ocrInfo = vysledky.filter((v) => v.jistoty).map((v) => `${v.soubor} – rozpoznáno OCR, jistota po stranách ${Math.min(...v.jistoty)}–${Math.max(...v.jistoty)} % (údaje ze stran pod 75 % nejsou předem zaškrtnuté)`);
+  const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů v ${vysledky.length} ${vysledky.length === 1 ? 'dokumentu' : 'dokumentech'}. Čteno podle typických formulací – u každého údaje je citace a strana, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${ocrInfo.length ? `<p class="dlg__text">${esc(ocrInfo.join('; '))}.</p>` : ''}${chyby.length ? `<p class="dlg__text varuj">Nenačteno: ${esc(chyby.join(' '))}</p>` : ''}${nenalezeno.length ? `<p class="dlg__text"><b>V dokumentech nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
   const vyb = await potvrdNavrh(navrh, titul, uvod);
   if (!vyb) return 0;
-  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z PBŘ.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`); return n;
+  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`); return n;
 }
-const TLACITKO_PBR = `<label class="btn" title="PDF s textovou vrstvou; údaje se zapíšou až po potvrzení">${ikona('import', 16)}Načíst údaje z PBŘ (PDF)…<input type="file" class="sr-only" accept="application/pdf,.pdf" data-pbr="1"></label>`;
-const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = e.target.files[0]; e.target.value = ''; if (f) nactiPbr(f).then((n) => n && poKonci()); });
+const TLACITKO_PBR = `<label class="btn" title="PBŘ, průvodní a souhrnná zpráva – PDF (i naskenované, OCR) nebo Word .docx; lze vybrat více souborů najednou. Údaje se zapíšou až po potvrzení.">${ikona('import', 16)}Načíst údaje z PBŘ / dokumentace…<input type="file" class="sr-only" multiple accept="application/pdf,.pdf,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-pbr="1"></label>`;
+const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = [...e.target.files]; e.target.value = ''; if (f.length) nactiPbr(f).then((n) => n && poKonci()); });
 
 async function prevzitDoPlanu() {
   const zd = zdroje('karta'), titul = 'Převzít z operativní karty';

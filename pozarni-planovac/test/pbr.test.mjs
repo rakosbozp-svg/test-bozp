@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rozborPbr, navrhZPbr } from '../js/pbr.js';
+import { rozborPbr, navrhZPbr, slucRozbory } from '../js/pbr.js';
 import { pouzijNavrh } from '../js/prebirani.js';
 import { novyProjekt } from '../js/model.js';
 
@@ -111,4 +111,84 @@ test('PBŘ → návrh: citace, přeskočení shodných hodnot, zápis do karty a
   assert.equal(karta.vodniZdroje[0].overenPrutok, false);
   assert.ok(p.poznamkyKOvereni.some((x) => x.tema === 'PBŘ' && /plyn/i.test(x.text)));
   assert.equal(navrhZPbr(rozborPbr(STRANKY).nalezy, cile, 'pbr.pdf').filter((x) => x.cil === 'projekt').length, 0, 'poznámky se podruhé neduplikují');
+});
+
+// ---- druhý styl PBŘ (změna stavby, tabulkové údaje, odrážky; text jako z OCR) – smyšlené údaje ----
+const STRANKY_ZMENA = [
+  ['Stavební úpravy zázemí testovací haly Testov', 'Stavba:', 'Stavební úpravy zázemí testovací haly', 'Polní čp. 12, parc.č.st. 34, k.ú. Testov', 'POŽÁRNĚ BEZPEČNOSTNÍ ŘEŠENÍ', 'Požárně bezpečnostní řešení — TZ 1'],
+  ['Stavební úpravy zázemí testovací haly Testov', '1. Úvod', 'Požárně bezpečnostní řešení změny stavby je zpracováno jako část projektu.', 'Konstrukční systém:',
+    '- Svislé nosné konstrukce železobetonové prefabrikované - konstrukční část druhu DP1',
+    '- Vodorovné nosné konstrukce — železobetonové prefabrikované - konstrukční část druhu DP1',
+    'Požární výška objektu + 0,00 m', 'Konstrukce objektu smíšený', 'Počet podlaží 2 NP', 'Čl. 3.2.b5 ČSN 73 0834 - Posouzení únikových cest:', 'Požárně bezpečnostní řešení — TZ 2'],
+  ['Stavební úpravy zázemí testovací haly Testov', 'Z posuzované části objektu jsou dva směry nechráněné únikové cesty vedoucí do volného prostoru.',
+    'Změna užívání je zatříděna jako Změna staveb skupiny II.',
+    '- Příjezdová komunikace k objektu je zpevněná cesta šířky 4 m', '- Objekt je vzdálen od veřejné komunikace 15 m',
+    '- Vnější odběrní místa — stávající hydranty v ulici Lipová a Dubová ve vzdálenosti cca', '150 m od objektu',
+    '- Vnitřní odběrní místa — bude provedena instalace nového vnitřního odběrního místa', 'H D 19, s hadicí délky 20 m.',
+    '- V prostoru šaten budou umístěny dva hasicí přístroje PG6 - práškové', 'Požárně bezpečnostní řešení — TZ 3'],
+];
+
+test('PBŘ změny stavby: tabulkové údaje, odrážky přes více řádků, záhlaví se nelepí do vět', () => {
+  const n = podle(rozborPbr(STRANKY_ZMENA));
+  assert.equal(n.adresa.hodnota, 'Polní čp. 12, parc.č.st. 34, k.ú. Testov');
+  assert.ok(n.adresa.neoznacit);
+  assert.equal(n.podlazi.hodnota, '2 NP');
+  assert.equal(n.vyska.hodnota, '0,00');
+  assert.equal(n.konstrukce.hodnota, 'smíšený konstrukční systém (dle PBŘ)');
+  assert.match(n.steny.hodnota, /^Svislé nosné konstrukce železobetonové/);
+  assert.match(n.stropy.hodnota, /^Vodorovné nosné konstrukce/);
+  assert.equal(n.typUc.hodnota, 'NÚC – nechráněná úniková cesta');
+  assert.match(n.typUc.citace, /^Z posuzované části/, 'záhlaví stránky ani nadpis článku nejsou v citaci');
+  assert.equal(n.pocetUc.hodnota, '2');
+  assert.equal(n.prijezd.hodnota, 'zpevněná cesta šířky 4 m; objekt je vzdálen od veřejné komunikace 15 m');
+  assert.match(n.hydrant.hodnota.popis, /Lipová a Dubová ve vzdálenosti cca 150 m od objektu/);
+  assert.match(n.vnitrni.hodnota, /H D 19, s hadicí délky 20 m\.$/);
+  assert.match(n.php.hodnota, /PG6/);
+  assert.equal(n.zmenaSkupiny.hodnota, 'změna stavby skupiny II');
+});
+
+// ---- DOCX (průvodní zpráva) ----
+import { deflateRawSync } from 'node:zlib';
+import { stranyZDocx } from '../js/docx.js';
+function zip(soubory) {   // minimální ZIP (deflate) pro test
+  const lok = [], cen = []; let off = 0;
+  for (const [jm, obsah] of Object.entries(soubory)) {
+    const data = deflateRawSync(Buffer.from(obsah)), n = Buffer.from(jm);
+    const h = Buffer.alloc(30); h.writeUInt32LE(0x04034b50, 0); h.writeUInt16LE(8, 8); h.writeUInt32LE(data.length, 18); h.writeUInt32LE(Buffer.byteLength(obsah), 22); h.writeUInt16LE(n.length, 26);
+    const c = Buffer.alloc(46); c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(8, 10); c.writeUInt32LE(data.length, 20); c.writeUInt32LE(Buffer.byteLength(obsah), 24); c.writeUInt16LE(n.length, 28); c.writeUInt32LE(off, 42);
+    lok.push(h, n, data); cen.push(c, n); off += 30 + n.length + data.length;
+  }
+  const cd = Buffer.concat(cen), e = Buffer.alloc(22); e.writeUInt32LE(0x06054b50, 0); e.writeUInt16LE(cen.length / 2, 8); e.writeUInt16LE(cen.length / 2, 10); e.writeUInt32LE(cd.length, 12); e.writeUInt32LE(off, 16);
+  return new Uint8Array(Buffer.concat([...lok, cd, e]));
+}
+const odst = (...p) => `<w:document><w:body>${p.map((x) => `<w:p><w:r><w:t>${x}</w:t></w:r></w:p>`).join('')}</w:body></w:document>`;
+
+test('DOCX: průvodní zpráva – místo stavby, stavebník, podlaží, vytápění; popisky bez „PBŘ“', async () => {
+  const bajty = zip({ '[Content_Types].xml': '<Types/>', 'word/document.xml': odst('A.1.1 Údaje o stavbě', 'a) název stavby', 'Rekonstrukce šaten haly v Testově', 'b) místo stavby (adresa, čísla popisná, katastrální území, parcelní čísla pozemků)', 'Polní č.p.12', 'Testov, 100 00', 'Pozemek: p.č. st. 34', 'A.1.2 Údaje o žadateli / stavebníkovi', 'Obec Testov, Náměstí 1, 10000 Testov', 'Počet podlaží ………………….1', 'Objekt je vytápěn plynovou kotelnou &amp; ohřev vody bojlerem.') });
+  const st = await stranyZDocx(bajty);
+  assert.ok(st[0].includes('Počet podlaží 1'), 'tečkovací vodítka se odstraní');
+  const r = rozborPbr(st, { odstavce: true }), n = podle(r);
+  assert.equal(r.jePbr, false);
+  assert.equal(n.adresa.hodnota, 'Polní č.p.12, Testov, 100 00');
+  assert.equal(n.nazev.hodnota, 'Rekonstrukce šaten haly v Testově'); assert.ok(n.nazev.neoznacit);
+  assert.equal(n.provozovatel.hodnota, 'Obec Testov, Náměstí 1, 10000 Testov'); assert.ok(n.provozovatel.neoznacit);
+  assert.equal(n.podlazi.hodnota, '1 (počet podlaží celkem – NP/PP neuvedeno)');
+  assert.equal(n.plyn.hodnota, 'Objekt je vytápěn plynovou kotelnou & ohřev vody bojlerem.');
+  assert.ok(!n.kotel, 'stejná věta se nenabízí dvakrát');
+  assert.ok(!r.nalezy.some((x) => /PBŘ/.test(x.popis)));
+  await assert.rejects(stranyZDocx(new Uint8Array([1, 2, 3])), /DOCX/);
+});
+
+test('více dokumentů: shodné údaje jednou, rozdílné neoznačené s upozorněním, nenalezeno = v žádném', () => {
+  const a = { soubor: 'pbr.pdf', ocr: 93, ...rozborPbr(STRANKY_ZMENA) };
+  const b = { soubor: 'A.docx', ...rozborPbr([['Počet podlaží 1', 'Polní č.p.12']], { odstavce: true }) };
+  const c = { soubor: 'B.docx', ...rozborPbr([['Konstrukce objektu smíšený']], { odstavce: true }) };
+  const { nalezy, nenalezeno } = slucRozbory([a, b, c]);
+  const podl = nalezy.filter((x) => x.klic === 'podlazi');
+  assert.equal(podl.length, 2); assert.ok(podl.every((x) => x.neoznacit && /POZOR: dokumenty uvádějí různé hodnoty/.test(x.popis)));
+  assert.equal(nalezy.filter((x) => x.klic === 'konstrukce').length, 1, 'stejná hodnota ze dvou dokumentů jen jednou');
+  assert.ok(!nenalezeno.includes('počet podlaží'));
+  assert.ok(nenalezeno.includes('počet osob'));
+  const navrh = navrhZPbr(nalezy, { karta: { objekt: {}, charakter: {}, vodniZdroje: [] }, projekt: null });
+  assert.match(navrh.find((x) => x.cesta === 'charakter.steny').zdroj, /^pbr\.pdf \(OCR, jistota 93 %\), str\. 2: „Svislé/);
 });
