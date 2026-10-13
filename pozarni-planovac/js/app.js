@@ -10,6 +10,8 @@ import { katalogProjektu } from './evakznacky.js';
 import { SCHEMA_ZAKLAD, SCHEMA_TEXT, METODIKA_OP } from './operativniplan.js';
 import { vykresliSchema, pripojSchema, schemaJakoText, nahledSchema } from './textlisty.js';
 import { navrhZKarty, navrhZPlanu, pouzijNavrh } from './prebirani.js';
+import { radkyZPdf, rozborPbr, navrhZPbr } from './pbr.js';
+import { otevriPdf } from './kresleni/import/pdf.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
 import { sapJakoText } from './sap.js';
 import { vykresliDotaznik, pripojDotaznik } from './dotaznikUI.js';
@@ -210,16 +212,36 @@ function zdroje(typ) {
   return o;
 }
 const vyberZdroje = (zd) => `<label class="rk-field"><span class="rk-field__label">Zdroj</span><select class="rk-field__control" name="zdroj">${zd.map((x) => `<option value="${esc(x.klic)}">${esc(x.nazev)}</option>`).join('')}</select></label>`;
-const zkrat = (v) => { const t = typeof v === 'string' ? v : Object.values(v).filter(Boolean).join(', '); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
+const zkrat = (v) => { const t = v && typeof v === 'object' ? String(v.popis ?? v.text ?? '') : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
 
-async function potvrdNavrh(navrh, titul) {
+async function potvrdNavrh(navrh, titul, uvod = '') {
   if (!navrh.length) { await oznam('Ve zdroji nejsou žádné nové údaje k převzetí (prázdná pole se nepřebírají, shodné hodnoty se přeskočí).', { titul }); return null; }
   const r = await formular({ titul, ano: 'Převzít vybrané',
-    html: `<p class="dlg__text">Zaškrtnuté údaje se zapíšou do formuláře. Pole, která už mají hodnotu, jsou předem odškrtnutá – zaškrtnutím je přepíšete.</p>
-      <div class="moznosti">${navrh.map((x, i) => `<label class="moznost"><input type="checkbox" name="n_${i}" ${x.stavajici ? '' : 'checked'}><div><b>${esc(x.popis)}</b><span>${esc(zkrat(x.hodnota))}</span>${x.stavajici ? `<span class="varuj">Přepíše: ${esc(zkrat(x.stavajici))}</span>` : ''}</div></label>`).join('')}</div>` });
+    html: `${uvod}<p class="dlg__text">Zaškrtnuté údaje se zapíšou do formuláře. Pole, která už mají hodnotu, a údaje k ověření jsou předem odškrtnuté – zaškrtnutím je převezmete.</p>
+      <div class="moznosti">${navrh.map((x, i) => `<label class="moznost"><input type="checkbox" name="n_${i}" ${x.stavajici || x.neoznacit ? '' : 'checked'}><div><b>${esc(x.popis)}</b><span>${esc(zkrat(x.hodnota))}</span>${x.stavajici ? `<span class="varuj">Přepíše: ${esc(zkrat(x.stavajici))}</span>` : ''}${x.zdroj ? `<small class="citace">${esc(x.zdroj)}</small>` : ''}</div></label>`).join('')}</div>` });
   if (!r.ok) return null;
   return new Set(navrh.map((_, i) => i).filter((i) => r.pole[`n_${i}`]));
 }
+
+// PBŘ (PDF s textovou vrstvou) → návrh údajů pro kartu, přílohu OP a poznámky k ověření. Vše s citací, zápis až po potvrzení.
+async function nactiPbr(soubor) {
+  const titul = 'Údaje z PBŘ';
+  let stranky;
+  try { ohlas('Čtu PBŘ…', true); stranky = await radkyZPdf(await otevriPdf(await soubor.arrayBuffer())); ohlas(''); }
+  catch (err) { ohlas(''); await oznam(err.message, { titul }); return 0; }
+  if (stranky.flat().join('').replace(/\s/g, '').length < 300) { await oznam('PDF nemá textovou vrstvu (je naskenované). Aplikace OCR neumí – údaje opište z PBŘ ručně nebo si vyžádejte PBŘ v PDF s textem.', { titul }); return 0; }
+  const { nalezy, nenalezeno } = rozborPbr(stranky);
+  const cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, projekt: S.p };
+  S.p.dotaznik.pbr = { soubor: soubor.name, datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
+  uloz();
+  const navrh = navrhZPbr(nalezy, cile, soubor.name);
+  const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů. Čteno podle typických formulací – u každého údaje je citace a strana PBŘ, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${nenalezeno.length ? `<p class="dlg__text"><b>V PBŘ nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
+  const vyb = await potvrdNavrh(navrh, titul, uvod);
+  if (!vyb) return 0;
+  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z PBŘ.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`); return n;
+}
+const TLACITKO_PBR = `<label class="btn" title="PDF s textovou vrstvou; údaje se zapíšou až po potvrzení">${ikona('import', 16)}Načíst údaje z PBŘ (PDF)…<input type="file" class="sr-only" accept="application/pdf,.pdf" data-pbr="1"></label>`;
+const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = e.target.files[0]; e.target.value = ''; if (f) nactiPbr(f).then((n) => n && poKonci()); });
 
 async function prevzitDoPlanu() {
   const zd = zdroje('karta'), titul = 'Převzít z operativní karty';
@@ -306,7 +328,7 @@ function obsah(list) {
   if (!list) { host.innerHTML = '<p class="prazdno">Projekt nemá žádný list. Přidejte ho vlevo.</p>'; return; }
   if (list.typ === 'karta') {
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledKarty(list, S.p)}</div>`; return; }
-    const kresli = () => { vykresliKartu(list, host); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); pripoj(list, host, naZmenu); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
+    const kresli = () => { vykresliKartu(list, host); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); host.querySelector('.prevzit-lista').insertAdjacentHTML('beforeend', TLACITKO_PBR); pripoj(list, host, naZmenu); pripojPbr(host, kresli); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
     const naZmenu = (prekreslit) => {
       uloz();
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
@@ -315,7 +337,7 @@ function obsah(list) {
   } else if (list.typ === 'dotaznik') {
     const objekt = () => S.p.listy.find((l) => l.karta)?.karta.objekt.nazev || S.p.listy.find((l) => l.opText)?.opText.objekty[0]?.nazev || S.p.nazev;
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('DOTAZNÍK PRO KLIENTA', 'Odpovědi klienta; do karty a plánu je přenesete tlačítkem „Převzít odpovědi do projektu“.', dotaznikJakoText(S.p.dotaznik, objekt()))}</div>`; return; }
-    const kresli = () => vykresliDotaznik(S.p, host);
+    const kresli = () => { vykresliDotaznik(S.p, host, TLACITKO_PBR); pripojPbr(host, kresli); };
     kresli();
     pripojDotaznik(S.p, host, {
       onZmena: () => uloz(),

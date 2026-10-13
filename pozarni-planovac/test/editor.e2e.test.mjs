@@ -598,3 +598,34 @@ test('dotazník pro klienta: stažení vyplnitelného PDF, načtení vyplněnéh
   assert.equal(await p.locator('[data-fve=pritomna]').inputValue(), 'ne');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('PBŘ (PDF s textem): načtení údajů s citací do karty, nenalezené údaje v dotazníku', skip, async () => {
+  const { nactiPdfLib } = await import('../js/pdf/export.js');
+  const L = await nactiPdfLib(), d = await L.PDFDocument.create(); d.registerFontkit(L.fontkit);
+  const font = await d.embedFont(readFileSync(join(root, 'vendor/fonts/Roboto-Regular.woff')), { subset: true });
+  const RADKY = ['Místo stavby: Zkušební 12, 100 00 Praha', 'KATEGORIE STAVBY: Stavba kategorie II', 'Počet nadzemních podlaží (NP): 3', 'Dle uspořádání objektu je požární výška uvažována jako h= 7,5 m.',
+    'Pro únik osob je k dispozici nechráněná úniková cesta vedoucí na volné prostranství.', 'Ve vzdálenosti cca 90 m se nachází nadzemní hydrant v ulici Polní.',
+    'Výplň, aby PDF mělo dost textu na rozpoznání textové vrstvy, bez dalších údajů pro kartu. Výplň, aby PDF mělo dost textu na rozpoznání textové vrstvy.', 'Výplň, aby PDF mělo dost textu na rozpoznání textové vrstvy, bez dalších údajů pro kartu.'];
+  const s = d.addPage([595, 842]); RADKY.forEach((r, i) => s.drawText(r, { x: 40, y: 800 - i * 16, size: 9, font }));
+  const f = join(tmp, 'pbr-test.pdf'); writeFileSync(f, await d.save());
+
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'PBŘ test'); await p.click('#d-novy button'); await p.waitForSelector('[data-pole="objekt.adresa"]');
+  await p.setInputFiles('[data-pbr]', f);
+  await p.waitForSelector('.dlg[open] .moznost', { timeout: 30000 });
+  const dialog = await p.locator('.dlg[open]').textContent();
+  assert.ok(dialog.includes('pbr-test.pdf, str. 1: „Místo stavby: Zkušební 12'), 'citace se zdrojem a stranou');
+  assert.ok(dialog.includes('V PBŘ nezjištěno'));
+  assert.equal(await p.locator('.dlg .moznost', { hasText: 'POŽÁRNÍ výška' }).locator('input').isChecked(), false, 'údaj k ověření není předem zaškrtnutý');
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  assert.equal(await p.locator('[data-pole="objekt.adresa"]').inputValue(), 'Zkušební 12, 100 00 Praha');
+  assert.equal(await p.locator('[data-pole="charakter.podlazi"]').inputValue(), '3 NP');
+  assert.equal(await p.locator('[data-pole="charakter.typUnikoveCesty"]').inputValue(), 'NÚC – nechráněná úniková cesta');
+  assert.equal(await p.locator('[data-pole="charakter.celkovaVyskaM"]').inputValue(), '');
+  await p.click('#l-dotaznik'); await p.waitForSelector('.pbr-souhrn');
+  assert.match(await p.locator('.pbr-souhrn').textContent(), /pbr-test\.pdf.*nezjištěno.*uzávěr vody/s);
+  assert.deepEqual(chyby, []); await ctx.close();
+});

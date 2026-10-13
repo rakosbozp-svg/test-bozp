@@ -260,3 +260,6 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .listy-extra { border-top: 1px dashed var(--line); padding-top: 6px; }
 .kroky-dotazniku { margin: var(--space-2) 0 var(--space-3); padding-left: 1.2em; font-size: 14px; color: var(--ink-muted); }
 .prevzit-lista { gap: var(--space-2); flex-wrap: wrap; }
+.dlg .moznost .citace { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-muted); font-style: italic; }
+.pbr-souhrn { margin: var(--space-3) 0; padding: var(--space-3); border-left: 3px solid var(--warn); background: var(--surface-2, #f6f6f6); font-size: 14px; }
+.pbr-souhrn p { margin: 0 0 4px; }
