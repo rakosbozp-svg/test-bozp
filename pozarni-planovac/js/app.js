@@ -214,13 +214,13 @@ function zdroje(typ) {
   return o;
 }
 const vyberZdroje = (zd) => `<label class="rk-field"><span class="rk-field__label">Zdroj</span><select class="rk-field__control" name="zdroj">${zd.map((x) => `<option value="${esc(x.klic)}">${esc(x.nazev)}</option>`).join('')}</select></label>`;
-const zkrat = (v) => { const t = v && typeof v === 'object' ? String(v.popis ?? v.text ?? '') : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
+const zkrat = (v) => { const t = v && typeof v === 'object' ? String(v.popis ?? v.text ?? Object.values(v).filter((x) => typeof x === 'string' && x.trim()).join(' | ')) : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
 
 async function potvrdNavrh(navrh, titul, uvod = '') {
   if (!navrh.length) { await oznam('Ve zdroji nejsou žádné nové údaje k převzetí (prázdná pole se nepřebírají, shodné hodnoty se přeskočí).', { titul }); return null; }
   const r = await formular({ titul, ano: 'Převzít vybrané',
     html: `${uvod}<p class="dlg__text">Zaškrtnuté údaje se zapíšou do formuláře. Pole, která už mají hodnotu, a údaje k ověření jsou předem odškrtnuté – zaškrtnutím je převezmete.</p>
-      <div class="moznosti">${navrh.map((x, i) => `<label class="moznost"><input type="checkbox" name="n_${i}" ${x.stavajici || x.neoznacit ? '' : 'checked'}><div><b>${esc(x.popis)}</b><span>${esc(zkrat(x.hodnota))}</span>${x.stavajici ? `<span class="varuj">Přepíše: ${esc(zkrat(x.stavajici))}</span>` : ''}${x.zdroj ? `<small class="citace">${esc(x.zdroj)}</small>` : ''}</div></label>`).join('')}</div>` });
+      <div class="moznosti">${navrh.map((x, i) => `<label class="moznost"><input type="checkbox" name="n_${i}" ${x.stavajici || x.neoznacit ? '' : 'checked'}><div><b>${esc(x.popis)}</b><span>${esc(zkrat(x.nahled ?? x.hodnota))}</span>${x.stavajici ? `<span class="varuj">Přepíše: ${esc(zkrat(x.stavajici))}</span>` : ''}${x.zdroj ? `<small class="citace">${esc(x.zdroj)}</small>` : ''}</div></label>`).join('')}</div>` });
   if (!r.ok) return null;
   return new Set(navrh.map((_, i) => i).filter((i) => r.pole[`n_${i}`]));
 }
@@ -251,7 +251,7 @@ async function nactiPbr(soubory) {
   ohlas('');
   if (!vysledky.length) { if (chyby.length) await oznam(chyby.join('\n'), { titul }); return 0; }
   const { nalezy, nenalezeno } = slucRozbory(vysledky);
-  const cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, projekt: S.p };
+  const cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: S.p };
   S.p.dotaznik.pbr = { soubor: vysledky.map((v) => v.soubor).join(', '), datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
   uloz();
   const navrh = navrhZPbr(nalezy, cile);
@@ -259,7 +259,7 @@ async function nactiPbr(soubory) {
   const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů v ${vysledky.length} ${vysledky.length === 1 ? 'dokumentu' : 'dokumentech'}. Čteno podle typických formulací – u každého údaje je citace a strana, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${ocrInfo.length ? `<p class="dlg__text">${esc(ocrInfo.join('; '))}.</p>` : ''}${chyby.length ? `<p class="dlg__text varuj">Nenačteno: ${esc(chyby.join(' '))}</p>` : ''}${nenalezeno.length ? `<p class="dlg__text"><b>V dokumentech nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
   const vyb = await potvrdNavrh(navrh, titul, uvod);
   if (!vyb) return 0;
-  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`); return n;
+  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta || cile.opText ? '' : ' Projekt nemá operativní kartu ani plán – převzaty jen poznámky.'}`); return n;
 }
 const TLACITKO_PBR = `<label class="btn" title="PBŘ, průvodní a souhrnná zpráva – PDF (i naskenované, OCR) nebo Word .docx; lze vybrat více souborů najednou. Údaje se zapíšou až po potvrzení.">${ikona('import', 16)}Načíst údaje z PBŘ / dokumentace…<input type="file" class="sr-only" multiple accept="application/pdf,.pdf,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-pbr="1"></label>`;
 const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = [...e.target.files]; e.target.value = ''; if (f.length) nactiPbr(f).then((n) => n && poKonci()); });
@@ -395,7 +395,7 @@ function obsah(list) {
   } else if (OP_LISTY[list.typ]) {
     const [klic, schema, nadpis, pozn, uvod] = OP_LISTY[list.typ], data = list[klic], prefix = `listy[${list.id}].${klic}`;
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema(nadpis, pozn, schemaJakoText(data, schema))}</div>`; return; }
-    const kresli = () => { vykresliSchema(data, schema, prefix, host, TLACITKO_PREVZIT('z operativní karty') + uvod); pripojSchema(data, schema, host, naZmenu); obal(host, () => prevzitDoPlanu().then((n) => n && kresli())); };
+    const kresli = () => { vykresliSchema(data, schema, prefix, host, TLACITKO_PREVZIT('z operativní karty') + uvod); host.querySelector('.prevzit-lista').insertAdjacentHTML('beforeend', TLACITKO_PBR); pripojSchema(data, schema, host, naZmenu); pripojPbr(host, kresli); obal(host, () => prevzitDoPlanu().then((n) => n && kresli())); };
     const naZmenu = (prekreslit) => { uloz(); if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } panel(true); };
     kresli();
   } else if (list.typ === 'evak_text') {

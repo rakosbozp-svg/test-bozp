@@ -656,3 +656,35 @@ test('naskenované PBŘ: OCR v prohlížeči (offline) a převzetí údaje s cit
   assert.equal(await p.locator('[data-pole="charakter.konstrukce"]').inputValue(), 'smíšený konstrukční systém (dle PBŘ)');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('PBŘ do operativního plánu: složená pole přílohy a budova v „Budovy a zařízení“', skip, async () => {
+  const { nactiPdfLib } = await import('../js/pdf/export.js');
+  const L = await nactiPdfLib(), d = await L.PDFDocument.create(); d.registerFontkit(L.fontkit);
+  const font = await d.embedFont(readFileSync(join(root, 'vendor/fonts/Roboto-Regular.woff')), { subset: true });
+  const RADKY = ['POŽÁRNĚ BEZPEČNOSTNÍ ŘEŠENÍ', 'Místo stavby: Zkušební 12, 100 00 Praha', 'Počet nadzemních podlaží (NP): 2', 'Konstrukce objektu smíšený',
+    'EPS – elektrická požární signalizace', 'Výše uvedené podmínky nejsou naplněny => zařízení se nenavrhuje.',
+    'Tlačítko TOTAL STOP umístěné v zádveří u vstupu – vypne vše.', 'Příjezd k objektu je po místní komunikaci ulici Zkušební.',
+    'Výplň, aby PDF mělo dost textu na rozpoznání textové vrstvy, bez dalších údajů. Výplň, aby PDF mělo dost textu na rozpoznání textové vrstvy.'];
+  const s = d.addPage([595, 842]); RADKY.forEach((r, i) => s.drawText(r, { x: 40, y: 800 - i * 16, size: 9, font }));
+  const f = join(tmp, 'pbr-op.pdf'); writeFileSync(f, await d.save());
+
+  const ctx = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'OP z PBŘ'); await p.selectOption('#d-novy [name=typ]', 'operativni_plan'); await p.click('#d-novy button'); await p.waitForSelector('.editor');
+  await p.click('#listy a:has-text("Vyjímatelná příloha")'); await p.waitForSelector('[data-pole="udaje.pbz"]');
+  await p.setInputFiles('[data-pbr]', f);
+  await p.waitForSelector('.dlg[open] .moznost', { timeout: 30000 });
+  assert.match(await p.locator('.dlg[open]').textContent(), /nová budova v „Budovy a zařízení“/);
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForSelector('#sek-udaje .polozka');
+  assert.equal(await p.locator('[data-pole="udaje.pbz"]').inputValue(), 'EPS: NE (dle PBŘ se nenavrhuje)');
+  assert.equal(await p.locator('[data-pole="udaje.rozvody"]').inputValue(), 'Hlavní vypínač: TOTAL STOP – v zádveří u vstupu (dle PBŘ)');
+  assert.equal(await p.locator('[data-pole="komunikace.stav"]').inputValue(), 'Příjezd: po místní komunikaci ulici Zkušební');
+  assert.equal(await p.locator('#sek-udaje .polozka [data-klic=podlazi]').inputValue(), '2 NP');
+  assert.equal(await p.locator('#sek-udaje .polozka [data-klic=konstrukce]').inputValue(), 'smíšený konstrukční systém (dle PBŘ)');
+  await p.click('#listy a:has-text("Základní text")'); await p.waitForSelector('[data-pole="ots.signalizace"]');
+  assert.equal(await p.locator('[data-pole="ots.signalizace"]').inputValue(), 'EPS: NE (dle PBŘ se nenavrhuje)');
+  assert.deepEqual(chyby, []); await ctx.close();
+});

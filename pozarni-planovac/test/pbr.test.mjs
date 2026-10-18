@@ -192,3 +192,31 @@ test('více dokumentů: shodné údaje jednou, rozdílné neoznačené s upozorn
   const navrh = navrhZPbr(nalezy, { karta: { objekt: {}, charakter: {}, vodniZdroje: [] }, projekt: null });
   assert.match(navrh.find((x) => x.cesta === 'charakter.steny').zdroj, /^pbr\.pdf \(OCR, jistota 93 %\), str\. 2: „Svislé/);
 });
+
+test('PBŘ → operativní plán: složená pole (EPS+SHZ…), nová budova, druhý import jen doplní', () => {
+  const p = novyProjekt({ typ: 'operativni_plan', nazev: 'OP' });
+  const cile = { opText: p.listy.find((l) => l.typ === 'op_text').opText, opZaklad: p.listy.find((l) => l.typ === 'op_zaklad').opZaklad, projekt: p };
+  const nal = rozborPbr(STRANKY).nalezy;
+  const navrh = navrhZPbr(nal, cile, 'pbr.pdf'), dle = (c) => navrh.find((x) => x.cesta === c);
+  assert.equal(dle('udaje.pbz').hodnota, 'EPS: NE (dle PBŘ se nenavrhuje)');
+  assert.equal(dle('udaje.rozvody').hodnota, 'Hlavní vypínač: TOTAL STOP – v zádveří u hlavního vstupu (dle PBŘ)\nPlyn: Objekt je napojen na zemní plyn.\nZdrojem tepla je plynový kotel o výkonu 24 kW.');
+  assert.match(dle('voda.zdroje').hodnota, /^Vnější hydrant: .*nadzemní hydrant v ulici Polní/);
+  assert.equal(dle('komunikace.stav').hodnota, 'Příjezd: po místní komunikaci ulici Zkušební');
+  assert.equal(dle('ots.signalizace').hodnota, 'EPS: NE (dle PBŘ se nenavrhuje)');
+  const b = navrh.find((x) => x.pridat === 'objekty');
+  assert.deepEqual({ ...b.hodnota, konstrukce: b.hodnota.konstrukce.slice(0, 40) }, { nazev: '', podlazi: '3 NP, 1 PP', vyska: '', pudorys: '', konstrukce: 'nehořlavý konstrukční systém (dle PBŘ); ', useky: 'P 1.01/N3 Schodiště (I. SPB); P 2.01 Kanceláře (II. SPB)', vyuziti: '' });
+  assert.ok(!b.neoznacit && /název a celkovou výšku doplňte/.test(b.popis));
+  assert.ok(!navrh.some((x) => x.cil === 'projekt' && /Zdroj tepla/.test(x.hodnota.text)), 'co je v plánu, se nezdvojuje do poznámek');
+  assert.ok(navrh.some((x) => x.cil === 'projekt' && /^Plyn/.test(x.hodnota.text)), 'plyn zůstává v poznámkách (zjistit uzávěr)');
+  pouzijNavrh(navrh, new Set(navrh.map((_, i) => i).filter((i) => !navrh[i].neoznacit)), cile);
+  assert.equal(cile.opText.objekty.length, 1);
+  assert.equal(cile.opText.objekty[0].podlazi, '3 NP, 1 PP');
+  // ruční úprava budovy a druhý import: shodné se přeskočí, změněné se nabídne k přepsání (neoznačené)
+  cile.opText.objekty[0].nazev = 'Hala A'; cile.opText.objekty[0].podlazi = '3 NP';
+  const n2 = navrhZPbr(nal, cile, 'pbr.pdf').filter((x) => x.cil !== 'projekt');
+  assert.deepEqual(n2.map((x) => x.polozka?.pole ?? x.cesta), ['podlazi'], 'jen změněné pole budovy');
+  const pod = n2.find((x) => x.polozka?.pole === 'podlazi');
+  assert.equal(pod.stavajici, '3 NP'); assert.match(pod.popis, /budova „Hala A“ – Podlaží/);
+  pouzijNavrh(n2, new Set([n2.indexOf(pod)]), cile);
+  assert.equal(cile.opText.objekty[0].podlazi, '3 NP, 1 PP');
+});

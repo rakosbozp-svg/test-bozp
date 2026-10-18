@@ -114,7 +114,9 @@ export function rozborPbr(stranky, volby = {}) {
   const os = najdi(/(?:Navrhovaný|Projektovaný|Celkový) počet osob\s*:?\s*(do\s*)?(\d+)\*?\s*osob/iu);
   if (os) {
     const asist = najdi(/Počet osob vyžadujících asistenci\s*:\s*(\d+)/u), ub = najdi(/Počet ubytovaných osob\s*:\s*(do\s*)?(\d+)/u);
-    const h = [`${os.m[1] ? 'do ' : ''}${os.m[2]} osob (dle PBŘ)`, ub ? `ubytovaných ${ub.m[1] ? 'do ' : ''}${ub.m[2]}` : '', asist ? `${asist.m[1]} osob vyžadujících asistenci při evakuaci` : ''].filter(Boolean).join(', ');
+    // tabulka kategorie (vyhl. 460/2021) uvádí počet pro kategorizaci; skutečný projektovaný počet bývá v poznámce pod ní
+    const pd = najdi(/Počet podle projektov\p{L}+ dokumentace (?:činí|je)\s+([^\u2029]{3,160}?)(?:\.(?=\s|$)|\u2029|$)/u);
+    const h = [`${os.m[1] ? 'do ' : ''}${os.m[2]} osob (tabulka kategorie v PBŘ)`, ub ? `ubytovaných ${ub.m[1] ? 'do ' : ''}${ub.m[2]}` : '', asist ? `${asist.m[1]} osob vyžadujících asistenci při evakuaci` : '', pd ? `podle projektu: ${norm(pd.m[1])}` : ''].filter(Boolean).join(', ');
     pridej('osoby', 'Obsazení osobami', h, os.m[0], os.i, [{ cil: 'karta', cesta: 'objekt.obsazeniOsobami' }, { cil: 'opText', cesta: 'udaje.osoby' }]);
   } else nenalezeno.push('počet osob');
 
@@ -125,6 +127,9 @@ export function rozborPbr(stranky, volby = {}) {
   for (const [k, cesta, n, re] of [['steny', 'charakter.steny', 'Stěny', /(?:Nosné svislé|Svislé nosné) konstrukce(?: (?:jsou|tvoří|je)|\s*[–—-]|\s+\p{Ll})/u], ['stropy', 'charakter.stropy', 'Stropy', /(?:Stropní|Vodorovné nosné) konstrukce(?: (?:jsou|tvoří|je)|\s*[–—-]|\s+\p{Ll})/u], ['strecha', 'charakter.strecha', 'Střecha', /(?:Krov|Střecha|Střešní konstrukce|Nosná konstrukce střechy)(?: (?:je|jsou|tvoří)|\s*[–—-])/u], ['priccky', 'charakter.priccky', 'Příčky', /nenosné příčky|příčky (?:jsou|budou)|nov\p{L}+ (?:\p{L}+ )?příč(?:ky|ek)/iu]]) {
     const m = najdi(re); if (m) pridej(k, n, m.veta.replace(/\.$/, ''), m.veta, m.i, [{ cil: 'karta', cesta }]);
   }
+
+  const rozm = najdi(/(?:Rozměry|Půdorysné rozměry)(?: stávajícího| řešeného)? (?:objektu|stavby)\s*:?\s*(\d+(?:,\d+)?)\s*m?\s*[x×]\s*(\d+(?:,\d+)?)\s*m(?![\p{L}])/u);
+  if (rozm) pridej('rozmery', 'Půdorys (rozměry objektu)', `${rozm.m[1]} × ${rozm.m[2]} m (dle PBŘ)`, rozm.m[0], rozm.i, [{ cil: 'karta', cesta: 'charakter.pudorysM' }]);
 
   // C. požární úseky (kap. f) – kódy typu N 1.01/N2, P01.02, A 2.01; řádek tabulky s plochou a stupněm PB
   const useky = new Map(); let iUseku = null;
@@ -228,13 +233,80 @@ export function slucRozbory(vysledky) {
   return { nalezy, nenalezeno };
 }
 
-// Nálezy → návrh převzetí (formát js/prebirani.js → pouzijNavrh). cile = { karta, opText, projekt }.
+// Nálezy → návrh převzetí (formát js/prebirani.js → pouzijNavrh). cile = { karta, opText, opZaklad, projekt } (kterýkoli může chybět).
+const zdrojNalezu = (n, souborNazev) => `${n.soubor || souborNazev}${n.ocr != null ? ` (OCR, jistota ${n.ocr} %)` : ''}${n.strana ? `, str. ${n.strana}` : ''}: „${n.citace}“`;
+const nic = (v) => v === null || v === undefined || String(v).trim() === '';
+const dostanP = (data, cesta) => cesta.split('.').reduce((a, k) => (a == null ? a : a[k]), data);
+const textNalezu = (n) => String(n.hodnota && typeof n.hodnota === 'object' ? n.hodnota.popis : n.hodnota ?? '').trim();
+
+// Operativní plán (Hanuška 1996, kap. 2.1 a 2.2.1): jedno pole plánu se skládá z více nálezů (EPS + SHZ + ZOKT…),
+// aby se navzájem nepřepsaly. [cíl, cesta, popis, [[klíč nálezu, štítek]], oddělovač]
+const OP_POLE = [
+  ['opText', 'udaje.osoby', 'Množství osob', [['osoby', '']]],
+  ['opText', 'udaje.latky', 'Nebezpečné látky', [['latky', '']]],
+  ['opText', 'udaje.pbz', 'Umístění a ovládání SHZ, EPS', [['eps', 'EPS'], ['shz', 'SHZ'], ['zokt', 'ZOKT'], ['autonomni', 'Autonomní detekce']]],
+  ['opText', 'udaje.rozvody', 'Rozvody el. energie a topení', [['vypinac', 'Hlavní vypínač'], ['plyn', 'Plyn'], ['kotel', 'Zdroj tepla'], ['pripojky', 'Přípojky']]],
+  ['opText', 'voda.zdroje', 'Vodní zdroje', [['hydrant', 'Vnější hydrant'], ['vnitrni', 'Vnitřní odběrná místa']]],
+  ['opText', 'komunikace.stav', 'Stav komunikací', [['prijezd', 'Příjezd']]],
+  ['opText', 'komunikace.pokyny', 'Pokyny pro jízdu a parkování techniky', [['nastup', 'Nástupní plocha']]],
+  ['opZaklad', 'ots.osoby', 'Počet osob a směnnost', [['osoby', '']], '; '],
+  ['opZaklad', 'ots.signalizace', 'EPS, ohlašovna požárů', [['eps', 'EPS']], '; '],
+  ['opZaklad', 'ots.zasobovaniVodou', 'Zásobování vodou', [['hydrant', 'Vnější hydrant'], ['vnitrni', 'Vnitřní odběrná místa']], '; '],
+];
+// Budova v „Budovy a zařízení“: název a celková výška se z PBŘ nedoplňují (PBŘ uvádí název stavby/záměru a požární výšku).
+const OP_BUDOVA = [['podlazi', 'Podlaží', [['podlazi', '']]], ['pudorys', 'Půdorys', [['rozmery', '']]], ['konstrukce', 'Konstrukce', [['konstrukce', ''], ['steny', 'stěny'], ['stropy', 'stropy'], ['strecha', 'střecha'], ['priccky', 'příčky']]], ['useky', 'Požární úseky', [['useky', '']]]];
+
+function slozit(nalezy, casti, oddel, souborNazev) {
+  const radky = [], zdroje = new Set(); let neoznacit = false, konflikt = false;
+  for (const [klic, stitek] of casti) {
+    const nn = nalezy.filter((n) => n.klic === klic && textNalezu(n));
+    if (!nn.length) continue;
+    if (nn.some((n) => n.konflikt)) konflikt = true;
+    if (nn.some((n) => n.neoznacit)) neoznacit = true;
+    nn.forEach((n) => zdroje.add(zdrojNalezu(n, souborNazev)));
+    const h = [...new Set(nn.map(textNalezu))].join(' × ');
+    const bezStitku = !stitek || h.toLowerCase().startsWith(stitek.split(' ')[0].toLowerCase());   // „Vnitřní odběrná místa: Vnitřní odběrní místa…“
+    radky.push(`${bezStitku ? '' : `${stitek}: `}${h}${nn.some((n) => n.konflikt) ? ' (dokumenty se liší – ověřit)' : ''}`);
+  }
+  return radky.length ? { text: radky.join(oddel), zdroj: [...zdroje].join(' · '), neoznacit: neoznacit || konflikt, konflikt } : null;
+}
+
+const V_OP = new Set([...OP_POLE.flatMap((x) => x[3]), ...OP_BUDOVA.flatMap((x) => x[2])].map(([k]) => k).filter((k) => k !== 'plyn'));   // klíče, které jsou v textu OP
+
+function navrhOp(nalezy, cile, souborNazev) {
+  const o = [];
+  for (const [cil, cesta, popis, casti, oddel = '\n'] of OP_POLE) {
+    const data = cile[cil]; if (!data) continue;
+    const s = slozit(nalezy, casti, oddel, souborNazev); if (!s) continue;
+    const st = dostanP(data, cesta);
+    if (!nic(st) && String(st).trim() === s.text) continue;
+    o.push({ cil, cesta, popis: `${cil === 'opZaklad' ? 'OP základní text' : 'OP příloha'} – ${popis}${s.konflikt ? ' – POZOR: dokumenty se liší' : ''}`, hodnota: s.text, stavajici: nic(st) ? null : String(st), zdroj: s.zdroj, neoznacit: s.neoznacit });
+  }
+  const op = cile.opText; if (!op) return o;
+  const pole = OP_BUDOVA.map(([k, n, casti]) => [k, n, slozit(nalezy, casti, '; ', souborNazev)]).filter(([, , s]) => s);
+  if (!pole.length) return o;
+  const budovy = op.objekty || [];
+  if (budovy.length === 1) {   // jediná budova: doplní se její pole (vyplněná jen se zaškrtnutím přepíší)
+    const b = budovy[0];
+    for (const [k, n, s] of pole) {
+      if (!nic(b[k]) && String(b[k]).trim() === s.text) continue;
+      o.push({ cil: 'opText', polozka: { kolekce: 'objekty', id: b.id, pole: k }, popis: `OP příloha – budova „${nic(b.nazev) ? 'bez názvu' : b.nazev}“ – ${n}${s.konflikt ? ' – POZOR: dokumenty se liší' : ''}`, hodnota: s.text, stavajici: nic(b[k]) ? null : String(b[k]), zdroj: s.zdroj, neoznacit: s.neoznacit });
+    }
+    return o;
+  }
+  const hodnota = { nazev: '', podlazi: '', vyska: '', pudorys: '', konstrukce: '', useky: '', vyuziti: '' };
+  for (const [k, , s] of pole) hodnota[k] = s.text;
+  o.push({ cil: 'opText', pridat: 'objekty', popis: budovy.length ? `OP příloha – budova z PBŘ jako NOVÁ položka (plán už má ${budovy.length} budovy – údaje případně přepište ručně do správné)` : 'OP příloha – nová budova v „Budovy a zařízení“ (název a celkovou výšku doplňte)', hodnota, nahled: pole.map(([, n, s]) => `${n}: ${s.text}`).join(' | '), stavajici: null, zdroj: [...new Set(pole.map(([, , s]) => s.zdroj))].join(' · '), neoznacit: budovy.length > 0 || pole.some(([, , s]) => s.neoznacit) });
+  return o;
+}
+
 export function navrhZPbr(nalezy, cile, souborNazev = 'PBŘ') {
-  const o = [], st = (data, cesta) => cesta.split('.').reduce((a, k) => (a == null ? a : a[k]), data);
-  const nic = (v) => v === null || v === undefined || String(v).trim() === '';
+  const o = [], st = dostanP;
   for (const n of nalezy) {
-    const zdroj = `${n.soubor || souborNazev}${n.ocr != null ? ` (OCR, jistota ${n.ocr} %)` : ''}${n.strana ? `, str. ${n.strana}` : ''}: „${n.citace}“`;
+    const zdroj = zdrojNalezu(n, souborNazev);
     for (const c of n.cile) {
+      if (c.cil === 'opText') continue;   // operativní plán skládá navrhOp
+      if (c.poznamka && cile.opText && V_OP.has(n.klic)) continue;   // je v textu operativního plánu
       if (c.poznamka) { if (!cile.projekt || cile.projekt.poznamkyKOvereni.some((p) => p.text === `${n.popis}: ${typeof n.hodnota === 'string' ? n.hodnota : ''}`.trim())) continue; o.push({ cil: 'projekt', pridat: 'poznamkyKOvereni', popis: `Poznámka k ověření: ${n.popis}`, hodnota: { tema: 'PBŘ', text: `${n.popis}: ${typeof n.hodnota === 'string' ? n.hodnota : ''}`.trim(), stav: 'k ověření' }, stavajici: null, zdroj, neoznacit: false }); continue; }
       const data = cile[c.cil]; if (!data) continue;
       if (c.pridat) {
@@ -246,8 +318,8 @@ export function navrhZPbr(nalezy, cile, souborNazev = 'PBŘ') {
       }
       const hodnota = c.text && typeof n.hodnota === 'object' ? n.hodnota.popis : n.hodnota, s = st(data, c.cesta);
       if (!nic(s) && String(s) === String(hodnota)) continue;
-      o.push({ cil: c.cil, cesta: c.cesta, popis: `${n.popis}${c.cil === 'opText' ? ' → OP – příloha' : ''}`, hodnota, stavajici: nic(s) ? null : String(s), zdroj, neoznacit: !!n.neoznacit });
+      o.push({ cil: c.cil, cesta: c.cesta, popis: n.popis, hodnota, stavajici: nic(s) ? null : String(s), zdroj, neoznacit: !!n.neoznacit });
     }
   }
-  return o;
+  return o.concat(navrhOp(nalezy, cile, souborNazev));
 }
