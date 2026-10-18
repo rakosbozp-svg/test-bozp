@@ -220,3 +220,45 @@ test('PBŘ → operativní plán: složená pole (EPS+SHZ…), nová budova, dru
   pouzijNavrh(n2, new Set([n2.indexOf(pod)]), cile);
   assert.equal(cile.opText.objekty[0].podlazi, '3 NP, 1 PP');
 });
+
+// ---- opravy z revize kódu ----
+test('revize: částečně chráněná ÚC, podlaží bez dvojtečky, Investorem…, odrážka „o“, FVE i „je v objektu“', () => {
+  const n = podle(rozborPbr([['Pro únik je k dispozici částečně chráněná úniková cesta typu A.', 'Počet nadzemních podlaží 3', 'Požární výška objektu: 12,0 m', 'Investorem stavby je Obec Testov.', 'Na střeše je fotovoltaická elektrárna o výkonu 9,9 kWp.']]));
+  assert.equal(n.typUc.hodnota, 'ČCHÚC A');
+  assert.equal(n.podlazi.hodnota, '3 NP');
+  assert.ok(!n.provozovatel || !/^em /.test(n.provozovatel.hodnota), '„Investorem“ není „Investor“');
+  const d = podle(rozborPbr([['objekt je napojen na zemní plyn.']], { odstavce: true }));
+  assert.equal(d.plyn.hodnota, 'objekt je napojen na zemní plyn.');
+  const p = novyProjekt({ typ: 'operativni_karta', nazev: 'F' }), karta = p.listy.find((l) => l.typ === 'karta').karta;
+  const navrh = navrhZPbr(rozborPbr([['Na střeše je fotovoltaická elektrárna o výkonu 9,9 kWp.']]).nalezy, { karta, projekt: p });
+  pouzijNavrh(navrh, new Set(navrh.map((_, i) => i)), { karta, projekt: p });
+  assert.deepEqual([karta.fve.pritomna, karta.fve.vykonKWp], [true, 9.9]);
+});
+
+test('revize: záhlaví jen z okrajů stran a na ≥ 3 stranách; údaj opakovaný v souhrnu a v kap. b) zůstane', () => {
+  const st = [['POŽÁRNĚ BEZPEČNOSTNÍ ŘEŠENÍ', 'Souhrn:', 'Navrhovaný počet osob: 25 osob', 'Počet nadzemních podlaží (NP): 2'], ['a) Úvod', 'Text.'], ['b) Úseky', 'Navrhovaný počet osob: 25 osob', 'Počet nadzemních podlaží (NP): 2'], ['c) Konec', 'Text.']];
+  const n = podle(rozborPbr(st));
+  assert.match(n.osoby.hodnota, /^25 osob/); assert.equal(n.podlazi.hodnota, '2 NP');
+  assert.equal(podle(rozborPbr([['Úsek A', 'Zastavěná plocha: 120 m2'], ['x'], ['Úsek B', 'Zastavěná plocha: 340 m2'], ['y']])).plocha.hodnota, '120');
+  // číslované zápatí na všech stranách se odstraní (necitují se)
+  const zap = [1, 2, 3].map((i) => [`Text strany ${i} bez údajů.`, i === 2 ? 'Z objektu je jeden směr úniku' : 'nic', `PBŘ – TZ ${i}`]);
+  assert.doesNotMatch(podle(rozborPbr(zap)).pocetUc.citace, /TZ/);
+});
+
+test('revize: DOCX bez smazaných revizí a kódů polí; stejný počet osob z PBŘ a zprávy není konflikt', async () => {
+  const xml = '<w:document><w:body><w:p><w:r><w:t>Místo stavby: </w:t></w:r><w:del><w:r><w:delText>Stará 1, Praha</w:delText></w:r></w:del><w:ins><w:r><w:t>Nová 5, Brno</w:t></w:r></w:ins></w:p><w:p><w:r><w:t>1. Úvod</w:t></w:r><w:r><w:instrText> PAGEREF _Toc1 \\h </w:instrText></w:r></w:p><w:p><w:r><w:t>řádek</w:t></w:r><w:r><w:br w:type="page"/></w:r><w:r><w:t>další</w:t></w:r></w:p></w:body></w:document>';
+  const st = await stranyZDocx(zip({ 'word/document.xml': xml }));
+  assert.deepEqual(st[0], ['Místo stavby: Nová 5, Brno', '1. Úvod', 'řádek', 'další']);
+  const a = { soubor: 'pbr.pdf', ...rozborPbr([['POŽÁRNĚ BEZPEČNOSTNÍ ŘEŠENÍ', 'Navrhovaný počet osob: 25 osob']]) };
+  const b = { soubor: 'B.docx', ...rozborPbr([['Navrhovaný počet osob: 25 osob']], { odstavce: true }) };
+  assert.ok(!slucRozbory([a, b]).nalezy.some((x) => x.konflikt));
+});
+
+test('revize: poznámky z PBŘ se nezahodí, když pole OP už má vlastní text', () => {
+  const p = novyProjekt({ typ: 'operativni_plan', nazev: 'OP' });
+  const cile = { opText: p.listy.find((l) => l.typ === 'op_text').opText, projekt: p };
+  cile.opText.udaje.rozvody = 'Rozvaděč RH v 1.NP (zjištěno na místě)';
+  const navrh = navrhZPbr(rozborPbr(STRANKY).nalezy, cile, 'pbr.pdf');
+  assert.equal(navrh.find((x) => x.cesta === 'udaje.rozvody').stavajici, 'Rozvaděč RH v 1.NP (zjištěno na místě)');
+  assert.ok(navrh.some((x) => x.cil === 'projekt' && /^Zdroj tepla/.test(x.hodnota.text)), 'kotel zůstane v poznámkách');
+});

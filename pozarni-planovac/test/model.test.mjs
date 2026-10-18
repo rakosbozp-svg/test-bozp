@@ -119,3 +119,11 @@ test('referenční projekt Litice se načte a obsahuje jen potvrzená FVE data',
   assert.equal(p.listy[0].karta.objekt.adresa, '');   // nedoplněno, nevymýšlí se
   assert.ok(zkontrolujUplnost(p).some((x) => x.kod === 'GPS'));
 });
+
+test('import cizího projektu: nebezpečná id se přegenerují, neznámé typy listů zahodí', async () => {
+  const M = await import('../js/model.js');
+  const p = M.nactiProjekt(JSON.stringify({ schemaVersion: 1, id: 'x"><img src=x onerror=alert(1)>', nazev: 'Z', typ: '<b>', listy: [{ id: 'l"1', typ: '<img src=x onerror=alert(2)>' }, { id: 'ok_1', typ: 'karta', karta: { nebezpeci: [{ id: '"><b>', popis: 'x' }] } }] }));
+  assert.match(p.id, /^[\w-]+$/); assert.equal(p.typ, 'operativni_karta');
+  assert.deepEqual(p.listy.map((l) => [l.id, l.typ]), [['ok_1', 'karta']]);
+  assert.match(p.listy[0].karta.nebezpeci[0].id, /^[\w-]+$/);
+});

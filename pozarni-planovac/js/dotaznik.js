@@ -69,10 +69,21 @@ export function navrhZDotazniku(odp, cile) {
     const neVse = ['latky', 'lahve'].some((id) => tx(odp[id]).toUpperCase() === 'NE') && !radky.length;
     if (neVse && !k.nebezpeci.length) o.push({ cil: 'karta', pridat: 'nebezpeci', popis: 'Nebezpečí do karty: „NE“ (žádné nebezpečné látky)', hodnota: { popis: 'NE', hasivo: '', znackaId: null }, stavajici: null });
     for (const r of radky) if (!k.nebezpeci.some((x) => tx(x.popis).toLowerCase() === r.toLowerCase())) o.push({ cil: 'karta', pridat: 'nebezpeci', popis: 'Nebezpečí do karty (hasivo doplníte)', hodnota: { popis: r, hasivo: '', znackaId: null }, stavajici: null });
-    if (!nic(odp.hydrant) && !k.vodniZdroje.some((x) => tx(x.popis).toLowerCase() === tx(odp.hydrant).toLowerCase())) {
+    // skutečné látky vs. dřívější „NE“ (např. z PBŘ) – „NE“ se nabídne k odebrání, jinak by karta říkala obojí
+    const ne = k.nebezpeci.find((x) => tx(x.popis).toUpperCase() === 'NE');
+    if (radky.length && ne) o.push({ cil: 'karta', odebrat: { kolekce: 'nebezpeci', id: ne.id }, popis: 'Nebezpečí v kartě: odebrat dřívější „NE“ (klient uvádí látky)', hodnota: 'odebere položku „NE“', stavajici: null });
+    const prutok = nic(odp.hydrantPrutok) ? null : Number(odp.hydrantPrutok), overen = odp.hydrantOveren === true;
+    const hydranty = k.vodniZdroje.filter((x) => x.typ === 'hydrant');
+    const stejny = !nic(odp.hydrant) && hydranty.find((x) => tx(x.popis).toLowerCase() === tx(odp.hydrant).toLowerCase());
+    const doplnPrutok = (h, upresneni, neoznacit) => {   // průtok a ověření k hydrantu, který už v kartě je
+      if (prutok !== null && h.prutokLs !== prutok) o.push({ cil: 'karta', polozka: { kolekce: 'vodniZdroje', id: h.id, pole: 'prutokLs' }, popis: `Průtok hydrantu „${tx(h.popis).slice(0, 60)}“ (l/s)${upresneni}`, hodnota: prutok, stavajici: h.prutokLs == null ? null : String(h.prutokLs), neoznacit });
+      if (overen && h.overenPrutok !== true) o.push({ cil: 'karta', polozka: { kolekce: 'vodniZdroje', id: h.id, pole: 'overenPrutok' }, popis: `Průtok hydrantu „${tx(h.popis).slice(0, 60)}“ je ověřený zkouškou${upresneni}`, hodnota: true, stavajici: null, neoznacit });
+    };
+    if (stejny) doplnPrutok(stejny, '', false);
+    else if (!nic(odp.hydrant)) {
       o.push({ cil: 'karta', pridat: 'vodniZdroje', popis: 'Vnější hydrant do karty', stavajici: null,
-        hodnota: { typ: 'hydrant', popis: tx(odp.hydrant), prutokLs: nic(odp.hydrantPrutok) ? null : Number(odp.hydrantPrutok), overenPrutok: odp.hydrantOveren === true, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null } });
-    }
+        hodnota: { typ: 'hydrant', popis: tx(odp.hydrant), prutokLs: prutok, overenPrutok: overen, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null } });
+    } else if (hydranty.length === 1) doplnPrutok(hydranty[0], ' – klient neuvedl polohu, jediný hydrant v kartě: ověřte, že jde o něj', true);
   }
   if (cile.projekt) {
     for (const q of OTAZKY.filter((x) => x.kam.some((k) => k.poznamka))) {

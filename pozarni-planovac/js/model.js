@@ -192,6 +192,11 @@ export function migruj(data) {
   if (typeof data.schemaVersion !== 'number') throw new Error('Chybí schemaVersion – není to projekt Požárního plánovače');
   if (data.schemaVersion > SCHEMA_VERSION) throw new Error(`Projekt je z novější verze (${data.schemaVersion}), tato verze umí ${SCHEMA_VERSION}`);
   const p = data;
+  // Import cizího souboru: id musí být bezpečná (vkládají se do odkazů a atributů), druh dokumentace a listů známý.
+  opravId(p);
+  if (!TYPY_DOKUMENTU.includes(p.typ)) p.typ = 'operativni_karta';
+  if (Array.isArray(p.listy)) p.listy = p.listy.filter((l) => l && TYPY_LISTU.includes(l.typ));
+  if (typeof p.nazev !== 'string') p.nazev = String(p.nazev ?? 'Projekt');
   p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.dotaznik = { ...prazdnyDotaznik(), ...(p.dotaznik || {}) }; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
@@ -203,6 +208,17 @@ export function migruj(data) {
     if (['situace', 'pudorys', 'schema', 'evak_plan'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
   return p;
+}
+
+// Každé „id“ v projektu (projekt, listy, položky, prvky výkresu) musí být jen písmena, číslice, _ a -; jinak se vygeneruje nové.
+const OK_ID = /^[\w-]{1,80}$/;
+function opravId(o) {
+  if (Array.isArray(o)) { o.forEach(opravId); return; }
+  if (!o || typeof o !== 'object') return;
+  for (const [k, v] of Object.entries(o)) {
+    if (k === 'id' && !((typeof v === 'string' && OK_ID.test(v)) || Number.isFinite(v) || v == null)) o.id = uid('id');
+    else if (v && typeof v === 'object') opravId(v);
+  }
 }
 
 // Doplní chybějící klíče výchozími hodnotami; existující hodnoty (i pole) zachová.

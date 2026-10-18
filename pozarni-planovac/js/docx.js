@@ -28,7 +28,9 @@ export async function souborZeZip(bajty, jmeno) {
 
 const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 export function odstavceZXml(xml) {
-  return xml.replace(/<w:tab\/>/g, '\t').replace(/<w:br\/>/g, '\n').split(/<\/w:p>/)
+  // smazaný text revizí (w:del), kódy polí (PAGEREF…) a náhradní obsah (mc:Fallback) se nečtou; zalomení řádku i s atributy
+  return xml.replace(/<w:del\b[^>]*>[\s\S]*?<\/w:del>/g, '').replace(/<w:instrText\b[^>]*>[\s\S]*?<\/w:instrText>/g, '').replace(/<mc:Fallback\b[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
+    .replace(/<w:tab\/>/g, '\t').replace(/<w:(?:br|cr)\b[^>]*\/>/g, '\n').split(/<\/w:p>/)
     .map((p) => p.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => (e[0] === '#' ? String.fromCodePoint(parseInt(e[1] === 'x' ? e.slice(2) : e.slice(1), e[1] === 'x' ? 16 : 10)) : ENT[e] ?? m)))
     .flatMap((p) => p.split('\n')).map((p) => p.replace(/[….]{4,}/g, ' ').replace(/[ \t\u00a0]+/g, ' ').trim()).filter(Boolean);
 }

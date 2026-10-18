@@ -50,3 +50,19 @@ test('vyplnitelné PDF: pole pro všechny otázky, odpovědi s diakritikou se na
   const prazdne = await (await L.PDFDocument.create()); prazdne.addPage();
   await assert.rejects(dotaznikZPdf(await prazdne.save()), /formulářová pole/);
 });
+
+test('revize: průtok k hydrantu, který už v kartě je; látky místo dřívějšího „NE“', async () => {
+  const { navrhZDotazniku } = await import('../js/dotaznik.js');
+  const { pouzijNavrh } = await import('../js/prebirani.js');
+  const { novyProjekt } = await import('../js/model.js');
+  const p = novyProjekt({ typ: 'operativni_karta', nazev: 'D' }), k = p.listy.find((l) => l.typ === 'karta').karta;
+  k.nebezpeci.push({ id: 'n1', popis: 'NE', hasivo: '', znackaId: null });
+  k.vodniZdroje.push({ id: 'h1', typ: 'hydrant', popis: 'Polní ulice u č.p. 5', prutokLs: null, overenPrutok: false, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null });
+  const navrh = navrhZDotazniku({ hydrant: 'Polní ulice u č.p. 5', hydrantPrutok: 7.5, hydrantOveren: true, latky: 'propan-butan 2 x 33 kg' }, { karta: k, projekt: p });
+  pouzijNavrh(navrh, new Set(navrh.map((_, i) => i).filter((i) => !navrh[i].neoznacit && !navrh[i].stavajici)), { karta: k, projekt: p });
+  assert.deepEqual(k.vodniZdroje.map((h) => [h.prutokLs, h.overenPrutok]), [[7.5, true]]);
+  assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['propan-butan 2 x 33 kg']);
+  // jen průtok bez polohy → nabídne se k jedinému hydrantu, neoznačeně
+  const n2 = navrhZDotazniku({ hydrantPrutok: 9 }, { karta: k, projekt: p });
+  assert.equal(n2.length, 1); assert.ok(n2[0].neoznacit && /jediný hydrant/.test(n2[0].popis));
+});

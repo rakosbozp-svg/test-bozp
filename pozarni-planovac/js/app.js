@@ -123,15 +123,15 @@ function dashboard() {
       </div>
     </section>
     <div class="dlazdice">
-      ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${poslProj.id}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
+      ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${esc(poslProj.id)}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
       <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json ze zálohy (Stáhnout → Editovatelný projekt). Otevře se v režimu podle svého druhu.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
       <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. ${rezim === 'dzp' ? 'Založí novou DZP a vloží podklad do situace.' : 'Založí nový evakuační plán a vloží podklad do listu podlaží.'}</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
       ${rezim === 'dzp' ? `<button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>` : ''}
     </div>
     <section>
       <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">${rezim === 'dzp' ? 'Vaše DZP' : 'Vaše evakuační plány'}</h2></header>
-      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${x.id}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
-        <button class="btn mal" data-akce="kopie" data-id="${x.id}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${x.id}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${x.id}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || `<li class="prazdno">Zatím žádný ${rezim === 'dzp' ? 'projekt DZP' : 'evakuační plán'}.</li>`}</ul>
+      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${esc(x.id)}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
+        <button class="btn mal" data-akce="kopie" data-id="${esc(x.id)}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${esc(x.id)}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${esc(x.id)}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || `<li class="prazdno">Zatím žádný ${rezim === 'dzp' ? 'projekt DZP' : 'evakuační plán'}.</li>`}</ul>
       ${jine ? `<p class="napoveda" style="margin-top:var(--space-3)">${rezim === 'dzp' ? `Evakuační plány (${jine}) najdete v režimu <a href="#/evakuace">Evakuační plány</a>.` : `Projekty DZP (${jine}) najdete v režimu <a href="#/dzp">DZP</a>.`}</p>` : ''}
       <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
     </section>
@@ -214,7 +214,7 @@ function zdroje(typ) {
   return o;
 }
 const vyberZdroje = (zd) => `<label class="rk-field"><span class="rk-field__label">Zdroj</span><select class="rk-field__control" name="zdroj">${zd.map((x) => `<option value="${esc(x.klic)}">${esc(x.nazev)}</option>`).join('')}</select></label>`;
-const zkrat = (v) => { const t = v && typeof v === 'object' ? String(v.popis ?? v.text ?? Object.values(v).filter((x) => typeof x === 'string' && x.trim()).join(' | ')) : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
+const zkrat = (v) => { const t = typeof v === 'boolean' ? (v ? 'ano' : 'ne') : v && typeof v === 'object' ? String(v.popis ?? v.text ?? Object.values(v).filter((x) => typeof x === 'string' && x.trim()).join(' | ')) : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
 
 async function potvrdNavrh(navrh, titul, uvod = '') {
   if (!navrh.length) { await oznam('Ve zdroji nejsou žádné nové údaje k převzetí (prázdná pole se nepřebírají, shodné hodnoty se přeskočí).', { titul }); return null; }
@@ -229,13 +229,16 @@ async function potvrdNavrh(navrh, titul, uvod = '') {
 // Vše s citací (soubor, strana), zápis až po potvrzení.
 async function nactiPbr(soubory) {
   const titul = 'Údaje z PBŘ a dokumentace', vysledky = [], chyby = [];
+  const p = S.p;   // čtení (OCR) trvá – mezitím může uživatel přepnout projekt; zapisuje se vždy do projektu, kde import začal
+  const ulozP = () => { if (S.p === p) uloz(true); else { p.zmeneno = new Date().toISOString(); return U.uloz(p); } };
   for (const soubor of soubory) {
+    let doc = null;
     try {
       const bajty = new Uint8Array(await soubor.arrayBuffer());
       if (/\.docx$/i.test(soubor.name)) { ohlas(`Čtu ${soubor.name}…`, true); vysledky.push({ soubor: soubor.name, ...rozborPbr(await stranyZDocx(bajty), { odstavce: true }) }); continue; }
       if (/\.doc$/i.test(soubor.name)) { chyby.push(`${soubor.name}: starý formát Word (.doc) aplikace nečte – uložte ho ve Wordu jako .docx nebo PDF.`); continue; }
       ohlas(`Čtu ${soubor.name}…`, true);
-      const doc = await otevriPdf(bajty);
+      doc = await otevriPdf(bajty);
       let stranky = await radkyZPdf(doc), jistoty = null;
       if (stranky.flat().join('').replace(/\s/g, '').length < 300) {
         ohlas('');
@@ -247,19 +250,22 @@ async function nactiPbr(soubory) {
       if (jistoty) v.nalezy.forEach((n) => { n.ocr = jistoty[(n.strana || 1) - 1] ?? null; if (n.ocr !== null && n.ocr < 75) n.neoznacit = true; });
       vysledky.push({ soubor: soubor.name, jistoty, ...v });
     } catch (err) { console.error(err); chyby.push(`${soubor.name}: ${err?.message || String(err)}`); }
+    finally { try { await doc?.destroy(); } catch { /* uvolnění workeru pdf.js */ } }
   }
   ohlas('');
   if (!vysledky.length) { if (chyby.length) await oznam(chyby.join('\n'), { titul }); return 0; }
   const { nalezy, nenalezeno } = slucRozbory(vysledky);
-  const cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: S.p };
-  S.p.dotaznik.pbr = { soubor: vysledky.map((v) => v.soubor).join(', '), datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
-  uloz();
+  const cile = { karta: p.listy.find((l) => l.typ === 'karta')?.karta, opText: p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: p };
+  p.dotaznik.pbr = { soubor: vysledky.map((v) => v.soubor).join(', '), datum: new Date().toLocaleString('cs-CZ'), nalezeno: nalezy.map((n) => n.popis.split(' – ')[0]), nenalezeno };
+  await ulozP();
   const navrh = navrhZPbr(nalezy, cile);
   const ocrInfo = vysledky.filter((v) => v.jistoty).map((v) => `${v.soubor} – rozpoznáno OCR, jistota po stranách ${Math.min(...v.jistoty)}–${Math.max(...v.jistoty)} % (údaje ze stran pod 75 % nejsou předem zaškrtnuté)`);
   const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů v ${vysledky.length} ${vysledky.length === 1 ? 'dokumentu' : 'dokumentech'}. Čteno podle typických formulací – u každého údaje je citace a strana, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${ocrInfo.length ? `<p class="dlg__text">${esc(ocrInfo.join('; '))}.</p>` : ''}${chyby.length ? `<p class="dlg__text varuj">Nenačteno: ${esc(chyby.join(' '))}</p>` : ''}${nenalezeno.length ? `<p class="dlg__text"><b>V dokumentech nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
-  const vyb = await potvrdNavrh(navrh, titul, uvod);
+  const vyb = await potvrdNavrh(navrh, `${titul}${S.p === p ? '' : ` → projekt „${p.nazev}“`}`, uvod);
   if (!vyb) return 0;
-  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta || cile.opText ? '' : ' Projekt nemá operativní kartu ani plán – převzaty jen poznámky.'}`); return n;
+  const n = pouzijNavrh(navrh, vyb, cile); await ulozP();
+  if (S.p !== p) { ohlas(`Převzato ${n} údajů do projektu „${p.nazev}“ (import začal v něm, mezitím jste přepnuli).`); return 0; }
+  panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta || cile.opText ? '' : ' Projekt nemá operativní kartu ani plán – převzaty jen poznámky.'}`); return n;
 }
 const TLACITKO_PBR = `<label class="btn" title="PBŘ, průvodní a souhrnná zpráva – PDF (i naskenované, OCR) nebo Word .docx; lze vybrat více souborů najednou. Údaje se zapíšou až po potvrzení.">${ikona('import', 16)}Načíst údaje z PBŘ / dokumentace…<input type="file" class="sr-only" multiple accept="application/pdf,.pdf,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-pbr="1"></label>`;
 const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = [...e.target.files]; e.target.value = ''; if (f.length) nactiPbr(f).then((n) => n && poKonci()); });
@@ -313,8 +319,8 @@ function editor() {
   if ($('#a-tisk')) $('#a-tisk').onclick = () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); window.print(); };
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">
-    <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${p.id}/${l.id}">${esc(l.nazev)}<small>${M.TYPY_LISTU_NAZVY[l.typ] || l.typ}</small></a></li>`).join('')}</ol>
-      ${M.jeEvakuace(p) ? '' : `<ol class="listy-extra"><li class="${S.listId === 'dotaznik' ? 'akt' : ''}"><a href="#/p/${p.id}/dotaznik" id="l-dotaznik">Dotazník pro klienta<small>sběr údajů od klienta</small></a></li></ol>`}
+    <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${esc(p.id)}/${esc(l.id)}">${esc(l.nazev)}<small>${esc(M.TYPY_LISTU_NAZVY[l.typ] || l.typ)}</small></a></li>`).join('')}</ol>
+      ${M.jeEvakuace(p) ? '' : `<ol class="listy-extra"><li class="${S.listId === 'dotaznik' ? 'akt' : ''}"><a href="#/p/${esc(p.id)}/dotaznik" id="l-dotaznik">Dotazník pro klienta<small>sběr údajů od klienta</small></a></li></ol>`}
       <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${(M.LISTY_PRO_DOKUMENT[p.typ] || M.TYPY_LISTU).map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
       ${list && !list.virtualni ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
     <section class="stred">

@@ -74,13 +74,14 @@ export function navrhZPlanu({ opText, opZaklad }, budova, k) {
 }
 
 const uid = () => `t_${Math.random().toString(36).slice(2, 10)}`;
-// Zapíše vybrané položky návrhu. cile = { opText, opZaklad, karta, projekt }. Položka: cesta | pridat (nová položka kolekce) | polozka {kolekce, id, pole}. Vrací počet zapsaných.
+// Zapíše vybrané položky návrhu. cile = { opText, opZaklad, karta, projekt }. Položka: cesta | pridat (nová položka kolekce) | polozka {kolekce, id, pole} | odebrat {kolekce, id}. Vrací počet zapsaných.
 export function pouzijNavrh(navrh, vybrane, cile) {
   let n = 0;
   navrh.forEach((x, i) => {
     if (!vybrane.has(i)) return;
     const data = cile[x.cil]; if (!data) return;
     if (x.pridat) (data[x.pridat] ||= []).push({ id: uid(), ...x.hodnota });
+    else if (x.odebrat) data[x.odebrat.kolekce] = (data[x.odebrat.kolekce] || []).filter((y) => y.id !== x.odebrat.id);
     else if (x.polozka) { const it = (data[x.polozka.kolekce] || []).find((y) => y.id === x.polozka.id); if (!it) return; it[x.polozka.pole] = x.hodnota; }   // pole položky kolekce (např. budova OP)
     else nastav(data, x.cesta, x.hodnota);
     n++;
