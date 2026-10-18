@@ -1,0 +1,25 @@
+Add a new tab "Školení" (training). All UI text in Czech. Do not change emails, billing/subscription, roles/RLS logic from the previous step, the weekly supervisor check, or the visual style. Do not publish.
+
+## Navigation
+Add "Školení" to the main navigation between "Termíny" and "Kontrola" (graduation-cap icon). Visible to every approved user. Show a small red count badge with the number of training deadlines that are overdue (only within the user's accessible data).
+
+## Settings (admin only)
+New table `app_settings(key text primary key, value text, updated_at timestamptz default now())`. RLS: approved users can read, only admin (private.has_role(auth.uid(),'admin')) can insert/update/delete. Seed key `skoleni_url` with `https://skolenizpsv.lovable.app`.
+
+## Page layout (top to bottom)
+1. Header "Školení" with hint "{N} termínů · stav k {today d. m. yyyy}".
+2. Launch panel (card):
+   - mono label "Aplikace školení", bold title "Školení 2D – THP"
+   - note: "Školení a test dělá zaměstnanec v samostatné aplikaci. Když ho úspěšně dokončí, klikni tady u jeho termínu na Obnoveno dnes."
+   - big primary button "Přepnout do školení ↗" opening `skoleni_url` in a new tab (target _blank, rel noopener). Hidden when no valid URL.
+   - when no URL: text "Odkaz na aplikaci školení zatím není nastavený." + for admin " Vlož ho níže." / for others " Požádej správce."
+   - admin only: input "Odkaz na aplikaci školení (jen správce)" (placeholder https://nazev.lovable.app) + button "Uložit odkaz". Auto-prefix https:// when missing; accept only https:// URLs without spaces (else toast "Odkaz musí začínat https:// a nesmí obsahovat mezery."); empty value removes the link. Toast "Odkaz na školení uložen." / "Odkaz na školení odstraněn."
+3. Three tiles (clickable filters, toggle): "Po termínu" (red), "Do 30 dní" (amber), "Platné" (green), with counts.
+4. Toolbar: search "Hledat jméno nebo druh školení" + select "Všechny druhy" (only if more than one type).
+5. List of training deadlines sorted by due date ascending. Each row: status pill (po termínu / do X dní / platné), subject name (deadlines.subject_name), type + company › plant, line "do {next_due} · naposledy {last_done} · po {interval_months} měs.". Buttons: "Spustit školení ↗" (only when due within 30 days or overdue and a URL is set; opens the URL) and "Obnoveno dnes" (sets last_done = today and recomputes next_due exactly the same way the Termíny page does; toast "Obnoveno").
+   Empty state: "Zatím žádné termíny školení. Přidej je v záložce Termíny (druh „Školení …“)." / with filters: "Filtru nic neodpovídá."
+
+## What counts as training
+A deadline is training if its type_name matches one of the deadline_types "Školení BOZP – zaměstnanci", "Školení BOZP – vedoucí", "Školení PO", "Školení řidičů VZV", "Práce ve výškách", or (for custom types) the type name matches /školen|instrukt|přezkouš|výšk|vzv/i. Put this rule in one helper (e.g. src/lib/training.ts) so it can be reused. Use the existing deadlines query/hooks; RLS already limits data to the user's companies/plants.
+
+Mobile-first, touch targets ≥ 44 px, same cards/mono labels/red primary style. When finished, list in Czech what you created (table, files) and anything you could not do; confirm the build passes.
