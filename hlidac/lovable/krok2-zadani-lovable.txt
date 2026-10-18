@@ -1,0 +1,31 @@
+Add ROLES AND DATA SCOPE ("Role a oprávnění"). All UI text in Czech. Do not change emails, billing/subscription (keep the existing private.billing_active() "paid" policies exactly as they are), the weekly supervisor check logic, or the visual style.
+
+## Roles
+There are exactly three roles:
+1. **Hlavní správce (admin)** – sees and edits everything, manages users. ONLY these e-mail addresses can ever be admin: `rakos@zpsv.cz` and `rakos.bozp@gmail.com`. Store them in a table `app_admin_emails(email text primary key)` seeded with these two. A database trigger/check must make it impossible to give the 'admin' role to any user whose profile e-mail is not in that table, and anyone who registers with one of these e-mails is automatically approved and gets 'admin'.
+2. **Správce firmy (role 'firma')** – sees and edits only the data of the companies assigned to them (all plants of those companies).
+3. **Správce závodu (role 'zavod')** – sees and edits only the data of the plants (závody) assigned to them.
+
+Extend the `app_role` enum with 'firma' and 'zavod' (keep 'user' only for backward compatibility, do not assign it anymore).
+New table `user_scopes`: id uuid pk, user_id uuid, company_id uuid null, plant_id uuid null, created_at; check exactly one of company_id / plant_id is set; unique (user_id, company_id, plant_id). Only admins can read all / write; a user can read their own rows.
+
+## Registration
+- A new registration is NOT an admin and NOT a firm manager automatically – it stays "Čeká na schválení" (status pending) with no role, and sees only a waiting screen, exactly like now.
+- Only the admin approves the user and assigns the role and scope.
+
+## Admin UI – page "Uživatelé" (admin only)
+For each user row: name, e-mail, status, role select (Správce firmy / Správce závodu; "Hlavní správce" shown only as a read-only badge for the two admin e-mails), and scope picker: for Správce firmy a multi-select of companies, for Správce závodu a multi-select of plants grouped by company. Buttons Schválit / Zablokovat stay. Changing role or scope saves immediately with a toast "Uloženo". Show a warning chip "Bez přiřazení – nic neuvidí" for approved users with no scope. At the top a short note: "Hlavní správce je jen rakos@zpsv.cz a rakos.bozp@gmail.com. Správce firmy a správce závodu určuje jen hlavní správce."
+
+## Data scope (enforce in RLS, not only in the UI)
+Create a SECURITY DEFINER helper, e.g. `private.can_access(company uuid, plant uuid)`: true if admin; or the user has a 'firma' scope row for that company; or a 'zavod' scope row for that plant. Apply it (in addition to the existing is_approved and billing policies, which stay) to SELECT/INSERT/UPDATE/DELETE on: companies (by id), plants (company_id, id), locations, deadlines, defects, inspections, inspection_drafts, subjects (company_id). For Správce závodu: in companies they see only companies that contain one of their plants (read-only), and they cannot create or delete companies or plants. Správce firmy can create/edit plants and locations inside their companies but cannot create new companies. Only admin can create/delete companies and manage users/roles. deadline_types stay readable by all approved users, editable by admin only.
+
+In the app, every list, filter, select (Firma/Závod/Pracoviště), overview count, export and the weekly check board must show only what the user may access (RLS will already filter; just make sure nothing breaks with fewer rows, e.g. empty states "Zatím nemáte přiřazenou žádnou firmu ani závod. Ozvěte se hlavnímu správci.").
+
+## Migration of existing users
+- rakos@zpsv.cz stays admin.
+- Every other existing approved user that currently has role 'user' becomes 'firma' with scope rows for ALL existing companies (so nobody loses access today); the admin can narrow it later.
+
+## Header
+Show the current user's role under their name: "Hlavní správce" / "Správce firmy · {company names}" / "Správce závodu · {plant names}" (shorten to first 2 + "+N").
+
+When finished, list in Czech what you created (tables, enum values, policies, files), how the existing users were migrated, and anything you could not do. Do not publish.
