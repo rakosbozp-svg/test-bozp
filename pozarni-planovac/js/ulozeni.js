@@ -1,9 +1,9 @@
 // Lokální ukládání projektů v prohlížeči. Primárně IndexedDB (kvůli importovaným podkladům), záložně localStorage.
 // Čtení je synchronní z paměťové cache načtené při startu (init); zápis jde do úložiště asynchronně.
-// Bez backendu se projekty nesynchronizují s webovou verzí – zálohou je Stáhnout → Editovatelný projekt.
-import { nactiProjekt, serializuj } from './model.js';
+// Bez backendu se projekty nesynchronizují s webovou verzí – zálohou je soubor (jeden projekt, nebo všechny najednou).
+import { nactiProjekt, serializuj, FORMAT_ZALOHY } from './model.js';
 
-const DB = 'pplan', OBJ = 'projekty', LS_IDX = 'pp.index.v1', LS_PROJ = 'pp.projekt.', POSL = 'pp.posledni';
+const DB = 'pplan', OBJ = 'projekty', LS_IDX = 'pp.index.v1', LS_PROJ = 'pp.projekt.', POSL = 'pp.posledni', ZALOHA = 'pp.zaloha';
 let db = null, rezim = 'pamet';             // 'idb' | 'ls' | 'pamet' (nic se neukládá)
 const cache = new Map();                    // id -> {id, nazev, typ, zmeneno, text}
 let fronta = Promise.resolve();
@@ -74,12 +74,28 @@ export function smaz(id) {
 export const nastavPosledni = (id) => lsPis(POSL, id);
 export const posledni = () => { const id = lsCti(POSL); return id && cache.has(id) ? id : null; };
 
-export function stahni(p) {
-  const blob = new Blob([serializuj(p)], { type: 'application/json' });
+function stahniText(text, soubor) {
   const a = document.createElement('a');
-  const jmeno = p.nazev.replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '') || 'projekt';
-  a.href = URL.createObjectURL(blob);
-  a.download = `${jmeno}.pplan.json`;
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.download = soubor;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+export function stahni(p) {
+  const jmeno = p.nazev.replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '') || 'projekt';
+  stahniText(serializuj(p), `${jmeno}.pplan.json`);
+}
+
+// Záloha VŠECH projektů v prohlížeči (DZP i evakuační plány) do jednoho souboru; obnova přes „Importovat projekt“.
+export function zalohaJakoText(kdy = new Date()) {
+  const projekty = [...cache.values()].sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')).map((r) => JSON.parse(r.text));
+  return JSON.stringify({ format: FORMAT_ZALOHY, verze: 1, vytvoreno: kdy.toISOString(), pocet: projekty.length, projekty }, null, 1);
+}
+export function stahniZalohu() {
+  const kdy = new Date();
+  stahniText(zalohaJakoText(kdy), `Pozarni_planovac_zaloha_${kdy.toISOString().slice(0, 10)}.pplan-zaloha.json`);
+  lsPis(ZALOHA, kdy.toISOString());
+  return cache.size;
+}
+export const posledniZaloha = () => lsCti(ZALOHA);

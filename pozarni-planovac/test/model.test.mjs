@@ -127,3 +127,13 @@ test('import cizího projektu: nebezpečná id se přegenerují, neznámé typy 
   assert.deepEqual(p.listy.map((l) => [l.id, l.typ]), [['ok_1', 'karta']]);
   assert.match(p.listy[0].karta.nebezpeci[0].id, /^[\w-]+$/);
 });
+
+test('záloha všech projektů: rozpozná se, vadný projekt se přeskočí, ostatní projdou migrací', () => {
+  const a = M.novyProjekt({ nazev: 'A', typ: 'operativni_karta' }), b = M.novyProjekt({ nazev: 'B', typ: 'evakuacni_plan' });
+  const z = M.nactiZalohu(JSON.stringify({ format: M.FORMAT_ZALOHY, verze: 1, vytvoreno: '2026-10-18T10:00:00.000Z', projekty: [JSON.parse(M.serializuj(a)), { nazev: 'Rozbitý' }, JSON.parse(M.serializuj(b))] }));
+  assert.deepEqual(z.projekty.map((p) => p.nazev), ['A', 'B']);
+  assert.equal(z.chyby.length, 1); assert.match(z.chyby[0], /^Rozbitý: /);
+  assert.equal(z.vytvoreno, '2026-10-18T10:00:00.000Z');
+  assert.equal(M.nactiZalohu(M.serializuj(a)), null, 'jeden projekt není záloha');
+  assert.throws(() => M.nactiZalohu(JSON.stringify({ format: M.FORMAT_ZALOHY })), /seznam projektů/);
+});

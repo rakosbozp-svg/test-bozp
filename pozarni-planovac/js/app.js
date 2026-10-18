@@ -97,6 +97,44 @@ function nastavLogo(rezim) {
   document.querySelectorAll('#rezim [data-rezim]').forEach((x) => { if (x.dataset.rezim === rezim) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
 }
 
+// ---------- záloha všech projektů ----------
+const DEN = 86400000;
+const projektu = (n) => `${n} ${n === 1 ? 'projekt' : n >= 2 && n <= 4 ? 'projekty' : 'projektů'}`;   // 1 projekt, 2 projekty, 5 projektů
+function pripominkaZalohy(vse) {
+  if (!vse.length || !U.dostupne()) return '';
+  const posl = U.posledniZaloha(), zmenene = vse.filter((x) => !posl || x.zmeneno > posl).length;
+  if (!zmenene || (posl && Date.now() - Date.parse(posl) < 7 * DEN)) return '';
+  const kdy = posl ? `Poslední záloha všech projektů: ${new Date(posl).toLocaleDateString('cs-CZ')} (před ${Math.floor((Date.now() - Date.parse(posl)) / DEN)} dny). Od té doby změněno projektů: ${zmenene}.` : `Projekty (${vse.length}) ještě nebyly zálohovány.`;
+  return `<div class="rk-alert rk-alert--warn" role="status" id="d-pripominka"><span class="rk-alert__icon">${ikona('pozor', 18)}</span><div class="rk-alert__text"><span class="rk-alert__title">Zálohujte projekty</span><span class="rk-alert__body">${esc(kdy)} Projekty jsou jen v tomto prohlížeči – vymazání dat prohlížeče nebo přeinstalace je smaže.</span></div><button type="button" class="rk-btn rk-btn--secondary rk-btn--sm rk-alert__action" id="d-zalohovat-ted">Zálohovat teď</button></div>`;
+}
+function zalohovatVse() {
+  const n = U.seznam().length;
+  if (!n) { oznam('V tomto prohlížeči zatím nejsou žádné projekty.', { titul: 'Záloha' }); return; }
+  U.stahniZalohu(); ohlas(`Záloha je stažená (${projektu(n)}). Uložte soubor mimo prohlížeč (disk, cloud).`);
+  if (!S.p) dashboard();
+}
+async function obnovZalohu(z) {
+  const titul = 'Obnovit ze zálohy';
+  if (!z.projekty.length) { await oznam(`Záloha neobsahuje žádný použitelný projekt.${z.chyby.length ? `\n${z.chyby.join('\n')}` : ''}`, { titul }); return; }
+  const ids = new Set(U.seznam().map((x) => x.id)), existuje = (p) => ids.has(p.id), nEx = z.projekty.filter(existuje).length;
+  const evak = z.projekty.filter((p) => M.jeEvakuace(p)).length;
+  const r = await formular({ titul, ano: 'Obnovit',
+    html: `<p class="dlg__text">Záloha${z.vytvoreno ? ` z ${esc(new Date(z.vytvoreno).toLocaleString('cs-CZ'))}` : ''} obsahuje ${projektu(z.projekty.length)} (DZP: ${z.projekty.length - evak}, evakuační plány: ${evak}).${nEx ? ` ${nEx} z nich už v tomto prohlížeči je.` : ''} Nic se nepřepíše.</p>
+      ${z.chyby.length ? `<p class="dlg__text varuj">Nepoužitelné projekty se přeskočí: ${esc(z.chyby.join('; '))}</p>` : ''}
+      ${nEx ? `<div class="moznosti"><label class="moznost"><input type="radio" name="rezim" value="chybejici" checked><div><b>Obnovit jen chybějící projekty</b><span>Projekty, které v prohlížeči už jsou, zůstanou beze změny.</span></div></label>
+        <label class="moznost"><input type="radio" name="rezim" value="kopie"><div><b>Obnovit vše – existující jako kopie</b><span>Ke stávajícím projektům se přidá verze ze zálohy s označením „(ze zálohy)“.</span></div></label></div>` : ''}
+      <ul class="zaloha-seznam">${z.projekty.map((p) => `<li>${esc(p.nazev)} <small>${esc((M.TYPY_DOKUMENTU_NAZVY[p.typ] || '').toLowerCase())}${existuje(p) ? ' · už je v prohlížeči' : ''}</small></li>`).join('')}</ul>` });
+  if (!r.ok) return;
+  const kopie = r.pole.rezim === 'kopie';
+  let n = 0; const chyby = [];
+  for (const p of z.projekty) {
+    if (existuje(p)) { if (!kopie) continue; p.id = `proj_${Math.random().toString(36).slice(2, 10)}`; p.nazev += ' (ze zálohy)'; }
+    const u = await U.uloz(p); if (u.ok) n++; else chyby.push(`${p.nazev}: ${u.chyba}`);
+  }
+  dashboard();
+  ohlas(`Ze zálohy obnoveno: ${projektu(n)}.${chyby.length ? ` Neuloženo: ${chyby.join('; ')}` : ''}`);
+}
+
 function dashboard() {
   S.ed?.zrusit(); S.ed = null;
   topAkce.innerHTML = '';
@@ -110,6 +148,7 @@ function dashboard() {
       <p class="rk-sh__lead">${R.hero[2]}</p>
     </header>
     ${U.dostupne() ? '' : `<div class="varovani" role="alert">${ikona('pozor', 20)}<span>Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data). Projekt se neuloží – po úpravách použijte Stáhnout → Editovatelný projekt.</span></div>`}
+    ${pripominkaZalohy(vse)}
     <section class="rk-callout">
       <div class="rk-callout__main">
         <header class="rk-sh rk-sh--dark"><div class="rk-eyebrow">${R.novy[0]}</div>
@@ -124,7 +163,8 @@ function dashboard() {
     </section>
     <div class="dlazdice">
       ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${esc(poslProj.id)}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
-      <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json ze zálohy (Stáhnout → Editovatelný projekt). Otevře se v režimu podle svého druhu.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
+      <button type="button" class="rk-card rk-card--interactive" id="d-zaloha"><div class="rk-card__top"><span class="rk-tile">${ikona('stahnout', 20)}</span></div><div class="rk-card__title">Zálohovat všechny projekty</div><div class="rk-card__body">Jeden soubor se všemi projekty v prohlížeči (teď ${projektu(vse.length)}) – DZP i evakuační plány včetně podkladů. Obnovíte ho přes Importovat projekt.</div><div class="rk-card__link"><span>Stáhnout zálohu</span><span class="rk-card__arrow">→</span></div></button>
+      <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json (jeden projekt) nebo záloha všech projektů. Projekt se otevře v režimu podle svého druhu.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
       <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. ${rezim === 'dzp' ? 'Založí novou DZP a vloží podklad do situace.' : 'Založí nový evakuační plán a vloží podklad do listu podlaží.'}</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
       ${rezim === 'dzp' ? `<button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>` : ''}
     </div>
@@ -133,7 +173,7 @@ function dashboard() {
       <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${esc(x.id)}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
         <button class="btn mal" data-akce="kopie" data-id="${esc(x.id)}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${esc(x.id)}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${esc(x.id)}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || `<li class="prazdno">Zatím žádný ${rezim === 'dzp' ? 'projekt DZP' : 'evakuační plán'}.</li>`}</ul>
       ${jine ? `<p class="napoveda" style="margin-top:var(--space-3)">${rezim === 'dzp' ? `Evakuační plány (${jine}) najdete v režimu <a href="#/evakuace">Evakuační plány</a>.` : `Projekty DZP (${jine}) najdete v režimu <a href="#/dzp">DZP</a>.`}</p>` : ''}
-      <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Zálohujte přes Stáhnout.</p>
+      <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Vymazání dat prohlížeče je smaže – zálohujte tlačítkem Zálohovat všechny projekty.</p>
     </section>
   </section>`;
   $('#d-novy').onsubmit = (e) => {
@@ -141,10 +181,14 @@ function dashboard() {
     const p = M.novyProjekt({ nazev: d.get('nazev').trim(), typ: d.get('typ') });
     U.uloz(p); location.hash = `#/p/${p.id}`;
   };
+  $('#d-zaloha').onclick = zalohovatVse;
+  if ($('#d-zalohovat-ted')) $('#d-zalohovat-ted').onclick = zalohovatVse;
   $('#d-import').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
-      const p = M.nactiProjekt(await f.text());
+      const text = await f.text(), z = M.nactiZalohu(text);
+      if (z) { e.target.value = ''; await obnovZalohu(z); return; }
+      const p = M.nactiProjekt(text);
       if (U.seznam().some((x) => x.id === p.id)) { p.id = `proj_${Math.random().toString(36).slice(2, 10)}`; p.nazev += ' (import)'; }
       const r = await U.uloz(p); if (!r.ok) throw new Error(r.chyba);
       location.hash = `#/p/${p.id}`;

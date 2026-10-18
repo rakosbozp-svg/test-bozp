@@ -236,4 +236,16 @@ export function uklidPrilohy(p) {
 }
 
 export const serializuj = (p) => JSON.stringify(p, null, 1);
+
+// Soubor zálohy všech projektů (js/ulozeni.js → stahniZalohu). Vrací null, není-li text zálohou;
+// jinak { projekty, chyby, vytvoreno } – vadný projekt se přeskočí a uvede v chybách, ostatní se obnoví.
+export const FORMAT_ZALOHY = 'pozarni-planovac-zaloha';
+export function nactiZalohu(text) {
+  const d = JSON.parse(text);
+  if (!d || d.format !== FORMAT_ZALOHY) return null;
+  if (!Array.isArray(d.projekty)) throw new Error('Záloha neobsahuje seznam projektů');
+  const projekty = [], chyby = [];
+  d.projekty.forEach((x, i) => { try { projekty.push(migruj(x)); } catch (e) { chyby.push(`${typeof x?.nazev === 'string' ? x.nazev : `projekt č. ${i + 1}`}: ${e.message}`); } });
+  return { projekty, chyby, vytvoreno: typeof d.vytvoreno === 'string' ? d.vytvoreno : null };
+}
 export const nactiProjekt = (text) => migruj(JSON.parse(text));

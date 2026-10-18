@@ -688,3 +688,35 @@ test('PBŘ do operativního plánu: složená pole přílohy a budova v „Budov
   assert.equal(await p.locator('[data-pole="ots.signalizace"]').inputValue(), 'EPS: NE (dle PBŘ se nenavrhuje)');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('záloha všech projektů: připomínka, stažení, obnova chybějících a obnova jako kopie', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 }, acceptDownloads: true });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  const zalozit = async (rezim, nazev) => { await p.goto(`${URL_}#/${rezim}`); await p.waitForSelector('#d-novy'); await p.fill('#d-novy [name=nazev]', nazev); await p.click('#d-novy button'); await p.waitForSelector('.editor'); };
+  await zalozit('dzp', 'Záloha DZP'); await zalozit('evakuace', 'Záloha evak');
+  await p.goto(`${URL_}#/dzp`); await p.waitForSelector('#d-pripominka');
+  assert.match(await p.locator('#d-pripominka').textContent(), /ještě nebyly zálohovány/);
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#d-zalohovat-ted')]);
+  assert.match(dl.suggestedFilename(), /^Pozarni_planovac_zaloha_\d{4}-\d{2}-\d{2}\.pplan-zaloha\.json$/);
+  const f = join(tmp, dl.suggestedFilename()); await dl.saveAs(f);
+  const z = JSON.parse(readFileSync(f, 'utf8'));
+  assert.equal(z.format, 'pozarni-planovac-zaloha');
+  assert.ok(['Záloha DZP', 'Záloha evak'].every((n) => z.projekty.some((x) => x.nazev === n)), 'záloha obsahuje DZP i evakuační plán');
+  await p.waitForSelector('#d-pripominka', { state: 'detached' });
+  // smazat projekt DZP a obnovit jen chybějící
+  const li = p.locator('.projekty li', { hasText: 'Záloha DZP' });
+  await li.locator('[data-akce=smaz]').click(); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  assert.equal(await p.locator('.projekty li', { hasText: 'Záloha DZP' }).count(), 0);
+  await p.setInputFiles('#d-import', f); await p.waitForSelector('.dlg[open] .zaloha-seznam');
+  assert.match(await p.locator('.dlg[open]').textContent(), /Nic se nepřepíše/);
+  await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForSelector('.projekty li >> text=Záloha DZP');
+  assert.equal(await p.locator('.projekty li', { hasText: 'Záloha DZP' }).count(), 1);
+  // znovu – vše jako kopie: přibude „(ze zálohy)“, originál zůstane
+  await p.setInputFiles('#d-import', f); await p.waitForSelector('.dlg[open] [name=rezim]');
+  await p.check('.dlg [name=rezim][value=kopie]'); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForSelector('.projekty li >> text=Záloha DZP (ze zálohy)');
+  assert.equal(await p.locator('.projekty li', { hasText: 'Záloha DZP' }).count(), 2);
+  assert.deepEqual(chyby, []); await ctx.close();
+});

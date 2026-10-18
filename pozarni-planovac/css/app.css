@@ -267,3 +267,8 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .dlg .moznost .citace { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-muted); font-style: italic; }
 .pbr-souhrn { margin: var(--space-3) 0; padding: var(--space-3); border-left: 3px solid var(--warn); background: var(--surface-2, #f6f6f6); font-size: 14px; }
 .pbr-souhrn p { margin: 0 0 4px; }
+
+/* Záloha všech projektů */
+#d-pripominka { align-items: center; flex-wrap: wrap; }
+.zaloha-seznam { margin: 0; padding-left: 18px; max-height: 30vh; overflow: auto; font-size: 14px; }
+.zaloha-seznam small { color: var(--ink-muted); }

@@ -97,6 +97,13 @@ Kalkulačka podle kap. 3–5 a tabulek č. 1, 2, 4 metodiky: dojezdy jednotek (t
 ### Kontrola grafické části DZP
 Situace: vodní zdroj, nástupní plocha (žlutá plocha nebo značka), hlavní uzávěry/vypínače, místo soustředění evakuovaných (Hanuška 2.3.2). Půdorys: únikové/zásahové cesty a vchody (2.3.3). Soulad s kartou: hydrant, vodní zdroje, uzávěr plynu/vody, vypínač, FVE (vypínač / TOTAL / CENTRAL STOP), EPS a nebezpečí uvedené v kartě musí mít značku ve výkresech. Vše jen jako upozornění – aplikace nečte text ani obsah podkladu (obrázek, DXF).
 
+## Záloha všech projektů
+Projekty jsou jen v úložišti prohlížeče – vymazání dat prohlížeče nebo přeinstalace je smaže. Na úvodní stránce:
+- **Zálohovat všechny projekty** stáhne jeden soubor `Pozarni_planovac_zaloha_RRRR-MM-DD.pplan-zaloha.json` se všemi projekty (DZP i evakuační plány, včetně importovaných podkladů).
+- **Importovat projekt** pozná soubor zálohy a nabídne obnovu: jen chybějící projekty (výchozí), nebo vše s tím, že existující se přidají jako kopie „(ze zálohy)“. Nic se nepřepíše; vadný projekt v záloze se přeskočí a vypíše.
+- **Připomínka** na úvodní stránce: když se od poslední zálohy projekty změnily a záloha je starší než 7 dní (nebo ještě nebyla), ukáže se upozornění s tlačítkem Zálohovat teď. Datum poslední zálohy si pamatuje prohlížeč.
+- V Artifacts stahování nefunguje (omezení platformy) – zálohujte z verze otevřené ze souboru.
+
 ## Dotazník pro klienta (DZP)
 V levém panelu projektu DZP (karta i operativní plán) je položka **Dotazník pro klienta** (`js/dotaznik.js`, 36 otázek v 7 oddílech). Ptá se jen na to, co v PBŘ a výkresech zpravidla není nebo se mohlo změnit: provoz a kontakty, změny proti projektu, hlavní vypínač a uzávěry, prostory pod napětím po vypnutí, FVE, nebezpečné látky a tlakové lahve, EPS a PCO, další PBZ, hydrant s ověřeným průtokem, jiné zdroje vody, organizace PO (zjištění a ohlášení požáru, jednotka podniku), příjezd a místa nebezpečná pro hasiče.
 - **Stáhnout PDF k vyplnění** – vyplnitelné PDF (formulářová pole, písmo s českou diakritikou). Vyplněné PDF se **načte zpět** (`js/pdf/dotaznikPdf.js`); naskenovaný papír je třeba opsat ručně.
