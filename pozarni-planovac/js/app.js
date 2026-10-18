@@ -305,9 +305,9 @@ function editor() {
   const p = S.p, list = S.listId === 'dotaznik' ? { id: 'dotaznik', typ: 'dotaznik', nazev: 'Dotazník pro klienta', virtualni: true } : p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
   topAkce.innerHTML = `<span class="nazev-projektu">${esc(p.nazev)}</span>${M.jeEvakuace(p) ? '<span class="rk-badge rk-badge--warning" title="Evakuační plán není DZP">Evakuační plán · ne DZP</span>' : ''}<span id="stav" class="stav">${esc(S.stav)}</span>
-    ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF">${ikona('tisk', 16)}Tisk / PDF</button>` : ''}
-    <button class="btn" id="a-pdf" title="Vytvoří PDF z karet, výkresů a textů projektu">${ikona('soubor', 16)}Export PDF</button>
-    <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json">${ikona('stahnout', 16)}Stáhnout → Editovatelný projekt</button>`;
+    ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF" aria-label="Tisk / PDF">${ikona('tisk', 16)}<span class="btn__txt">Tisk / PDF</span></button>` : ''}
+    <button class="btn" id="a-pdf" title="Vytvoří PDF z karet, výkresů a textů projektu" aria-label="Export PDF">${ikona('soubor', 16)}<span class="btn__txt">Export PDF</span></button>
+    <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json (Stáhnout → Editovatelný projekt)" aria-label="Stáhnout → Editovatelný projekt">${ikona('stahnout', 16)}<span class="btn__txt">Stáhnout → Editovatelný projekt</span></button>`;
   $('#a-stahnout').onclick = () => U.stahni(p);
   $('#a-pdf').onclick = () => exportPdfDialog();
   if ($('#a-tisk')) $('#a-tisk').onclick = () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); window.print(); };

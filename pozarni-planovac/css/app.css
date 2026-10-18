@@ -221,7 +221,11 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
   .rk-sh__title.dash__nadpis { font-size: 30px; }
   .dash .rk-callout { padding: var(--space-5); }
   .nast { padding: 0 6px; } .nast .nast__txt { display: none; }
-  .top { padding: var(--space-2) var(--space-4); }
+  .top { padding: var(--space-2) var(--space-4); position: static; }   /* na telefonu lišta odjede s obsahem, nezakrývá formulář */
+  .top-akce .btn__txt { display: none; }
+  .top-akce .btn { padding: 0 var(--space-3); }
+  .nazev-projektu { max-width: 16ch; }
+  .panel { top: 0; }
 }
 @media print {
   body { background: #fff; }
