@@ -15,7 +15,7 @@ import { stranyZDocx } from './docx.js';
 import { ocrPdf } from './ocr.js';
 import { otevriPdf } from './kresleni/import/pdf.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
-import { sapJakoText } from './sap.js';
+import { sapJakoText, nastavKontextSaP, kontextSaP } from './sap.js';
 import { vykresliDotaznik, pripojDotaznik } from './dotaznikUI.js';
 import { navrhZDotazniku, dotaznikJakoText } from './dotaznik.js';
 import { dotaznikDoPdf, dotaznikZPdf } from './pdf/dotaznikPdf.js';
@@ -430,6 +430,7 @@ function obsah(list) {
       },
     });
   } else if (list.typ === 'op_sap') {
+    nastavKontextSaP(list.opSap, kontextSaP(S.p));   // vydatnost vody z ověřeného hydrantu v kartě (když není zadána)
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('OPERATIVNÍ PLÁN – výpočet SaP', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), část druhá.', sapJakoText(list.opSap))}</div>`; return; }
     const kresli = () => { vykresliSap(list, host); };
     kresli();

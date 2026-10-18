@@ -1,7 +1,28 @@
-# Požární plánovač (DZP)
+# Požární plánovač (DZP a evakuační plány)
 
-Webová aplikace pro tvorbu dokumentace zdolávání požárů (operativní karta / plán).
-Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není k dispozici.
+Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, operativní plán s výpočtem SaP) a požární evakuační plány.
+**Stav: funkční verze 1.0.** Běží v prohlížeči bez serveru a bez internetu: otevřete `dist/pozarni-planovac.html` dvojklikem.
+
+## Jak začít
+1. Otevřete `dist/pozarni-planovac.html` (Chrome, Edge, Firefox nebo Safari 16.4+). Vpravo nahoře přepnete **DZP** × **Evakuační plány**.
+2. Založte projekt. Máte-li PBŘ nebo průvodní/souhrnnou zprávu (PDF i sken, Word), dejte **Načíst údaje z PBŘ / dokumentace…** – údaje se nabídnou s citací.
+3. Co v dokumentaci není, zjistěte **Dotazníkem pro klienta** (vyplnitelné PDF) a převezměte do karty / plánu.
+4. Panel **Úplnost** ukazuje, co chybí; výkresy kreslíte v editoru (podklad DXF/PDF/obrázek), **Export PDF** vytvoří celý dokument.
+5. **Zálohujte** tlačítkem *Zálohovat všechny projekty* – projekty jsou jen v tomto prohlížeči.
+
+## Co aplikace počítá a doplňuje sama
+- **Výpočet SaP** (Hanuška 1996, část druhá) krok za krokem se vzorci; navíc:
+  - nejednoznačnost metodiky u doby volného rozvoje (tBR první × poslední jednotky) se **spočte oběma způsoby** – protokol ukáže, zda varianta podle vzorce vede k více silám;
+  - **vydatnost vody** se, není-li zadána, vezme z hydrantu v kartě s **ověřeným** průtokem (l/s × 60, největší z ověřených).
+- **Vzdálenost hydrantu / vodního zdroje od objektu** vzdušnou čarou z GPS; GPS lze vložit najednou z Mapy.cz/Google i ve stupních-minutách-vteřinách.
+- Údaje z PBŘ a zpráv (pravidla + OCR), převod karta ↔ operativní plán, dotazník → karta/plán, kontrola úplnosti, legenda výkresu z použitých značek, měřítko a rozvržení evakuačního plánu.
+
+## Co zůstává na zpracovateli (nejde dopočítat – vyžaduje místo, HZS nebo normu)
+- Skutečný stav na místě (uzávěry, vypínače, látky, FVE), kontakty, stupeň poplachu a územní odbor HZS, ověřený průtok hydrantu (zkouška).
+- Rozhodnutí u nejednoznačností metodiky (výpočet ukáže obě varianty) a schválení DZP s HZS.
+- Evakuační plány: barvy podle ISO 3864-4 jsou přibližné (normu nemáme), z ČSN ISO 23601 chybí str. 5–6, čl. 7.4 a příloha A; z 16 evakuačních značek je 5 dodaných, 7 náhrad ze značek DZP a 4 chybí (přenosný hasicí přístroj, výtah, schodiště, elektrické zařízení) – dodejte oficiální ISO 7010 (nahrají se v projektu evakuačního plánu).
+- Vyplnitelné PDF dotazníku je ověřené testy, ne ve všech prohlížečích PDF.
+- V Artifacts nefungují stažení (export PDF, záloha) – pro práci používejte soubor HTML.
 
 ## Podklady (`podklady/`)
 - `VZOR_OPERATIVNI_KARTA.docx` – vzor operativní karty HZS Středočeského kraje
@@ -10,12 +31,6 @@ Stav: příprava. Zdrojový kód původního plánovače z ChatGPT zatím není 
 - `Graficke_znacky_DZP.pdf` – katalog 109 značek (ČAHD, 11/2011, vektorové)
 - `Metodicky_navod_DZP_1996.pdf` – metodika Hanuška 1996 (74 s.)
 - `priklady/` – hotové DZP: Litice (situace, DZP FVE s rozhodnutím HZS Pardubického kraje 2025), Doloplazy (OK FVE 1 a 2)
-
-## Chybí dodat
-- metodika Hanuška 1996 a „Postup při tvorbě DZP"
-- PNG značky E001–E019 a F001–F006
-- schválená DZP FVE 2025 a plánek areálu Litice
-- ukázka požadovaného výstupu
 
 ## Hotovo
 - **Značky** (`znacky/`): všech 109 značek z katalogu ČAHD 11/2011 jako PNG (600 dpi, průhledné pozadí) a SVG,

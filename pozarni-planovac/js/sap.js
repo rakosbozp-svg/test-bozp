@@ -94,8 +94,20 @@ const kladne = (v) => { const n = cislo(v); return n !== null && Number.isFinite
 const f = (n, d = 1) => (Number.isFinite(n) ? (Math.round(n * 10 ** d) / 10 ** d).toLocaleString('cs-CZ') : '–');
 const nahoru = (x) => Math.ceil(x - 1e-9);
 
+// Údaje odvozené z ostatních listů projektu (nepatří do dat výpočtu, neukládají se): nastavKontextSaP(opSap, kontextSaP(projekt)).
+const KONTEXT = new WeakMap();
+export const nastavKontextSaP = (d, k) => { if (d && typeof d === 'object') KONTEXT.set(d, k); };
+// Vydatnost zdroje vody z karty: jen hydrant s OVĚŘENÝM průtokem (zkouškou); požadavek normy z PBŘ se nepoužije.
+export function kontextSaP(p) {
+  const h = (p?.listy || []).flatMap((l) => l.karta?.vodniZdroje || []).filter((v) => v.typ === 'hydrant' && v.overenPrutok === true && kladne(v.prutokLs) !== null);
+  if (!h.length) return {};
+  const max = h.reduce((a, b) => (kladne(b.prutokLs) > kladne(a.prutokLs) ? b : a));
+  return { vydatnost: { lmin: kladne(max.prutokLs) * 60, popis: `ověřený průtok hydrantu „${String(max.popis || '').trim().slice(0, 60) || 'bez popisu'}“ ${f(kladne(max.prutokLs))} l/s × 60${h.length > 1 ? ` (největší z ${h.length} ověřených hydrantů)` : ''}` } };
+}
+
 // Hlavní výpočet. Vrací { kroky: [{oddil, nazev, vzorec, vysledek}], chybi: [text], vysledky: {...} }
-export function vypocetSaP(d) {
+// opt.tbrPo: varianta podle vzorce v metodice (doba bojového rozvinutí POSLEDNÍ jednotky) – počítá se jen pro kontrolu.
+export function vypocetSaP(d, opt = {}) {
   const kroky = [], chybi = [], v = {};
   const krok = (oddil, nazev, vzorec, vysledek) => kroky.push({ oddil, nazev, vzorec, vysledek });
 
@@ -118,9 +130,10 @@ export function vypocetSaP(d) {
     const tR = po.tDO - pr.tDO; v.tR = tR;
     krok('Doby', 'Rozdíl dojezdů poslední a první jednotky', `tR = tDO(Po) − tDO(Pr) = ${f(po.tDO)} − ${f(pr.tDO)}`, `${f(tR)} min`);
     if (pr.tBR === null || po.tBR === null) chybi.push('doba bojového rozvinutí první a poslední jednotky tBR (informativně tab. 10)');
-    if (tZP !== null && tOH !== null && pr.tBR !== null) {
-      tVR = tZP + tOH + pr.tDO + pr.tBR;
-      krok('Doby', 'Doba volného rozvoje požáru', `tVR = tZP + tOH + tDO(Pr) + tBR(Pr) = ${f(tZP)} + ${f(tOH)} + ${f(pr.tDO)} + ${f(pr.tBR)}  [ve zdroji horní index „Po“ – použito „Pr“ dle vysvětlivky a schématu]`, `${f(tVR)} min`);
+    const tbr = opt.tbrPo ? po.tBR : pr.tBR;
+    if (tZP !== null && tOH !== null && tbr !== null) {
+      tVR = tZP + tOH + pr.tDO + tbr; v.tVR = tVR;
+      krok('Doby', 'Doba volného rozvoje požáru', opt.tbrPo ? `tVR = tZP + tOH + tDO(Pr) + tBR(Po) = ${f(tZP)} + ${f(tOH)} + ${f(pr.tDO)} + ${f(tbr)}  [varianta podle vzorce v metodice]` : `tVR = tZP + tOH + tDO(Pr) + tBR(Pr) = ${f(tZP)} + ${f(tOH)} + ${f(pr.tDO)} + ${f(tbr)}  [ve vzorci zdroje horní index „Po“ – použito „Pr“ dle vysvětlivky a schématu; varianta „Po“ je spočtena v kontrole na konci]`, `${f(tVR)} min`);
       t1 = Math.min(10, tVR); t2 = Math.max(0, tVR - 10);
       krok('Doby', 'Doba rozhořívání a volného rozvoje', `t1 = min(10; tVR), t2 = tVR − t1`, `t1 = ${f(t1)} min, t2 = ${f(t2)} min`);
     }
@@ -199,8 +212,8 @@ export function vypocetSaP(d) {
     const kH = kladne(d.kH) ?? 2, kO = kladne(d.kO) ?? 2, NHa = nahoru(1.25 * (kH * Nh + kO * No));
     krok('SaP', 'Přibližný počet hasičů', `NHa = 1,25·Σ(ki·Npri) = 1,25·(${f(kH)}·${Nh} + ${f(kO)}·${No})`, `${NHa}`);
     Object.assign(v, { Nh, No, Npr, NA: Math.max(NA1, NA2), NAN, NHa });
-    const vyd = kladne(d.vydatnost);
-    if (vyd !== null) { const sp = Nh * qh + No * qo; krok('SaP', 'Porovnání se zdrojem vody', `skutečná spotřeba ${f(sp, 0)} l/min × vydatnost ${f(vyd, 0)} l/min`, sp <= vyd ? 'vyhovuje' : `chybí ${f(sp - vyd, 0)} l/min → dálková doprava vody`); v.voda = sp <= vyd; }
+    const zKarty = kladne(d.vydatnost) === null ? KONTEXT.get(d)?.vydatnost : null, vyd = kladne(d.vydatnost) ?? zKarty?.lmin ?? null;
+    if (vyd !== null) { const sp = Nh * qh + No * qo; krok('SaP', 'Porovnání se zdrojem vody', `skutečná spotřeba ${f(sp, 0)} l/min × vydatnost ${f(vyd, 0)} l/min${zKarty ? ` (vydatnost nezadána – z karty: ${zKarty.popis})` : ''}`, sp <= vyd ? 'vyhovuje' : `chybí ${f(sp - vyd, 0)} l/min → dálková doprava vody`); v.voda = sp <= vyd; }
   }
 
   // ---- 5. Dýchací technika (kap. 5.5) ----
@@ -228,6 +241,15 @@ export function vypocetSaP(d) {
     const qp = 0.01 * qpp * pp, Vp = Np * qp * 10 * 3;
     krok('Pěna', 'Zásoba pěnidla', `qp = 0,01·qpr·pp = 0,01·${f(qpp, 0)}·${f(pp)}; Vp = Npr·qp·tn·z = ${f(Np, 0)}·${f(qp, 2)}·10·3`, `${f(Vp, 0)} l`); v.Vp = Vp;
   }
+  // Kontrola nejednoznačnosti metodiky: stejný výpočet s tBR poslední jednotky (vzorec ve zdroji)
+  if (!opt.tbrPo && v._tBR && v._tBR[0] !== v._tBR[1] && v.Npr !== undefined) {
+    const a = vypocetSaP(d, { tbrPo: true }).vysledky;
+    if (a.Npr !== undefined) {
+      const vic = a.Npr !== v.Npr || a.NA !== v.NA;
+      v.varianta = { tVR: a.tVR, Qp: a.Qp, Npr: a.Npr, NA: a.NA, NHa: a.NHa, vic };
+      krok('Kontrola', 'Varianta podle vzorce v metodice (tBR poslední jednotky)', `tVR = ${f(a.tVR)} min místo ${f(v.tVR)} min`, `Qp = ${f(a.Qp, 0)} l/min, ${a.Npr} proudů, ${a.NA} automobilů${vic ? ' – VÍCE sil než hlavní výpočet, rozhodněte s HZS' : ' – stejný počet proudů i automobilů, nejednoznačnost výsledek nemění'}`);
+    }
+  }
   return { kroky, chybi, vysledky: v };
 }
 
@@ -239,7 +261,8 @@ export function shrnutiSaP(d) {
     v.Sp !== null && v.Sp !== undefined ? `Plocha požáru ${f(v.Sp)} m², plocha hašení ${f(v.Sh)} m².` : '',
     v.voda === false ? 'Vydatnost zdroje vody nestačí – nutná dálková doprava vody.' : v.voda === true ? 'Vydatnost zdroje vody vyhovuje.' : '',
     v.To !== undefined ? `Ochranná doba dýchacího přístroje ${f(v.To)} min.` : '',
-    v.Vp !== undefined ? `Zásoba pěnidla ${f(v.Vp, 0)} l.` : ''].filter(Boolean).join(' ');
+    v.Vp !== undefined ? `Zásoba pěnidla ${f(v.Vp, 0)} l.` : '',
+    v.varianta?.vic ? `Podle vzorce v metodice (doba bojového rozvinutí poslední jednotky) by vyšlo ${v.varianta.Npr} proudů a ${v.varianta.NA} automobilů – nejednoznačnost metodiky, ověřte s HZS.` : ''].filter(Boolean).join(' ');
 }
 
 export function sapJakoText(d) {

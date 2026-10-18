@@ -58,3 +58,29 @@ test('neúplné vstupy se hlásí, výpočet nic nedomýšlí', () => {
   assert.ok(chybi.length >= 3); assert.equal(vysledky.Npr, undefined);
   assert.match(shrnutiSaP(prazdnySap()), /není úplný/);
 });
+
+test('nejednoznačnost metodiky (tBR první × poslední jednotky) se spočte oběma způsoby', async () => {
+  const d = zaklad(), { vysledky: v, kroky } = vypocetSaP(d);
+  // hlavní výpočet tVR = 5 + 2 + 6 + 3 = 16; varianta podle vzorce tBR(Po) = 5 → 18
+  blizko(v.tVR, 16); blizko(v.varianta.tVR, 18);
+  const k = kroky.find((x) => x.oddil === 'Kontrola');
+  assert.match(k.vzorec, /tVR = 18 min místo 16 min/);
+  assert.equal(v.varianta.vic, v.varianta.Npr !== v.Npr || v.varianta.NA !== v.NA);
+  if (v.varianta.vic) assert.match(shrnutiSaP(d), /Podle vzorce v metodice/); else assert.doesNotMatch(shrnutiSaP(d), /Podle vzorce v metodice/);
+  // stejné tBR obou jednotek → žádná varianta
+  d.jednotky[1].tBR = 3; assert.equal(vypocetSaP(d).vysledky.varianta, undefined);
+});
+
+test('vydatnost vody z ověřeného hydrantu v kartě, když není zadána (neověřený se nepoužije)', async () => {
+  const { nastavKontextSaP, kontextSaP } = await import('../js/sap.js');
+  const d = zaklad(), hydrant = (prutokLs, overenPrutok, popis) => ({ id: popis, typ: 'hydrant', popis, prutokLs, overenPrutok });
+  const projekt = { listy: [{ typ: 'karta', karta: { vodniZdroje: [hydrant(20, false, 'neověřený'), hydrant(7.5, true, 'Polní'), hydrant(6, true, 'Lipová')] } }] };
+  const k = kontextSaP(projekt);
+  assert.equal(k.vydatnost.lmin, 450); assert.match(k.vydatnost.popis, /„Polní“ 7,5 l\/s × 60 \(největší z 2 ověřených hydrantů\)/);
+  nastavKontextSaP(d, k);
+  const krok = vypocetSaP(d).kroky.find((x) => x.nazev === 'Porovnání se zdrojem vody');
+  assert.match(krok.vzorec, /vydatnost 450 l\/min \(vydatnost nezadána – z karty: ověřený průtok hydrantu „Polní“/);
+  d.vydatnost = 1200;   // zadaná hodnota má přednost
+  assert.doesNotMatch(vypocetSaP(d).kroky.find((x) => x.nazev === 'Porovnání se zdrojem vody').vzorec, /z karty/);
+  assert.deepEqual(kontextSaP({ listy: [{ typ: 'karta', karta: { vodniZdroje: [hydrant(20, false, 'x')] } }] }), {});
+});

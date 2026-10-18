@@ -720,3 +720,20 @@ test('záloha všech projektů: připomínka, stažení, obnova chybějících a
   assert.equal(await p.locator('.projekty li', { hasText: 'Záloha DZP' }).count(), 2);
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('karta: GPS vložené z map se rozdělí, vzdálenost hydrantu se spočte', skip, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const p = await ctx.newPage(); const chyby = []; p.on('pageerror', (e) => chyby.push(e.message));
+  await p.goto(URL_);
+  await p.fill('#d-novy [name=nazev]', 'GPS test'); await p.click('#d-novy button'); await p.waitForSelector('[data-pole="objekt.gps.sirka"]');
+  await p.fill('[data-pole="objekt.gps.sirka"]', '50.1452539N, 14.0968236E');
+  assert.equal(await p.locator('[data-pole="objekt.gps.delka"]').inputValue(), '14,0968236');
+  await p.click('[data-akce=pridej][data-kolekce=vodniZdroje]'); await p.waitForSelector('#sek-voda .polozka');
+  await p.fill('#sek-voda [data-klic="gps.sirka"]', '50°8\'47.378"N, 14°5\'48.565"E');
+  assert.match(await p.locator('#sek-voda [data-klic="gps.delka"]').inputValue(), /^14,0968/);
+  assert.equal(await p.locator('#sek-voda [data-vzdalenost]').textContent(), 'Vzdušnou čarou od objektu cca 140 m (z GPS; skutečná trasa hadic bývá delší).');
+  await p.reload(); await p.waitForSelector('#sek-voda [data-vzdalenost]');
+  assert.match(await p.locator('#sek-voda [data-vzdalenost]').textContent(), /cca 140 m/, 'uloženo a po načtení se spočte znovu');
+  assert.deepEqual(chyby, []); await ctx.close();
+});

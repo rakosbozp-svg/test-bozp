@@ -1,6 +1,7 @@
 // Formulář operativní karty podle vzoru HZS SCK (list A4). Pole jsou řízena daty; každý vstup má data-cesta,
 // stejnou jako cesta v nálezech kontroly úplnosti, aby šlo z nálezu skočit na pole.
 import { najdiZnacku, vyberZnacku } from './znacky.js';
+import { textVzdalenosti, ctiGps } from './geo.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -124,9 +125,10 @@ function vody(list) {
       ${v.typ === 'nadrz' ? `<label class="f f-s"><span>Objem (m³)</span><input type="text" inputmode="decimal" data-pol="vodniZdroje" data-id="${v.id}" data-klic="objemM3" data-typ="cislo" value="${esc(zCisla(v.objemM3))}"></label>` : ''}
       <label class="f f-s"><span>GPS – šířka</span><input type="text" inputmode="decimal" data-pol="vodniZdroje" data-id="${v.id}" data-klic="gps.sirka" data-typ="cislo" value="${esc(zCisla(v.gps?.sirka))}"></label>
       <label class="f f-s"><span>GPS – délka</span><input type="text" inputmode="decimal" data-pol="vodniZdroje" data-id="${v.id}" data-klic="gps.delka" data-typ="cislo" value="${esc(zCisla(v.gps?.delka))}"></label>
+      <output class="vystup" data-vzdalenost="${v.id}">${esc(textVzdalenosti(list.karta.objekt.gps, v.gps))}</output>
       <button type="button" class="btn mal" data-akce="smaz" data-kolekce="vodniZdroje">Odebrat</button>
     </div>`).join('') || '<p class="prazdno">Zatím žádný zdroj vody.</p>';
-  return `<section class="sek sek-modra" id="sek-voda" data-cesta="${p}.vodniZdroje"><h3>Vodní zdroje a hasební látky</h3><p class="napoveda">U vnějších hydrantů doplňte ověřený průtok v l/s (návod HZS).</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="vodniZdroje">+ Přidat vodní zdroj</button></section>`;
+  return `<section class="sek sek-modra" id="sek-voda" data-cesta="${p}.vodniZdroje"><h3>Vodní zdroje a hasební látky</h3><p class="napoveda">U vnějších hydrantů doplňte ověřený průtok v l/s (návod HZS). GPS lze vložit najednou do pole šířky (např. „50.1452539N, 14.0968236E“ z Mapy.cz) – délka se doplní sama; je-li vyplněno GPS objektu, spočte se vzdálenost.</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="vodniZdroje">+ Přidat vodní zdroj</button></section>`;
 }
 
 const uid = () => `p_${Math.random().toString(36).slice(2, 10)}`;
@@ -137,6 +139,9 @@ export const novaPolozka = (kolekce) => (kolekce === 'nebezpeci'
 // Připojí obsluhu. onZmena(prekreslit) se volá po každé změně modelu.
 export function pripoj(list, host, onZmena) {
   const k = list.karta;
+  const obnovVzdalenosti = () => host.querySelectorAll('[data-vzdalenost]').forEach((o) => { const v = k.vodniZdroje.find((x) => x.id === o.dataset.vzdalenost); o.textContent = v ? textVzdalenosti(k.objekt.gps, v.gps) : ''; });
+  // GPS vložené jedním textem do pole šířky („50.14N, 14.09E“, i ve stupních/minutách) → šířka i délka
+  const rozdelGps = (el, g, nastavDelku) => { el.value = zCisla(g.sirka); const d = el.closest('.polozka, .mriz, section')?.querySelector(el.dataset.pole ? '[data-pole="objekt.gps.delka"]' : `[data-id="${el.dataset.id}"][data-klic="gps.delka"]`); if (d) d.value = zCisla(g.delka); nastavDelku(g.delka); el.classList.remove('neplatne'); };
   const polozka = (el) => k[el.dataset.pol].find((x) => x.id === el.dataset.id);
   host.oninput = host.onchange = (e) => {
     const el = e.target;
@@ -144,14 +149,19 @@ export function pripoj(list, host, onZmena) {
     if (e.type === 'change' && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox'))) return;
     if (el.dataset.pole) {
       let v = el.value;
+      const g = el.dataset.pole === 'objekt.gps.sirka' && /[\s,;°NSEW]/i.test(v.trim()) ? ctiGps(v) : null;
+      if (g) { rozdelGps(el, g, (d) => { k.objekt.gps.delka = d; }); k.objekt.gps.sirka = g.sirka; obnovVzdalenosti(); onZmena(false); return; }
       if (el.dataset.typ === 'cislo') { v = naCislo(v); el.classList.toggle('neplatne', Number.isNaN(v)); if (Number.isNaN(v)) return; }
-      nastav(k, el.dataset.pole, v); onZmena(false);
+      nastav(k, el.dataset.pole, v); if (el.dataset.pole.startsWith('objekt.gps')) obnovVzdalenosti(); onZmena(false);
     } else if (el.dataset.pol) {
       const it = polozka(el); if (!it) return;
       let v = el.type === 'checkbox' ? el.checked : el.value;
+      const g = el.dataset.klic === 'gps.sirka' && /[\s,;°NSEW]/i.test(String(v).trim()) ? ctiGps(v) : null;
+      if (g) { it.gps ||= { sirka: null, delka: null }; rozdelGps(el, g, (d) => { it.gps.delka = d; }); it.gps.sirka = g.sirka; obnovVzdalenosti(); onZmena(false); return; }
       if (el.dataset.typ === 'cislo') { v = naCislo(v); el.classList.toggle('neplatne', Number.isNaN(v)); if (Number.isNaN(v)) return; }
       const kl = el.dataset.klic.split('.'); const last = kl.pop();
-      kl.reduce((a, x) => a[x], it)[last] = v;
+      kl.reduce((a, x) => (a[x] ||= {}), it)[last] = v;
+      if (el.dataset.klic.startsWith('gps.')) obnovVzdalenosti();
       onZmena(e.type === 'change' && (el.tagName === 'SELECT'));   // změna typu mění zobrazená pole
     } else if (el.dataset.fve) {
       const kl = el.dataset.fve;
