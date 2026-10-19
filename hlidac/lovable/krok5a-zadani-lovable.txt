@@ -1,0 +1,12 @@
+Ano, souhlasím: 1.2.7 „Vstupní lékařské prohlídky“ ponech jen jako kontrolní otázku Vyhovuje / Nevyhovuje / Netýká se, žádné údaje o konkrétních osobách ani zdravotní data se neukládají.
+
+Postav zadání z mé předchozí zprávy (Kontrola ZQ-10-02 + Protokol ZQ-10-01) ve DVOU částech. TEĎ udělej jen ČÁST A, protokol a Word až v další zprávě:
+
+ČÁST A
+1. Všechny migrace z oddílu "Data" (plants.address + for_plant, zq_questions se seedem výchozího textu, zq_rotation, inspections.type/step/cycle, defects.number + q_no, tabulka protocols) včetně RLS přesně podle zadání.
+2. Pole "Sídlo závodu" (plants.address) v záložce Firmy, editovatelné jen hlavním správcem.
+3. Modal "Upravit kontrolní otázky ZQ-10-02" (Uložit / Obnovit výchozí / Zrušit) – jen hlavní správce.
+4. Volba typu v "Nová kontrola" (Kontrola vedoucího / Kontrola ZQ-10-02 – jen hlavní správce) a formulář ZQ-10-02 s obměnou otázek přesně podle pravidla "Rotation rule", včetně textu o cyklu/sadě nad formulářem, Uložit na později a uložení, které založí závady (q_no, source 'zq', výchozí texty "Nevyhovuje: {otázka}" / "Zjednat nápravu.").
+5. "Provedené kontroly" zobrazí typ kontroly; Detail funguje i pro ZQ.
+
+Nic jiného neměň, nepublikuj. Na konci česky napiš, co je hotové, a potvrď, že typová kontrola i sestavení projdou.
