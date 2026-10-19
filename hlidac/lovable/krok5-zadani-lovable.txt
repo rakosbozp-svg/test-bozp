@@ -1,0 +1,158 @@
+Add the ADMIN CHECK "Kontrola ZQ-10-02" with question rotation and the Word protocol "Protokol ZQ-10-01". This is for ŽPSV only. All UI text in Czech. Do not change emails, billing/subscription, the roles/RLS model (reuse private.can_access and is_approved + billing policies exactly like on defects), the weekly supervisor check ("Kontrola vedoucího") behaviour, or the visual style. Do not publish.
+
+## Who
+Only the main admin (Hlavní správce) can start a ZQ-10-02 check, edit the question list and create/download ZQ-10-01 protocols. Others can see finished ZQ checks of their accessible plants in "Provedené kontroly" (Detail only, no protocol button).
+
+## Data (migrations, RLS like defects; write = admin only for zq_questions, protocols)
+1. `plants`: add `address text default ''` (Sídlo závodu, editable in Firmy by admin) and `for_plant text default ''` (last used "Za závod" name).
+2. `zq_questions` (single row, key 'default'): text text, updated_at. Seed with the default text below. Admin edits it in a modal "Upravit kontrolní otázky ZQ-10-02" (textarea, buttons Uložit / Obnovit výchozí / Zrušit). Format: lines starting with "#" are group headers, other lines are "1.2.3 Question text"; question id = 'q' + number with dots replaced by underscores.
+3. `zq_rotation`: location_id uuid primary key (one row per workplace; for a check of the whole plant use a key row with plant_id instead – use id text pk = location_id or 'plant:'+plant_id), asked text[] (question ids already asked in the current cycle), round int, cycle int, sig text (hash of the question text; if the question text changes, the rotation restarts), updated_at.
+4. `inspections`: add `type text default 'vedouci'` ('vedouci' | 'zq'), `step int`, `cycle int`. ZQ checks are stored in the same table; items use the ZQ question number in `no`.
+5. `defects`: add `number text default ''` (defect number like "01/2026", assigned when it first appears in a protocol) and `q_no text default ''` (ZQ question number).
+6. New table `protocols`: id uuid pk, company_id, plant_id, location_id null, location_name text, number text ("01/2026"), seq int, year int, inspected_on date, inspector text, for_plant text, work text, defect_ids uuid[], inspection_id uuid null, created_by uuid, created_at. Unique (plant_id, year, seq).
+
+## Rotation rule (per workplace, exactly like this)
+all = all questions in order. If a rotation row exists with the same sig: asked/round/cycle from it, else asked=[], round=0, cycle=1.
+pool = all questions not in asked. If pool is empty: cycle+1, round=0, asked=[], pool=all.
+step = round + 2. Pick every step-th question of pool (1-based index divisible by step). If fewer than 10 picked, add questions from the start of pool until there are 10 (or pool runs out).
+On final save of a ZQ check: asked += picked ids, round += 1 (same cycle, sig).
+Show above the form: "Otázky ZQ-10-02 · cyklus {cycle}, sada {round+1}: každá {step}. otázka z dosud nepoložených ({picked} z {total}). Do konce cyklu zbývá {left} otázek." (or "Tato sada cyklus uzavře, příště se začíná znovu.").
+
+## UI
+- In the weekly view "Nová kontrola" (admin only) add a type choice: "Kontrola vedoucího" (existing, default) | "Kontrola ZQ-10-02" (hint "Kontrolní otázky ZQ-10-02 s obměnou po pracovištích. Výstup: protokol ZQ-10-01."). Button text "Začít kontrolu ZQ-10-02".
+- The ZQ form reuses the existing check form (groups with dark headers, Vyhovuje/Nevyhovuje/Netýká se, expand on Nevyhovuje with Co nevyhovuje / Opatření / Závažnost / Odpovídá / Termín / Fotky, sticky progress, Zrušit / Uložit na později / Uložit kontrolu). Differences: questions come from the rotation; there are no per-question default texts – when "Co nevyhovuje" is empty use "Nevyhovuje: {question text}" and when "Opatření" is empty use "Zjednat nápravu." (If Lovable AI is available, you may instead generate a one-sentence finding and measure per question in Czech; if that fails, use the fallback.) Defects get q_no and source 'zq'.
+- "Provedené kontroly" shows the type ("Kontrola vedoucího" / "Kontrola ZQ-10-02"); for ZQ checks admin gets the button "Protokol ZQ-10-01" instead of "Záznam (Word)".
+- Also add a primary button "Protokol ZQ-10-01" on the Závady page (admin only) to create a protocol without a check.
+- In the admin area of the weekly view add "Upravit kontrolní otázky ZQ-10-02".
+
+## Protocol dialog "Protokol o kontrole pracoviště · ZQ-10-01" (admin only)
+Fields: Závod (select of accessible plants), Pracoviště (select: "Všechna pracoviště" + locations of the plant), Číslo protokolu (default next number for that plant and year: max seq + 1, two digits, "NN/YYYY"), Datum kontroly (default check date or today), Kontrolu provedl (default check inspector or user name), Za závod (placeholder "jméno přítomného zástupce", default plants.for_plant). Read-only info: Sídlo závodu (plants.address; amber warning "Sídlo závodu není zadané. Doplň ho v záložce Firmy." if empty), Zodpovědný vedoucí (location.manager, or for the whole plant a list "Manager (Pracoviště)" joined by ", "; amber warning if none).
+Textarea "Pracoviště" prefilled with:
+- with a check: "Proběhla týdenní kontrola pracoviště {place} podle kontrolních otázek ZQ-10-02 Kontrolní otázky ke zhodnocení plnění požadavků právních předpisů v oblasti bezpečnosti a hygieny práce, včetně požární ochrany. Kontrolováno {n} bodů: {ok} vyhovuje, {nok} nevyhovuje, {na} se netýká." (use "pracovišť závodu {plant}" when no place; correct Czech plurals)
+- without a check: "Proběhla kontrola pracoviště {place} podle kontrolních otázek ZQ-10-02 Kontrolní otázky ke zhodnocení plnění požadavků právních předpisů v oblasti bezpečnosti a hygieny práce, včetně požární ochrany, včetně kontroly provozní dokumentace a technických prostředků PO."
+List "Zjištěné nedostatky" = defects of that plant (and place if chosen), open first then by due date, with checkboxes (preselected = the check's defects), buttons "Vybrat otevřené" / "Zrušit výběr".
+Checkbox (checked) "Před uložením opravit pravopis a gramatiku textů" – only if Lovable AI is available (Czech proofreading of work/finding/measure/resolution texts, keep abbreviations BOZP, PO, OOPP, VTZ, VZV, MPBP, LOTO, ZQ-10-02, numbers and names). Hide it otherwise.
+Button "Stáhnout protokol (Word)" → generates the .docx in the browser with the `docx` package, saves/updates the protocols row, assigns defects.number to selected defects without a number (per plant and year: continue after the highest existing "NN/YYYY"), saves plants.for_plant. Toast "Protokol {number} připraven."
+File name: "ZQ-10-01_Protokol_{NN-YYYY}_{plant}{_place}.docx".
+
+## Word layout ZQ-10-01 (A4 portrait, font Aptos 11 pt, footer "ZQ-10-01", ŽPSV logo top left if available in the project)
+- Centered bold: "PROTOKOL {number}" (14 pt), "o provedené kontrole pracoviště v oblasti BOZP a PO", "dne {d. m. yyyy}". Two empty lines.
+- Lines with bold labels: "Závod: {plant} ({company})", "Sídlo závodu: …", "Zodpovědný vedoucí: …", "Kontrolu provedl: …", "Za závod {plant}: …" (dotted line "……………………………………" when empty).
+- Bold "Pracoviště:" then the work text (justified).
+- If from a ZQ check: bold "Kontrolované body podle ZQ-10-02:" and a 3-column table (Bod | Kontrolní otázka | Výsledek, grey header D9D9D9, header repeats): Vyhovuje / "Nevyhovuje – závada {number}" bold red / Netýká se grey.
+- Bold "Zjištěné nedostatky:" and a 2-column table (left 2950 dxa, right 6122 dxa): header row "Nová zjištění" (grey, spans both), second header "Popis nálezu" | "Fotodokumentace". If none: "Při kontrole nebyly zjištěny nedostatky." Each defect row (min height ~5.8 cm, cannot split): left = "Místo: {location or plant}", "Bod ZQ-10-02: {q_no}" (if any), "Závada {number}" bold red, description red, empty line, "Opatření:" bold + text, "Termín odstranění:" bold + date, "Odpovědná osoba:" bold + name, and if resolved: "Odstraněno: {date}" bold green 2B7355 + resolution note. Right = up to 4 photos (two side by side when more than one, keep aspect ratio) and, if resolved, label "Po odstranění:" + up to 2 resolution photos; when no photos: italic grey "bez fotodokumentace".
+
+## Default question text (seed zq_questions with exactly this)
+# 1.1 Bezpečnost práce – kontrola dokumentace (přítomnost, úplnost a platnost)
+1.1.1 Pracovní předpisy (pokyny, pracovní postupy, stavební dokumentace)
+1.1.2 Bezpečnostní plán stavby
+1.1.3 Místní provozní bezpečnostní předpis
+1.1.4 Návody k obsluze jednotlivých zařízení (od výrobce)
+1.1.5 Seznamy hodnocení rizik (registr rizik)
+1.1.6 Stavební deník (zápisy jsou prováděny řádně)
+1.1.7 Provozní deníky VTZ
+1.1.8 Seznam jeřábů a zdvihacích zařízení
+1.1.9 Seznam tlakových nádob
+1.1.10 Seznam elektrických strojů, zařízení a spotřebičů
+1.1.11 Revize elektrických zařízení (rozvaděče, buňka UNIMO)
+1.1.12 Revize elektrického ručního nářadí a spotřebičů
+1.1.13 Revize jeřábů a zdvihacích zařízení
+1.1.14 Pověření odpovědných osob za VTZ
+1.1.15 Kniha evidence pracovních úrazů
+1.1.16 Přidělování OOPP a jejich používání
+1.1.17 Zabezpečení stavby proti vstupu nepovolaných osob
+1.1.18 Vybavení lékárničky a její označení
+1.1.19 Průkaz vazače
+1.1.20 Průkaz jeřábníka
+1.1.21 Průkaz obsluhy plošin
+1.1.22 Průkaz lešenáře
+1.1.23 Průkaz strojníka (obsluha stavebních strojů)
+# 1.2 Vzdělávání v oblasti bezpečnosti a hygieny práce, lékařské prohlídky
+1.2.1 Základní školení nových zaměstnanců
+1.2.2 Školení na pracovišti
+1.2.3 Opakované (periodické) školení
+1.2.4 Mimořádné školení
+1.2.5 Profesní školení
+1.2.6 Školení vedoucích zaměstnanců
+1.2.7 Vstupní lékařské prohlídky
+1.2.8 Seznam zaměstnanců na rizikových pracovištích
+# 1.3 Kontrola pracoviště
+1.3.1 Jsou komunikace v nezávadném stavu (bez nánosů, děr, oleje a jiných překážek)?
+1.3.2 Jsou cesty a chodníky zřetelně označeny?
+1.3.3 Jsou držadla, madla a příčle žebříků bez poškození?
+1.3.4 Jsou schody čisté a nepoškozené a je první a poslední schod barevně odlišen?
+1.3.5 Jsou víka a kryty kanálů dostatečně pevné, nepoškozené a nepřečnívají nad okolní terén?
+1.3.6 Jsou zvýšené pracovní plošiny nepoškozené a je zábradlí dostatečně vysoké a nepoškozené?
+1.3.7 Jsou dveře výtahů nepoškozené a je provedena revize výtahů?
+1.3.8 Je osvětlení pracoviště dostatečné?
+1.3.9 Mají zaměstnanci přístup k sociálním a sanitárním zařízením?
+1.3.10 Jsou dveře rozvaděčů uzavřené a nepoškozené?
+1.3.11 Jsou vypínače strojů označené, snadno přístupné a nepoškozené?
+1.3.12 Jsou nebezpečná místa strojů dobře zabezpečena proti vzniku úrazů?
+1.3.13 Jsou bezpečnostní vypínání strojů pravidelně kontrolována?
+1.3.14 Jsou okraje, odkud mohou lidé spadnout, opatřeny zábradlím nebo jinou dostatečnou ochranou?
+1.3.15 Jsou kryty točivých prvků a soukolí řádně upevněny?
+1.3.16 Jsou vázací prostředky řádně uloženy a označeny?
+1.3.17 Jsou zdvihací zařízení řádně označena maximální nosností?
+1.3.18 Jsou regály označeny maximální nosností?
+1.3.19 Je používané ruční nářadí v bezvadném stavu?
+1.3.20 Jsou elektrická vedení na strojích neporušená a řádně upevněná?
+1.3.21 Plní bezpečnostní vypínače a zarážky spolehlivě svou funkci?
+1.3.22 Může se každý na své pracovní místo bezpečně dostat a bezpečně tam pracovat?
+1.3.23 Je pracoviště (staveniště) uklizené a je materiál bezpečně uložen?
+1.3.24 Jsou hadice s tlakovým vzduchem nepoškozené a řádně upevněné?
+1.3.25 Jsou pracovní a skladovací prostory udržovány v čistotě a pořádku?
+1.3.26 Jsou sociální prostory udržovány v čistotě a pořádku?
+1.3.27 Je nářadí uloženo na určených místech?
+1.3.28 Jsou k dispozici umývárny s tekoucí teplou a studenou vodou?
+1.3.29 Je k dispozici místo, kde je možné se osušit, převléknout a uschovat si oděv?
+1.3.30 Mají zaměstnanci k dispozici pitnou vodu?
+1.3.31 Jsou kabely a vodiče chráněny před poškozením?
+1.3.32 Jsou všechny přípojky řádně instalovány a používají se vhodné zásuvky a zástrčky?
+1.3.33 Používají zaměstnanci OOPP předepsané pro danou profesi?
+1.3.34 Je provedeno bezpečnostní značení podle nařízení vlády č. 375/2017 Sb.?
+# 2.1 Požární ochrana – kontrola dokumentace (přítomnost, úplnost, platnost)
+2.1.1 Požární předpisy
+2.1.2 Požární řád
+2.1.3 Požární směrnice
+2.1.4 Požární evakuační řád
+2.1.5 Začlenění činností podle požárního nebezpečí
+2.1.6 Požární kniha
+2.1.7 Organizační směrnice zabezpečení PO
+# 2.2 Vzdělávání v oblasti PO
+2.2.1 Vstupní školení PO
+2.2.2 Školení PO na pracovišti
+2.2.3 Opakované školení PO
+2.2.4 Odborná příprava preventistů PO
+2.2.5 Školení vedoucích zaměstnanců v PO
+# 2.3 Technické prostředky PO
+2.3.1 Jsou přenosné hasicí přístroje správně rozmístěny a přístupné?
+2.3.2 Jsou nástěnné požární hydranty v pohotovostním stavu a volně přístupné?
+2.3.3 Jsou ventilové stanice vodních clon a stabilních hasicích zařízení kompletní včetně návodu k obsluze a jsou přístupné?
+2.3.4 Jsou požární dveře a vrata funkční včetně samozavíračů?
+2.3.5 Jsou tlačítka elektrické požární signalizace viditelná a volně přístupná?
+2.3.6 Jsou u telefonů uvedena čísla tísňového volání?
+2.3.7 Jsou barevně vymezeny prostory kolem požárně technických zařízení, elektrických rozvaděčů a požárních vstupů do energokanálů, které musí zůstat volné?
+2.3.8 Jsou utěsněny prostupy potrubí a kabelů požárně dělicími a stavebními konstrukcemi?
+2.3.9 Jsou nástěnné hydranty vybaveny hadicí a proudnicí?
+2.3.10 Jsou hadice a proudnice v dobrém technickém stavu?
+# 2.4 Požární rizika pracoviště
+2.4.1 Jsou hořlavé materiály ukládány v požárně bezpečné vzdálenosti od zdrojů tepla a elektrických rozvaděčů?
+2.4.2 Jsou dodržována pravidla pro skladování hořlavých kapalin a plynů a pro manipulaci s nimi?
+2.4.3 Jsou odstraňovány hořlavé usazeniny a prach ze strojních a stavebních konstrukcí?
+2.4.4 Je dodržována požárně bezpečná vzdálenost tepelných spotřebičů a ostatních zdrojů zapálení od hořlavých předmětů a materiálů?
+2.4.5 Jsou elektrické vařiče, konvektory a mikrovlnné trouby provozovány pod přímým dohledem zaměstnanců a na základě písemného povolení?
+2.4.6 Jsou dodržovány technologické předpisy a požární řády?
+2.4.7 Je pravidelně prováděno čištění vzduchotechniky?
+2.4.8 Jsou dodržována pravidla pro svařování a ostatní požárně nebezpečné práce?
+2.4.9 Jsou únikové cesty a úniková schodiště průchodné v celém profilu?
+2.4.10 Je dodržován zákaz kouření na pracovišti?
+2.4.11 Jsou kuřárny označené, požárně bezpečné a vybavené nehořlavými nádobami na odpad?
+2.4.12 Je na viditelném a všem zaměstnancům přístupném místě vyvěšen pracovní řád, požární směrnice, požární evakuační řád a seznam požární hlídky a je tato dokumentace aktuální?
+2.4.13 Jsou místa uložení hořlavých kapalin a lahví s plyny označena požárními bezpečnostními tabulkami?
+2.4.14 Jsou místa s nebezpečím výbuchu označena bezpečnostními tabulkami a nápisy?
+2.4.15 Jsou povolené tepelné spotřebiče označeny?
+2.4.16 Jsou údaje v požárním evakuačním plánu aktuální?
+2.4.17 Jsou příjezdové komunikace pro požární zásah volně průchodné a průjezdné a jsou vyznačeny jízdní pruhy?
+
+When finished, list in Czech what you created (tables, columns, files), whether AI proofreading/generation is used, and anything you could not do; confirm the build passes.
