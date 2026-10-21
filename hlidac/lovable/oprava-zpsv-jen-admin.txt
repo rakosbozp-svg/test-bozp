@@ -1,0 +1,11 @@
+Úprava rolí pro ŽPSV (nejdřív dokonči rozdělanou část B: spusť vite build a typovou kontrolu, oprav případné chyby a přesuň seznam „Protokoly ZQ-10-01“ pod „Provedené kontroly“). Pak:
+
+Tato aplikace je jen pro ŽPSV. Jediný hlavní správce je rakos@zpsv.cz. Všichni ostatní jsou jen správci závodů (role 'zavod'), které určuje hlavní správce. Role 'firma' (správce firmy) se v této aplikaci nepoužívá.
+
+1. Navigace: záložky „Firmy“, „Uživatelé“ a „Předplatné“ vidí jen hlavní správce. Správce závodu je nevidí a přímý vstup na /firmy, /uzivatele, /predplatne ho přesměruje na /prehled.
+2. Pruh „Platby v náhledu jsou v testovacím režimu“ a pruh „Bez aktivního paušálu lze data jen prohlížet…“ vidí jen hlavní správce. Správce závodu je nevidí (pokud je aplikace jen pro čtení, ukáž mu jen neutrální „Úpravy jsou dočasně vypnuté. Kontaktujte správce.“ bez zmínky o platbách).
+3. Uživatelé: výběr role nabízí jen „Správce závodu“ (výběr závodů). „Správce firmy“ z výběru odstraň. Hlavní správce zůstává jen štítek u rakos@zpsv.cz.
+4. Databáze: trigger na user_roles ať odmítne roli 'firma' (chyba „V ŽPSV se používá jen správce závodu.“). app_admin_emails obsahuje už jen rakos@zpsv.cz – nech to tak.
+5. Kdekoli jinde, kde jsou tlačítka pro přidání/smazání firmy nebo závodu, nastavení e-mailových upozornění firmy apod., je ukaž jen hlavnímu správci. Správce závodu může dál pracovat s termíny, školením, kontrolami a závadami svého závodu a přidávat pracoviště ve svém závodě.
+
+Nic jiného neměň (e-maily, předplatné samotné, kontroly), nepublikuj. Na konci česky napiš, co se změnilo, a potvrď, že typová kontrola i sestavení prošly.
