@@ -8,7 +8,8 @@
     "znacky": "python3 tools/build_znacky.py",
     "litice": "node tools/vytvor_litice.mjs",
     "fixtury-dxf": "python3 tools/generuj_dxf_fixtury.py",
-    "build": "node tools/sestav_jeden_soubor.mjs"
+    "build": "node tools/sestav_jeden_soubor.mjs",
+    "build:web": "node tools/sestav_web.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

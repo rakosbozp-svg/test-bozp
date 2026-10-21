@@ -1,0 +1,25 @@
+{
+ "installCommand": "echo bez instalace",
+ "buildCommand": "node tools/sestav_web.mjs",
+ "outputDirectory": "web",
+ "framework": null,
+ "headers": [
+  {
+   "source": "/(.*)",
+   "headers": [
+    {
+     "key": "X-Robots-Tag",
+     "value": "noindex, nofollow"
+    },
+    {
+     "key": "X-Content-Type-Options",
+     "value": "nosniff"
+    },
+    {
+     "key": "Referrer-Policy",
+     "value": "same-origin"
+    }
+   ]
+  }
+ ]
+}
