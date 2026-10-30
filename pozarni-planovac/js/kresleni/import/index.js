@@ -21,7 +21,8 @@ export function vlozVektor(v, { prvky, vrstvy, meritko }) {
   if (prazdny) { const n = P.navrhniMeritko({ ...v, prvky }); if (n) v.meritko.pomer = n; }
   const pomer = v.meritko.pomer;
   for (const p of prvky) if (p.druh === 'text') { p.vyska = normalizujVelikost(Math.max(1, ((p.vyskaM ?? 0.003) * 1000) / pomer)); delete p.vyskaM; }
-  for (const l of vrstvy) if (!v.vrstvy.some((x) => x.id === l.id)) v.vrstvy.push(l);
+  // vrstvy importu jsou podklad: patří dospod, aby jejich výplně nezakryly trasy a značky nakreslené potom
+  v.vrstvy.unshift(...vrstvy.filter((l, i) => !v.vrstvy.some((x) => x.id === l.id) && vrstvy.findIndex((x) => x.id === l.id) === i));
   v.prvky.push(...prvky);
   P.obnovDvere(v.prvky);
   for (const d of prvky) if (d.druh === 'dvere' && !d.stenaId) P.pripojDvere(d, v.prvky, [d.x, d.y], 0.6);
@@ -32,15 +33,23 @@ export function vlozVektor(v, { prvky, vrstvy, meritko }) {
 }
 
 // Přeškáluje celý obsah výkresu podle známé vzdálenosti dvou bodů (kalibrace neověřeného vektorového importu).
+// Mění se jen skutečné rozměry (souřadnice, šířka dveří). Velikosti v mm na papíře zůstanou: značky a nakreslené popisky
+// stejně velké; texty z importu mají skutečnou výšku, ta se přepočte s novým měřítkem tisku.
 export function kalibrujVektor(v, bodA, bodB, delkaM) {
   if (!(delkaM > 0)) throw new Error('Známá délka musí být kladné číslo');
   const d = Math.hypot(bodB[0] - bodA[0], bodB[1] - bodA[1]);
   if (d < 1e-9) throw new Error('Body kalibrace splývají');
-  const f = delkaM / d;
-  for (const p of v.prvky) P.meritkujPrvek(p, bodA, f, f);
+  const f = delkaM / d, pomer0 = v.meritko.pomer, papir = new Map();
+  for (const p of v.prvky) {
+    if (p.druh === 'text') papir.set(p, ['vyska', p.vyska]); else if (p.druh === 'znacka') papir.set(p, ['velikost', p.velikost]);
+    P.meritkujPrvek(p, bodA, f, f);
+    if (p.druh === 'dvere' && p.stenaId) p.sirkaM = Math.max(0.3, p.sirkaM * f);   // připojené dveře meritkujPrvek nemění
+  }
+  for (const [p, [k, x]] of papir) p[k] = x;
   P.obnovDvere(v.prvky);
   v.meritkoZdroj = { ...(v.meritkoZdroj || {}), overeno: true, zdroj: 'kalibrace', popis: `ověřeno kalibrací (${fmt(delkaM)} m)` };
   const n = P.navrhniMeritko(v); if (n) { v.meritko.pomer = n; P.vycentrujOkno(v); }
+  for (const p of v.prvky) if (p.druh === 'text' && p.puvod && Number.isFinite(p.vyska)) p.vyska = normalizujVelikost((p.vyska * f * pomer0) / v.meritko.pomer);
   return f;
 }
 
