@@ -52,7 +52,7 @@ test('migrace doplní chybějící pole a nic nesmaže', () => {
   delete p.listy[1].vykres.sit10m; delete p.poznamkyKOvereni;
   const m = M.migruj(JSON.parse(JSON.stringify(p)));
   assert.equal(m.listy[0].karta.objekt.nazev, 'X');
-  assert.equal(m.listy[0].karta.nebezpeci[0].hasivo, 'prášek');
+  assert.equal(m.listy[0].karta.nebezpeci.find((x) => x.id === 'n1').hasivo, 'prášek');
   assert.equal(m.listy[0].karta.fve.pritomna, null);
   assert.equal(m.listy[0].karta.objekt.provoz.pracovniDoba, '');
   assert.equal(m.listy[1].vykres.sit10m, true);
@@ -76,15 +76,15 @@ test('kontrola úplnosti: prázdná karta má chyby, vyplněná NE je akceptová
   const p = M.novyProjekt();
   const kody = (n) => new Set(n.map((x) => x.kod));
   let n = zkontrolujUplnost(p, katalog.znacky);
-  for (const kod of ['ID_OBJEKT', 'GPS', 'PRIJEZD', 'NEBEZPECI', 'VODA', 'DOPORUCENI', 'FVE_ROZHODNUTI', 'OSVEDCENI']) assert.ok(kody(n).has(kod), kod);
+  for (const kod of ['ID_OBJEKT', 'GPS', 'PRIJEZD', 'NEBEZPECI_POPIS', 'VODA', 'DOPORUCENI', 'FVE_ROZHODNUTI', 'OSVEDCENI']) assert.ok(kody(n).has(kod), kod);
   assert.ok(kody(n).has('SEVERKA') && kody(n).has('LEGENDA') && kody(n).has('REVIZE_CHYBI'));
   assert.ok(souhrn(n).chyby > 10);
 
   const k = p.listy[0].karta;
   k.omezeni = 'NE'; k.objekt.omezeni = 'NE';
-  k.nebezpeci.push({ id: 'n1', popis: 'NE', hasivo: '' });
+  k.nebezpeci.forEach((x) => { x.popis = 'NE'; });                      // předtištěné řádky vzoru: „NE“
   n = zkontrolujUplnost(p);
-  assert.ok(!kody(n).has('OMEZENI') && !kody(n).has('NEBEZPECI') && !kody(n).has('NEBEZPECI_HASIVO'));
+  assert.ok(!kody(n).has('OMEZENI') && !kody(n).has('NEBEZPECI') && !kody(n).has('NEBEZPECI_POPIS') && !kody(n).has('NEBEZPECI_HASIVO'));
 });
 
 test('kontrola: nebezpečí bez hasiva, FVE bez výkonu, hydrant bez ověřeného průtoku', () => {

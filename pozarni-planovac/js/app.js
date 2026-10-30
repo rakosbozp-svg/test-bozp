@@ -2,7 +2,7 @@ import * as M from './model.js';
 import * as U from './ulozeni.js';
 import { nactiKatalog } from './znacky.js';
 import { vykresliKartu, pripoj, esc } from './formular.js';
-import { nahledKarty } from './nahled.js';
+import { nahledKarty, prizpusobNahled } from './nahled.js';
 import { vykresliEvak, pripojEvak, nahledEvak } from './evakuace.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
 import { METODIKA_EVAK } from './evakuace.js';
@@ -17,12 +17,12 @@ import { otevriPdf } from './kresleni/import/pdf.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
 import { sapJakoText, nastavKontextSaP, kontextSaP } from './sap.js';
 import { vykresliDotaznik, pripojDotaznik } from './dotaznikUI.js';
-import { navrhZDotazniku, dotaznikJakoText } from './dotaznik.js';
+import { navrhZDotazniku, dotaznikJakoText, OTAZKY } from './dotaznik.js';
 import { dotaznikDoPdf, dotaznikZPdf } from './pdf/dotaznikPdf.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
 import { zeptejSe, potvrd, oznam, formular } from './dialogy.js';
-import { exportujPdf, stahniBajty, jmenoPdf } from './pdf/export.js';
+import { exportujPdf, stahniBajty, jmenoPdf, nactiFonty } from './pdf/export.js';
 import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
 import { vlozPodklad } from './kresleni/podklad.js';
@@ -71,6 +71,8 @@ function smeruj() {
   } else { S.p = null; dashboard(); }
 }
 window.addEventListener('hashchange', smeruj);
+// Přechod na adresu; když už stránka na té adrese je, hashchange nenastane – překreslí se přímo (např. po smazání zobrazeného listu).
+function jdi(hash) { if (location.hash === hash) smeruj(); else location.hash = hash; }
 
 // ---------- dashboard ----------
 // Úvodní stránka má dva oddělené režimy: DZP (pro hasiče) a evakuační plány (pro osoby v objektu). Volba je v adrese (#/dzp, #/evakuace)
@@ -99,7 +101,10 @@ function nastavLogo(rezim) {
 
 // ---------- záloha všech projektů ----------
 const DEN = 86400000;
-const projektu = (n) => `${n} ${n === 1 ? 'projekt' : n >= 2 && n <= 4 ? 'projekty' : 'projektů'}`;   // 1 projekt, 2 projekty, 5 projektů
+const sklon = (jeden, dva, pet) => (n) => `${n} ${n === 1 ? jeden : n >= 2 && n <= 4 ? dva : pet}`;
+const projektu = sklon('projekt', 'projekty', 'projektů');   // 1 projekt, 2 projekty, 5 projektů
+const odpovedi = sklon('odpověď', 'odpovědi', 'odpovědí'), udaju = sklon('údaj', 'údaje', 'údajů');
+const malym = (t) => t.charAt(0).toLowerCase() + t.slice(1);   // „operativní karta (DZP)“ – zkratky zůstanou velkými
 function pripominkaZalohy(vse) {
   if (!vse.length || !U.dostupne()) return '';
   const posl = U.posledniZaloha(), zmenene = vse.filter((x) => !posl || x.zmeneno > posl).length;
@@ -119,11 +124,11 @@ async function obnovZalohu(z) {
   const ids = new Set(U.seznam().map((x) => x.id)), existuje = (p) => ids.has(p.id), nEx = z.projekty.filter(existuje).length;
   const evak = z.projekty.filter((p) => M.jeEvakuace(p)).length;
   const r = await formular({ titul, ano: 'Obnovit',
-    html: `<p class="dlg__text">Záloha${z.vytvoreno ? ` z ${esc(new Date(z.vytvoreno).toLocaleString('cs-CZ'))}` : ''} obsahuje ${projektu(z.projekty.length)} (DZP: ${z.projekty.length - evak}, evakuační plány: ${evak}).${nEx ? ` ${nEx} z nich už v tomto prohlížeči je.` : ''} Nic se nepřepíše.</p>
+    html: `<p class="dlg__text">Záloha${z.vytvoreno ? ` z ${esc(new Date(z.vytvoreno).toLocaleString('cs-CZ'))}` : ''} obsahuje ${projektu(z.projekty.length)} (DZP: ${z.projekty.length - evak}, evakuační plány: ${evak}).${nEx ? ` ${nEx} z nich už v tomto prohlížeči ${nEx >= 2 && nEx <= 4 ? 'jsou' : 'je'}.` : ''} Nic se nepřepíše.</p>
       ${z.chyby.length ? `<p class="dlg__text varuj">Nepoužitelné projekty se přeskočí: ${esc(z.chyby.join('; '))}</p>` : ''}
       ${nEx ? `<div class="moznosti"><label class="moznost"><input type="radio" name="rezim" value="chybejici" checked><div><b>Obnovit jen chybějící projekty</b><span>Projekty, které v prohlížeči už jsou, zůstanou beze změny.</span></div></label>
         <label class="moznost"><input type="radio" name="rezim" value="kopie"><div><b>Obnovit vše – existující jako kopie</b><span>Ke stávajícím projektům se přidá verze ze zálohy s označením „(ze zálohy)“.</span></div></label></div>` : ''}
-      <ul class="zaloha-seznam">${z.projekty.map((p) => `<li>${esc(p.nazev)} <small>${esc((M.TYPY_DOKUMENTU_NAZVY[p.typ] || '').toLowerCase())}${existuje(p) ? ' · už je v prohlížeči' : ''}</small></li>`).join('')}</ul>` });
+      <ul class="zaloha-seznam">${z.projekty.map((p) => `<li>${esc(p.nazev)} <small>${esc(malym(M.TYPY_DOKUMENTU_NAZVY[p.typ] || ''))}${existuje(p) ? ' · už je v prohlížeči' : ''}</small></li>`).join('')}</ul>` });
   if (!r.ok) return;
   const kopie = r.pole.rezim === 'kopie';
   let n = 0; const chyby = [];
@@ -170,7 +175,7 @@ function dashboard() {
     </div>
     <section>
       <header class="rk-sh"><div class="rk-eyebrow">Uloženo v tomto prohlížeči</div><h2 class="rk-sh__title rk-sh__title--sm">${rezim === 'dzp' ? 'Vaše DZP' : 'Vaše evakuační plány'}</h2></header>
-      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${esc(x.id)}"><b>${esc(x.nazev)}</b><small>${esc((M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ).toLowerCase())} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
+      <ul class="projekty" style="margin-top:var(--space-4)">${sez.map((x) => `<li><a href="#/p/${esc(x.id)}"><b>${esc(x.nazev)}</b><small>${esc(malym(M.TYPY_DOKUMENTU_NAZVY[x.typ] || x.typ))} · ${new Date(x.zmeneno).toLocaleString('cs-CZ')}</small></a>
         <button class="btn mal" data-akce="kopie" data-id="${esc(x.id)}">${ikona('kopie', 15)}Duplikovat</button><button class="btn mal" data-akce="stahnout" data-id="${esc(x.id)}">${ikona('stahnout', 15)}Stáhnout</button><button class="btn mal nebezp" data-akce="smaz" data-id="${esc(x.id)}">${ikona('smazat', 15)}Smazat</button></li>`).join('') || `<li class="prazdno">Zatím žádný ${rezim === 'dzp' ? 'projekt DZP' : 'evakuační plán'}.</li>`}</ul>
       ${jine ? `<p class="napoveda" style="margin-top:var(--space-3)">${rezim === 'dzp' ? `Evakuační plány (${jine}) najdete v režimu <a href="#/evakuace">Evakuační plány</a>.` : `Projekty DZP (${jine}) najdete v režimu <a href="#/dzp">DZP</a>.`}</p>` : ''}
       <p class="napoveda" style="margin-top:var(--space-3)">Projekty jsou uloženy lokálně v tomto prohlížeči a automaticky se nesynchronizují s webovou verzí ani jinými zařízeními. Vymazání dat prohlížeče je smaže – zálohujte tlačítkem Zálohovat všechny projekty.</p>
@@ -227,11 +232,13 @@ function dashboard() {
 async function exportPdfDialog() {
   const p = S.p, katMapa = new Map(katalogProjektu(p, katalog).map((z) => [z.id, z]));
   const sh = souhrnUplnosti(zkontrolujUplnost(p, katalog));
+  const zakladOp = p.typ === 'operativni_plan' && p.listy.some((l) => l.typ === 'op_zaklad' || l.typ === 'op_sap') && p.listy.some((l) => !['op_zaklad', 'op_sap'].includes(l.typ));
   const typy = { karta: 'operativní karta', situace: 'situace', pudorys: 'půdorys', schema: 'schéma', text: 'text', evak_text: 'evakuační plán – text', evak_plan: 'evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy', op_sap: 'OP – výpočet SaP' };
   const dlg = await formular({
     titul: 'Export do PDF',
     html: `<p class="dlg__text">Vyberte listy, které se zahrnou do jednoho PDF (v pořadí, v jakém jsou v projektu). Karty a texty se vykreslí s vloženým písmem, výkresy jako vektory.</p>
-      <div class="moznosti">${p.listy.map((l) => `<label class="moznost"><input type="checkbox" name="l_${l.id}" checked><div><b>${esc(l.nazev)}</b><span>${typy[l.typ] || l.typ}</span></div></label>`).join('')}</div>
+      ${zakladOp ? '<p class="dlg__text">Základní text OP a výpočet SaP se podle metodiky ukládají odděleně od vyjímatelných příloh, např. jako součást posouzení požárního nebezpečí (Hanuška 1996, kap. 2.1) – proto nejsou předem zaškrtnuté. Exportujte je zvlášť.</p>' : ''}
+      <div class="moznosti">${p.listy.map((l) => `<label class="moznost"><input type="checkbox" name="l_${l.id}" ${zakladOp && ['op_zaklad', 'op_sap'].includes(l.typ) ? '' : 'checked'}><div><b>${esc(l.nazev)}</b><span>${typy[l.typ] || l.typ}</span></div></label>`).join('')}</div>
       <div class="zprava ${sh.chyby ? 'pozor' : ''}">Kontrola úplnosti: ${sh.chyby} chyb, ${sh.upozorneni} upozornění. PDF se vytvoří i tak; před odevzdáním HZS doplňte chybějící údaje a ověřte měřítko.</div>`,
     ano: 'Vytvořit PDF',
   });
@@ -240,8 +247,9 @@ async function exportPdfDialog() {
   if (!ids.length) return oznam('Vyberte alespoň jeden list.');
   try {
     ohlas('Vytvářím PDF…', true);
-    const bajty = await exportujPdf(p, { listy: ids, katalog: katMapa });
+    const varovani = [], bajty = await exportujPdf(p, { listy: ids, katalog: katMapa, varovani });
     stahniBajty(bajty, jmenoPdf(p.nazev)); ohlas(`PDF je hotové (${Math.round(bajty.length / 1024)} kB).`);
+    if (varovani.length) await oznam(varovani.join('\n'), { titul: 'PDF je hotové – upozornění' });
   } catch (err) { ohlas(''); await oznam(`PDF se nepodařilo vytvořit: ${err.message}`); }
 }
 
@@ -304,12 +312,12 @@ async function nactiPbr(soubory) {
   await ulozP();
   const navrh = navrhZPbr(nalezy, cile);
   const ocrInfo = vysledky.filter((v) => v.jistoty).map((v) => `${v.soubor} – rozpoznáno OCR, jistota po stranách ${Math.min(...v.jistoty)}–${Math.max(...v.jistoty)} % (údaje ze stran pod 75 % nejsou předem zaškrtnuté)`);
-  const uvod = `<p class="dlg__text">Nalezeno ${nalezy.length} údajů v ${vysledky.length} ${vysledky.length === 1 ? 'dokumentu' : 'dokumentech'}. Čteno podle typických formulací – u každého údaje je citace a strana, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${ocrInfo.length ? `<p class="dlg__text">${esc(ocrInfo.join('; '))}.</p>` : ''}${chyby.length ? `<p class="dlg__text varuj">Nenačteno: ${esc(chyby.join(' '))}</p>` : ''}${nenalezeno.length ? `<p class="dlg__text"><b>V dokumentech nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
+  const uvod = `<p class="dlg__text">Nalezeno: ${udaju(nalezy.length)} v ${vysledky.length} ${vysledky.length === 1 ? 'dokumentu' : 'dokumentech'}. Čteno podle typických formulací – u každého údaje je citace a strana, zkontrolujte je. PBŘ popisuje stav <b>podle projektu</b>, skutečnost ověřte na místě.</p>${ocrInfo.length ? `<p class="dlg__text">${esc(ocrInfo.join('; '))}.</p>` : ''}${chyby.length ? `<p class="dlg__text varuj">Nenačteno: ${esc(chyby.join(' '))}</p>` : ''}${nenalezeno.length ? `<p class="dlg__text"><b>V dokumentech nezjištěno</b> (zeptejte se klienta – dotazník): ${esc(nenalezeno.join(', '))}.</p>` : ''}`;
   const vyb = await potvrdNavrh(navrh, `${titul}${S.p === p ? '' : ` → projekt „${p.nazev}“`}`, uvod);
   if (!vyb) return 0;
   const n = pouzijNavrh(navrh, vyb, cile); await ulozP();
-  if (S.p !== p) { ohlas(`Převzato ${n} údajů do projektu „${p.nazev}“ (import začal v něm, mezitím jste přepnuli).`); return 0; }
-  panel(true); ohlas(`Převzato ${n} údajů z dokumentace.${cile.karta || cile.opText ? '' : ' Projekt nemá operativní kartu ani plán – převzaty jen poznámky.'}`); return n;
+  if (S.p !== p) { ohlas(`Převzato: ${udaju(n)} do projektu „${p.nazev}“ (import začal v něm, mezitím jste přepnuli).`); return 0; }
+  panel(true); ohlas(`Převzato: ${udaju(n)} z dokumentace.${cile.karta || cile.opText ? '' : ' Projekt nemá operativní kartu ani plán – převzaty jen poznámky.'}`); return n;
 }
 const TLACITKO_PBR = `<label class="btn" title="PBŘ, průvodní a souhrnná zpráva – PDF (i naskenované, OCR) nebo Word .docx; lze vybrat více souborů najednou. Údaje se zapíšou až po potvrzení.">${ikona('import', 16)}Načíst údaje z PBŘ / dokumentace…<input type="file" class="sr-only" multiple accept="application/pdf,.pdf,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-pbr="1"></label>`;
 const pripojPbr = (host, poKonci) => host.querySelector('[data-pbr]')?.addEventListener('change', (e) => { e.stopPropagation(); const f = [...e.target.files]; e.target.value = ''; if (f.length) nactiPbr(f).then((n) => n && poKonci()); });
@@ -322,7 +330,7 @@ async function prevzitDoPlanu() {
   const src = zd.find((x) => x.klic === r.pole.zdroj), cile = { opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad };
   const navrh = navrhZKarty(src.l.karta, cile), vyb = await potvrdNavrh(navrh, titul);
   if (!vyb) return 0;
-  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); ohlas(`Převzato ${n} údajů z karty „${src.l.nazev}“.`); return n;
+  const n = pouzijNavrh(navrh, vyb, cile); uloz(true); ohlas(`Převzato: ${udaju(n)} z karty „${src.l.nazev}“.`); return n;
 }
 
 async function prevzitDoKarty(list) {
@@ -338,7 +346,7 @@ async function prevzitDoKarty(list) {
   }
   const navrh = navrhZPlanu({ opText, opZaklad }, budova, list.karta), vyb = await potvrdNavrh(navrh, titul);
   if (!vyb) return 0;
-  const n = pouzijNavrh(navrh, vyb, { karta: list.karta }); uloz(true); ohlas(`Převzato ${n} údajů z plánu „${src.p.nazev}“.`); return n;
+  const n = pouzijNavrh(navrh, vyb, { karta: list.karta }); uloz(true); ohlas(`Převzato: ${udaju(n)} z plánu „${src.p.nazev}“.`); return n;
 }
 
 // ---------- editor ----------
@@ -360,7 +368,7 @@ function editor() {
     <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json (Stáhnout → Editovatelný projekt)" aria-label="Stáhnout → Editovatelný projekt">${ikona('stahnout', 16)}<span class="btn__txt">Stáhnout → Editovatelný projekt</span></button>`;
   $('#a-stahnout').onclick = () => U.stahni(p);
   $('#a-pdf').onclick = () => exportPdfDialog();
-  if ($('#a-tisk')) $('#a-tisk').onclick = () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); window.print(); };
+  if ($('#a-tisk')) $('#a-tisk').onclick = async () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); await pismoKarty; prizpusobNahled($('#obsah')); window.print(); };
 
   app.innerHTML = `<div class="editor ${list && VYKRES.includes(list.typ) ? 'editor-vykres' : ''}">
     <nav class="listy" aria-label="Listy dokumentace"><h2>Listy</h2><ol id="listy">${p.listy.map((l) => `<li class="${l.id === S.listId ? 'akt' : ''}"><a href="#/p/${esc(p.id)}/${esc(l.id)}">${esc(l.nazev)}<small>${esc(M.TYPY_LISTU_NAZVY[l.typ] || l.typ)}</small></a></li>`).join('')}</ol>
@@ -379,7 +387,7 @@ function editor() {
     $('#l-kopie').onclick = () => { const k = M.kopirujList(p, list.id); uloz(true); location.hash = `#/p/${p.id}/${k.id}`; };
     $('#l-nahoru').onclick = () => { M.presunList(p, list.id, list.poradi - 1); uloz(true); editor(); };
     $('#l-dolu').onclick = () => { M.presunList(p, list.id, list.poradi + 1); uloz(true); editor(); };
-    $('#l-smaz').onclick = async () => { if (await potvrd(`Smazat list „${list.nazev}“?`, { ano: 'Smazat', nebezpecne: true })) { M.smazList(p, list.id); M.uklidPrilohy(p); uloz(true); location.hash = `#/p/${p.id}`; } };
+    $('#l-smaz').onclick = async () => { if (await potvrd(`Smazat list „${list.nazev}“?`, { ano: 'Smazat', nebezpecne: true })) { M.smazList(p, list.id); M.uklidPrilohy(p); uloz(true); jdi(`#/p/${p.id}`); } };
   }
   // přepnutí záložek nepřekresluje editor (zachová pohled, výběr a historii)
   app.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { S.panel = b.dataset.p; app.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('akt', x === b)); panel(); }; });
@@ -398,7 +406,7 @@ function obsah(list) {
   const host = $('#obsah');
   if (!list) { host.innerHTML = '<p class="prazdno">Projekt nemá žádný list. Přidejte ho vlevo.</p>'; return; }
   if (list.typ === 'karta') {
-    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledKarty(list, S.p)}</div>`; return; }
+    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledKarty(list, S.p)}</div>`; prizpusobNahled(host); pismoKarty.then(() => { if (host.isConnected) prizpusobNahled(host); }); return; }
     const kresli = () => { vykresliKartu(list, host); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); host.querySelector('.prevzit-lista').insertAdjacentHTML('beforeend', TLACITKO_PBR); pripoj(list, host, naZmenu); pripojPbr(host, kresli); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
     const naZmenu = (prekreslit) => {
       uloz();
@@ -417,16 +425,18 @@ function obsah(list) {
         try {
           const r = await dotaznikZPdf(new Uint8Array(await soubor.arrayBuffer())), n = Object.keys(r.odpovedi).length;
           const prepis = Object.keys(r.odpovedi).filter((k) => S.p.dotaznik.odpovedi[k] !== undefined && String(S.p.dotaznik.odpovedi[k]) !== String(r.odpovedi[k])).length;
-          if (prepis && !(await potvrd(`Načíst ${n} odpovědí z PDF?`, { ano: 'Načíst', popis: `${prepis} už vyplněných odpovědí se přepíše hodnotou z PDF. Odpovědi, které PDF neobsahuje, zůstanou.` }))) return;
+          if (prepis && !(await potvrd(`Načíst z PDF: ${odpovedi(n)}?`, { ano: 'Načíst', popis: `Už vyplněné odpovědi se přepíší hodnotou z PDF (${prepis}). Odpovědi, které PDF neobsahuje, zůstanou.` }))) return;
           Object.assign(S.p.dotaznik.odpovedi, r.odpovedi); S.p.dotaznik.nacteno = new Date().toLocaleString('cs-CZ'); uloz(true); kresli();
-          ohlas(`Načteno ${n} odpovědí z vyplněného dotazníku.`);
+          const zText = Object.entries(r.puvodni).map(([id, t]) => `• ${OTAZKY.find((q) => q.id === id)?.text}: „${t}“ → ${String(r.odpovedi[id]).replace('.', ',')}`);
+          if (r.nectene.length || zText.length) await oznam([`Načteno: ${odpovedi(n)}.`, ...(r.nectene.length ? ['', 'Číslo nešlo jednoznačně přečíst – doplňte ručně:', ...r.nectene.map((x) => `• ${x}`)] : []), ...(zText.length ? ['', 'Číslo přečtené z textu – zkontrolujte:', ...zText] : [])].join('\n'), { titul: 'Vyplněný dotazník' });
+          else ohlas(`Načteno: ${odpovedi(n)} z vyplněného dotazníku.`);
         } catch (err) { oznam(`Dotazník se nepodařilo načíst: ${err.message}`); }
       },
       prevzit: async () => {
         const titul = 'Převzít odpovědi do projektu', cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: S.p };
         const navrh = navrhZDotazniku(S.p.dotaznik.odpovedi, cile), vyb = await potvrdNavrh(navrh, titul);
         if (!vyb) return;
-        const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato ${n} údajů z dotazníku.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`);
+        const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato: ${udaju(n)} z dotazníku.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`);
       },
     });
   } else if (list.typ === 'op_sap') {
@@ -502,6 +512,11 @@ function skoc(cesta) {
   el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   (el.matches('input,select,textarea') ? el : el.querySelector('input,select,textarea,button'))?.focus({ preventScroll: true });
 }
+
+// Písmo náhledu karty = písmo PDF (Roboto), aby se karta v náhledu zalomila stejně jako v PDF. Bez něj se použije Arial.
+const pismoKarty = (async () => {
+  try { const f = await nactiFonty(); for (const [b, vaha] of [[f.regular, '400'], [f.bold, '700']]) { const ff = new FontFace('RobotoKarta', b, { weight: vaha }); await ff.load(); document.fonts.add(ff); } } catch { /* záložní písmo */ }
+})();
 
 // ---------- start ----------
 Promise.all([U.init(), nactiKatalog().then((k) => { katalog = k; }).catch((e) => ohlas(`Katalog značek se nenačetl: ${e.message}`, true))]).finally(smeruj);

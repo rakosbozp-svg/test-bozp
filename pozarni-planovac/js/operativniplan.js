@@ -80,6 +80,7 @@ export const SCHEMA_TEXT = { sekce: [
     ['udaje.pbz', 'Umístění a ovládání SHZ, EPS', 'area'],
     ['udaje.rozvody', 'Zvláštnosti rozvodů el. energie, topení, ventilace, klimatizace (šíření požáru)', 'area'],
     ['udaje.slozite', 'Upozornění na složité podmínky při zdolávání požáru', 'area'],
+    ['udaje.unikoveCesty', 'Únikové cesty (kap. 2 ba)', 'area'],
   ], kolekce: {
     klic: 'objekty', nazev: 'Budovy a zařízení', pridat: '+ Přidat budovu', prazdno: 'Zatím žádná budova.',
     pole: [['nazev', 'Název (jednotný v celém OP)', 'text'], ['podlazi', 'Podlaží (NP/PP)', 'text', 'S'], ['vyska', 'Celková výška (m)', 'text', 'S'], ['pudorys', 'Půdorys (m)', 'text', 'S'],
@@ -93,12 +94,12 @@ export const SCHEMA_TEXT = { sekce: [
     ['komunikace.stav', 'Stav komunikací vzhledem k rozměrům požární techniky', 'area'],
     ['komunikace.pokyny', 'Zvláštní pokyny pro jízdu nebo parkování techniky (nebo „NE“)', 'area'],
   ] },
-  { id: 'doporuceni', nazev: '2. Doporučení pro velitele zásahu', zdroj: 'Hanuška 1996, kap. 2.2.2', napoveda: 'Uveďte zejména: záchranu osob a evakuaci zvířat a materiálu; šíření požáru (ventilace, rozvody); bezpečnost hasičů a ochranné prostředky; toxické zplodiny a výbušné koncentrace; dekontaminaci; speciální techniku; <b>uzavření plynu a vypnutí el. energie včetně prostor pod napětím i po vypnutí hlavního vypínače (UPS, FVE)</b>; dálkovou dopravu vody; speciální hasiva; výsledky výpočtů pro přesný postup nasazení.', pole: [
+  { id: 'doporuceni', nazev: '2. Doporučení pro velitele zásahu', zdroj: 'Hanuška 1996, kap. 2.2.2', napoveda: 'Uveďte zejména: záchranu osob a evakuaci zvířat a materiálu; šíření požáru (ventilace, rozvody); bezpečnost hasičů a ochranné prostředky; toxické zplodiny a výbušné koncentrace; dekontaminaci; speciální techniku; <b>uzavření plynu a vypnutí el. energie včetně prostor pod napětím i po vypnutí hlavního vypínače (UPS, FVE), odstavení a vyprázdnění technologických zařízení a seznam osob, které to provádějí nebo o tom rozhodují (pracovní zařazení, adresa, telefon)</b>; dálkovou dopravu vody; speciální hasiva; výsledky výpočtů pro přesný postup nasazení.', pole: [
     ['doporuceni', 'Doporučení pro velitele zásahu', 'area'],
   ] },
   { id: 'telefony', nazev: 'Důležitá telefonní čísla', zdroj: 'Vzor Hanuška 1996, příloha č. 3', kolekce: {
     klic: 'telefony', nazev: 'Kontakty', pridat: '+ Přidat kontakt', prazdno: 'Zatím žádný kontakt.',
-    pole: [['funkce', 'Funkce', 'text'], ['jmeno', 'Jméno', 'text'], ['telefon', 'Telefon', 'text', 'S']],
+    pole: [['funkce', 'Funkce', 'text'], ['jmeno', 'Jméno', 'text'], ['adresa', 'Adresa', 'text'], ['telefon', 'Telefon', 'text', 'S']],
   } },
 ] };
 
@@ -150,7 +151,7 @@ export function kontrolaOpText(list, chyba, upoz) {
   if (nic(d.voda.zdroje)) chyba('OP_VODA', `${p}.voda.zdroje`, 'Textová část: chybí vodní zdroje (kap. 2.2.1 b).');
   if (nic(d.komunikace.stav)) chyba('OP_KOMUNIKACE', `${p}.komunikace.stav`, 'Textová část: chybí stav komunikací (kap. 2.2.1 c).');
   if (nic(d.doporuceni)) chyba('OP_DOPORUCENI', `${p}.doporuceni`, 'Chybí doporučení pro velitele zásahu (kap. 2.2.2).');
-  else if (!/vyp[ií]n|el\.|elektr|plyn|energi/i.test(d.doporuceni)) upoz('OP_DOPORUCENI_ENERGIE', `${p}.doporuceni`, 'Doporučení pro velitele zásahu: neobsahuje zmínku o uzavření plynu / vypnutí el. energie (kap. 2.2.2).');
+  else if (!/vyp[ií]n|vypn|odpoj|\bel\.|elektr|plyn|energi|STOP|proud/i.test(d.doporuceni)) upoz('OP_DOPORUCENI_ENERGIE', `${p}.doporuceni`, 'Doporučení pro velitele zásahu: neobsahuje zmínku o uzavření plynu / vypnutí el. energie (kap. 2.2.2).');
   if (!d.telefony.length) upoz('OP_TELEFONY', `${p}.telefony`, 'Textová část: chybí důležitá telefonní čísla.');
 }
 

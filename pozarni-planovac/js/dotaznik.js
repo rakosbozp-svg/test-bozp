@@ -18,6 +18,8 @@ export const OTAZKY = [
   { sekce: 'A. Objekt a provoz', id: 'znalostMobil', text: 'Osoba se znalostí objektu – mobil', typ: 'text', kam: [{ cil: 'karta', cesta: 'znalostObjektu.mobil' }] },
   { sekce: 'B. Změny proti projektu', id: 'zmeny', text: 'Změny od kolaudace / zpracování PBŘ (přístavby, změna užívání, dispozice, technologie). Pokud žádné, napište „NE“.', typ: 'area', kam: [{ poznamka: true }] },
   { sekce: 'C. Energie, uzávěry a FVE', id: 'vypinac', text: 'Hlavní vypínač elektrického proudu – umístění (místnost, rozvaděč)', typ: 'text', kam: [{ cil: 'karta', cesta: 'media.hlavniVypinacEl' }] },
+  { sekce: 'C. Energie, uzávěry a FVE', id: 'totalStop', text: 'TOTAL STOP (vypnutí včetně napájení požárně bezpečnostních zařízení) – umístění tlačítka (nebo „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'media.totalStop' }] },
+  { sekce: 'C. Energie, uzávěry a FVE', id: 'centralStop', text: 'CENTRAL STOP (vypnutí mimo napájení požárně bezpečnostních zařízení) – umístění tlačítka (nebo „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'media.centralStop' }] },
   { sekce: 'C. Energie, uzávěry a FVE', id: 'podNapetim', text: 'Zůstávají některé prostory pod napětím i po vypnutí hlavního vypínače? (UPS, záložní zdroj, FVE, baterie) – kde', typ: 'area', kam: [{ cil: 'opText', cesta: 'udaje.rozvody' }, { poznamka: true }] },
   { sekce: 'C. Energie, uzávěry a FVE', id: 'plyn', text: 'Hlavní uzávěr plynu – umístění (pokud plyn není, „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'media.hlavniUzaverPlynu' }] },
   { sekce: 'C. Energie, uzávěry a FVE', id: 'voda', text: 'Hlavní uzávěr vody – umístění', typ: 'text', kam: [{ cil: 'karta', cesta: 'media.hlavniUzaverVody' }] },
@@ -31,6 +33,8 @@ export const OTAZKY = [
   { sekce: 'D. Nebezpečné látky', id: 'lahve', text: 'Tlakové lahve – druh plynu, počet a umístění (nebo „NE“)', typ: 'area', kam: [{ cil: 'karta', special: 'nebezpeci' }, { poznamka: true }] },
   { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'eps', text: 'EPS – kde je ústředna (nebo „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'pbz.eps' }] },
   { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'pco', text: 'Je EPS připojena na pult centralizované ochrany (PCO) HZS? Kam je signál vyveden?', typ: 'text', kam: [{ cil: 'karta', cesta: 'pbz.zdp' }] },
+  { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'ktpo', text: 'Klíčový trezor požární ochrany (KTPO) – umístění (nebo „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'pbz.ktpo' }] },
+  { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'oppo', text: 'Obslužné pole požární ochrany (OPPO) – umístění (nebo „NE“)', typ: 'text', kam: [{ cil: 'karta', cesta: 'pbz.oppo' }] },
   { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'pbzJine', text: 'Další požárně bezpečnostní zařízení (SHZ, odvod kouře a tepla, požární klapky, evakuační výtah…) a kde se ovládají', typ: 'area', kam: [{ cil: 'opText', cesta: 'udaje.pbz' }, { poznamka: true }] },
   { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'hydrant', text: 'Vnější hydrant – umístění (nejbližší k objektu)', typ: 'text', kam: [{ cil: 'karta', special: 'hydrant' }] },
   { sekce: 'E. Požárně bezpečnostní zařízení a voda', id: 'hydrantPrutok', text: 'Vnější hydrant – průtok podle poslední zkoušky (l/s)', typ: 'cislo', kam: [{ cil: 'karta', special: 'hydrant' }] },
@@ -47,6 +51,15 @@ export const SEKCE = [...new Set(OTAZKY.map((o) => o.sekce))];
 export const prazdnyDotaznik = () => ({ odpovedi: {}, nacteno: '' });
 
 const nic = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+// Číslo z odpovědi klienta: „49,5 kWp“, „1 200 ks“, „cca 8 l/s“ → číslo. Odpověď s více čísly („4–6 l/s“, „6,5 l/s (zkouška 2024)“)
+// je nejednoznačná → null (zpracovatel ji přepíše ručně, nic se nedomýšlí).
+export function cisloZOdpovedi(text) {
+  const t = String(text ?? '').trim();
+  const cisla = [...t.matchAll(/[-+]?\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?|[-+]?\d+(?:[.,]\d+)?/g)];
+  if (cisla.length !== 1) return null;
+  const n = Number(cisla[0][0].replace(/[ \u00a0\u202f]/g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
 const tx = (v) => (nic(v) ? '' : String(v).trim());
 export const textOdpovedi = (o, v) => (o.typ === 'ano_ne' ? (v === true ? 'ano' : v === false ? 'ne' : '') : o.typ === 'cislo' ? (nic(v) ? '' : String(v).replace('.', ',')) : tx(v));
 
@@ -67,12 +80,12 @@ export function navrhZDotazniku(odp, cile) {
   if (cile.karta) {
     const k = cile.karta, radky = ['latky', 'lahve'].flatMap((id) => tx(odp[id]).split('\n').map((r) => r.trim()).filter((r) => r && r.toUpperCase() !== 'NE'));
     const neVse = ['latky', 'lahve'].some((id) => tx(odp[id]).toUpperCase() === 'NE') && !radky.length;
-    if (neVse && !k.nebezpeci.length) o.push({ cil: 'karta', pridat: 'nebezpeci', popis: 'Nebezpečí do karty: „NE“ (žádné nebezpečné látky)', hodnota: { popis: 'NE', hasivo: '', znackaId: null }, stavajici: null });
+    if (neVse && !k.nebezpeci.some((x) => !nic(x.popis))) o.push({ cil: 'karta', pridat: 'nebezpeci', popis: 'Nebezpečí do karty: „NE“ (žádné nebezpečné látky)', hodnota: { popis: 'NE', hasivo: '', znackaId: null }, stavajici: null });
     for (const r of radky) if (!k.nebezpeci.some((x) => tx(x.popis).toLowerCase() === r.toLowerCase())) o.push({ cil: 'karta', pridat: 'nebezpeci', popis: 'Nebezpečí do karty (hasivo doplníte)', hodnota: { popis: r, hasivo: '', znackaId: null }, stavajici: null });
     // skutečné látky vs. dřívější „NE“ (např. z PBŘ) – „NE“ se nabídne k odebrání, jinak by karta říkala obojí
-    const ne = k.nebezpeci.find((x) => tx(x.popis).toUpperCase() === 'NE');
+    const ne = k.nebezpeci.find((x) => tx(x.popis).toUpperCase() === 'NE' && !x.znackaId);   // „NE“ v předtištěném řádku vzoru (se značkou) platí jen pro tu kategorii
     if (radky.length && ne) o.push({ cil: 'karta', odebrat: { kolekce: 'nebezpeci', id: ne.id }, popis: 'Nebezpečí v kartě: odebrat dřívější „NE“ (klient uvádí látky)', hodnota: 'odebere položku „NE“', stavajici: null });
-    const prutok = nic(odp.hydrantPrutok) ? null : Number(odp.hydrantPrutok), overen = odp.hydrantOveren === true;
+    const prutok = nic(odp.hydrantPrutok) || !Number.isFinite(Number(odp.hydrantPrutok)) ? null : Number(odp.hydrantPrutok), overen = odp.hydrantOveren === true && prutok !== null;   // ověřený je jen průtok, který známe
     const hydranty = k.vodniZdroje.filter((x) => x.typ === 'hydrant');
     const stejny = !nic(odp.hydrant) && hydranty.find((x) => tx(x.popis).toLowerCase() === tx(odp.hydrant).toLowerCase());
     const doplnPrutok = (h, upresneni, neoznacit) => {   // průtok a ověření k hydrantu, který už v kartě je

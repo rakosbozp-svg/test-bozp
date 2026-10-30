@@ -196,16 +196,27 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 
 /* ---------- náhled A4 (dokument – zůstává bílý papír i v tmavém režimu) ---------- */
 .a4 { background: var(--papir); color: var(--papir-ink); border: 1px solid var(--line-strong); max-width: 794px; margin: 0 auto; padding: 12px; font: 12px/1.3 Arial, sans-serif; }
-.ok { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-.ok td, .ok th { border: 1px solid var(--papir-ink); padding: 3px 6px; vertical-align: top; text-align: left; }
-.ok th { width: 17%; font-weight: 700; }
-.ok.media td { width: 33%; }
-.ok .zl { background: #ff0; } .ok .nadpis { font-weight: 700; font-size: 15px; text-align: center; } .ok .stupen { text-align: center; }
-.ok td.zn { width: 50px; text-align: center; } .ok td.zn img { max-width: 40px; max-height: 40px; }
-.pruh { font-weight: 700; text-align: center; padding: 3px; border: 1px solid var(--papir-ink); margin-top: 6px; letter-spacing: .15em; }
-.pruh.sed { background: #d9d9d9; } .pruh.cer { background: #f00; color: #fff; } .pruh.zel { background: #0f0; } .pruh.mod { background: #00b0f0; } .pruh.zl { background: #ff0; }
-.dop { border: 1px solid var(--papir-ink); padding: 6px; margin-bottom: 4px; }
-.revize { font-size: 10px; }
+/* operativní karta podle vzoru HZS SČK: rozměry v mm a písmo Roboto jako v PDF (js/nahled.js, js/pdf/karta.js) */
+.karta-obal { overflow-x: auto; }
+.karta-varovani { max-width: 210mm; margin: 0 auto var(--space-3); padding: var(--space-3); border-left: 3px solid var(--danger); background: var(--danger-soft); color: var(--ink); font-size: 14px; }
+.a4.karta-a4 { width: 210mm; max-width: none; padding: 10mm; font: var(--pt, 8.5pt)/1.2 RobotoKarta, Roboto, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.ok-ram { outline: 1.4pt solid #000; min-height: 277mm; display: flex; flex-direction: column; }
+.ok-ram.meri { min-height: 0; } .ok-ram.meri .ok-dop { flex: none; }
+.okt { width: 190mm; border-collapse: collapse; table-layout: fixed; }
+.okt td { border: 0.6pt solid #000; padding: 1.1mm 1.2mm; vertical-align: top; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.2; }
+.okt td.str { text-align: center; } .okt td.sv { vertical-align: middle; }
+.okt td.zn { text-align: center; vertical-align: middle; } .okt td.zn img, .okt td.zn svg { max-width: 100%; vertical-align: middle; }
+.okt td svg, .okt td img { vertical-align: middle; }
+.okt .ikony { float: left; display: flex; gap: 0.8mm; margin-right: 0.8mm; }
+.karta-a4 .b { font-weight: 700; } .karta-a4 .u { text-decoration: underline; }
+.karta-a4 .odznak { color: #f00; font-weight: 700; border: 0.7pt solid #f00; padding: 0 0.6mm; }
+.ok-dop { flex: 1; padding: 1.5mm 2mm; white-space: pre-wrap; line-height: 1.2; }
+.ok-podpisy { display: flex; justify-content: space-between; padding: 3mm 5mm 3mm; }
+.ok-podpisy table { width: 71mm; border-collapse: collapse; table-layout: fixed; }
+.ok-podpisy th, .ok-podpisy td { border: 0.6pt solid #000; height: 5mm; padding: 0 1.2mm; font-size: 7.5pt; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.ok-podpisy th { text-align: center; font-weight: 700; }
+.ok-podpisy .st { font-size: 6pt; font-weight: 700; margin-right: 2mm; }
+.ok-revize { margin: 0; padding: 0 2mm 1mm; font-size: 6.5pt; }
 .chybi { color: #c62828; font-weight: 700; }
 .vykres-info { padding: var(--space-3); }
 
@@ -234,6 +245,8 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
   .editor { display: block; }
   .stred { border: 0; padding: 0; box-shadow: none; }
   .a4 { border: 0; max-width: none; padding: 0; }
+  .a4.karta-a4 { width: 190mm; padding: 0; zoom: 1 !important; } .karta-obal { overflow: visible; } .karta-varovani { display: none; }
+  .ok-ram { min-height: 276mm; }
   .chybi { color: transparent; }
   @page { size: A4 portrait; margin: 10mm; }
 }

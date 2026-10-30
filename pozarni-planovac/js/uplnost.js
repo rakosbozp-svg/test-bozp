@@ -1,5 +1,5 @@
-// Kontrola úplnosti DZP. Kontroluje jen to, co je doložené ve vzoru a návodu HZS SCK
-// (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
+// Kontrola úplnosti DZP. Kontroluje jen to, co je doložené ve vzoru a návodu HZS SČK, v Zásadách HZS SČK a v metodice
+// Hanuška 1996 (podklady/); nevydává výstup za právně správný – to musí ověřit zpracovatel s HZS.
 
 import { kontrolaEvak } from './evakuace.js';
 import { kontrolaGrafikyDzp } from './grafikaDzp.js';
@@ -7,6 +7,9 @@ import { vypocetSaP } from './sap.js';
 import { kontrolaOp, kontrolaOpZaklad, kontrolaOpText } from './operativniplan.js';
 import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
 import { KATEGORIE, MIN_ZNACKA_MM, ID_VYCHOD, ID_SHROMAZDISTE } from './kresleni/evakplan.js';
+import { SEKCE, POPISEK, PBZ, PBZ_UMISTENI, BEZ_NE, stavPbz } from './kartaPole.js';
+
+const dostan = (o, cesta) => cesta.split('.').reduce((a, x) => (a == null ? a : a[x]), o);
 
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const vyplneno = (v) => !prazdne(v);
@@ -36,66 +39,81 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
     if (list.typ === 'op_zaklad') kontrolaOpZaklad(list, chyba, upoz, projekt);
     if (list.typ === 'op_sap') kontrolaSap(list, projekt, upoz);
     if (list.typ === 'op_text') kontrolaOpText(list, chyba, upoz);
-    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak);
+    if (list.vykres) kontrolaVykresu(list, p, chyba, upoz, ids, !evak && katalogZnacek !== null, evak, projekt.listy.find((l) => l.karta)?.karta);
     if (evak && list.vykres) kontrolaEvakZnacek(list, projekt, p, chyba, upoz);
     if (list.typ === 'evak_plan') kontrolaEvakPlanu(list, projekt, p, chyba, upoz);
   }
   return n;
 }
 
+const jeNe = (v) => typeof v === 'string' && v.trim().toUpperCase() === 'NE';
+const NE_NAVOD = '(návod HZS SČK: co nelze doplnit, vepište „NE“)';
+
+// Operativní karta podle vzoru a návodu HZS SČK: každé předpřipravené okénko je vyplněné, nebo má „NE“.
 function kontrolaKarty(k, p, chyba, upoz) {
-  const o = k.objekt;
+  const o = k.objekt, c = `${p}.karta`, pop = (cesta) => POPISEK[cesta] || cesta;
   const povinne = [
-    [k.stupenPoplachu, 'KARTA_POPLACH', 'stupenPoplachu', 'Stupeň poplachu'],
-    [k.uzemniOdbor, 'KARTA_UO', 'uzemniOdbor', 'Územní odbor HZS'],
-    [o.nazev, 'ID_OBJEKT', 'objekt.nazev', 'Název objektu'],
-    [o.provozovatel, 'ID_PROVOZOVATEL', 'objekt.provozovatel', 'Provozovatel'],
-    [o.adresa, 'ADRESA', 'objekt.adresa', 'Adresa'],
-    [o.provoz.kontaktTelefon, 'KONTAKT', 'objekt.provoz.kontaktTelefon', 'Kontakt na provoz (telefon)'],
-    [o.prijezdZ, 'PRIJEZD', 'objekt.prijezdZ', 'Příjezd z'],
-    [o.omezeni, 'OMEZENI', 'objekt.omezeni', 'Omezení průjezdu (nebo „NE“)'],
-    [k.znalostObjektu.jmeno, 'ZNALOST', 'znalostObjektu.jmeno', 'Osoba se znalostí objektu'],
-    [k.zpracoval.jmeno, 'ZPRACOVAL', 'zpracoval.jmeno', 'Zpracovatel'],
-    [k.zpracoval.cisloOsvedceni, 'OSVEDCENI', 'zpracoval.cisloOsvedceni', 'Číslo osvědčení zpracovatele'],
+    ['KARTA_STANICE', 'uzemniOdbor'], ['ID_OBJEKT', 'objekt.nazev'], ['ID_PROVOZOVATEL', 'objekt.provozovatel'], ['ADRESA', 'objekt.adresa'],
+    ['PRACOVNI_DOBA', 'objekt.provoz.pracovniDoba'], ['KONTAKT', 'objekt.provoz.kontaktTelefon'], ['KONTAKT_JMENO', 'objekt.provoz.kontaktJmeno'],
+    ['OBSAZENI', 'objekt.obsazeniOsobami'], ['PRIJEZD', 'objekt.prijezdZ'], ['OMEZENI', 'objekt.omezeni'],
+    ['ZNALOST', 'znalostObjektu.jmeno'], ['ZNALOST_MOBIL', 'znalostObjektu.mobil'], ['ZPRACOVAL', 'zpracoval.jmeno'], ['OSVEDCENI', 'zpracoval.cisloOsvedceni'],
   ];
-  for (const [v, kod, cesta, nazev] of povinne) if (prazdne(v)) chyba(kod, `${p}.karta.${cesta}`, `${nazev}: nevyplněno (vzor HZS: nelze-li doplnit, vepište „NE“).`);
-  if (prazdne(o.gps.sirka) || prazdne(o.gps.delka)) chyba('GPS', `${p}.karta.objekt.gps`, 'Chybí GPS souřadnice objektu.');
+  for (const [kod, cesta] of povinne) {
+    const v = dostan(k, cesta);
+    if (prazdne(v)) chyba(kod, `${c}.${cesta}`, `${pop(cesta)}: nevyplněno${BEZ_NE.has(cesta) ? '.' : ` ${NE_NAVOD}.`}`);
+    else if (BEZ_NE.has(cesta) && jeNe(v)) chyba(kod, `${c}.${cesta}`, `${pop(cesta)}: „NE“ zde nelze – údaj musí být uveden${cesta.startsWith('zpracoval') ? ' (DZP smí zpracovat jen osoba podle § 11 odst. 1 nebo 2 zákona o požární ochraně – Zásady HZS SČK, kap. 1)' : ''}.`);
+  }
+  if (prazdne(k.stupenPoplachu)) upoz('KARTA_POPLACH', `${c}.stupenPoplachu`, 'Stupeň poplachu: doplňte podle požárního poplachového plánu kraje po konzultaci s HZS. U osamocených a dispozičně jednoduchých objektů se OK zpracovává bez stanovení stupně poplachu – pak vepište „NE“ (Zásady HZS SČK, kap. 3).');
+  if (!Number.isFinite(o.gps.sirka) || !Number.isFinite(o.gps.delka)) chyba('GPS', `${c}.objekt.gps`, 'GPS souřadnice objektu nejsou vyplněné (vzor je uvádí v záhlaví karty).');
 
-  for (const [klic, v] of Object.entries(k.charakter)) if (prazdne(v)) upoz('CHARAKTER', `${p}.karta.charakter.${klic}`, `Charakter objektu – ${klic}: nevyplněno (nebo „NE“).`);
-  for (const [klic, v] of Object.entries(k.media)) if (prazdne(v)) upoz('MEDIA', `${p}.karta.media.${klic}`, `Uzávěry a vypínače – ${klic}: nevyplněno (nebo „NE“).`);
-  for (const [klic, v] of Object.entries(k.pbz)) if (prazdne(v)) upoz('PBZ', `${p}.karta.pbz.${klic}`, `Požárně bezpečnostní zařízení – ${klic}: nevyplněno (nebo „NE“).`);
+  const sekce = (id) => SEKCE.find((s) => s.id === id).pole.map((x) => x[0]);
+  const vytahy = String(k.charakter.vytahy ?? '').trim();
+  for (const cesta of sekce('charakter')) {
+    const v = dostan(k, cesta);
+    if (cesta === 'charakter.vytahEvakuacni' || cesta === 'charakter.vytahPozarni') { if (v === null && vytahy && !jeNe(vytahy)) upoz('CHARAKTER_VYTAH', `${c}.${cesta}`, `${pop(cesta)}: uveďte ano/ne (v okénku VÝTAHY se podle toho zobrazí značka).`); continue; }
+    if (prazdne(v)) upoz('CHARAKTER', `${c}.${cesta}`, `Charakter objektu – ${pop(cesta)}: nevyplněno ${NE_NAVOD}.`);
+  }
+  for (const cesta of sekce('media')) if (prazdne(dostan(k, cesta))) upoz('MEDIA', `${c}.${cesta}`, `Uzávěry médií – ${pop(cesta)}: nevyplněno ${NE_NAVOD}.`);
+  for (const [kl] of PBZ_UMISTENI) if (prazdne(k.pbz[kl])) upoz('PBZ_UMISTENI', `${c}.pbz.${kl}`, `${pop(`pbz.${kl}`)}: nevyplněno ${NE_NAVOD}.`);
+  const neuvedene = PBZ.filter(([kl]) => stavPbz(k.pbz[kl]) === null);
+  if (neuvedene.length) upoz('PBZ', `${c}.pbz.${neuvedene[0][0]}`, `PBZ: u zařízení ${neuvedene.map((x) => x[1]).join(', ')} není uvedeno, zda v objektu jsou (vzor: „* nehodící se smaž“).`);
+  if (k.mimoVzor?.length) upoz('MIMO_VZOR', `${c}.mimoVzor`, `Karta obsahuje údaje ze starší verze, které vzor HZS SČK nemá a na kartě se netisknou (${k.mimoVzor.map((x) => x.nazev).join(', ')}). Podstatné přepište do doporučení nebo grafické části.`);
 
-  if (!k.nebezpeci.length) chyba('NEBEZPECI', `${p}.karta.nebezpeci`, 'Nebezpečí: žádná položka (bez nebezpečí uveďte „NE“).');
+  if (!k.nebezpeci.length) chyba('NEBEZPECI', `${c}.nebezpeci`, 'Nebezpečí: žádný řádek (vzor má řádky pro hořlaviny a výbušniny; nehodí-li se, vepište „NE“).');
   for (const nb of k.nebezpeci) {
-    if (prazdne(nb.popis)) chyba('NEBEZPECI_POPIS', `${p}.karta.nebezpeci[${nb.id}]`, 'Nebezpečí bez popisu.');
-    else if (nb.popis.trim().toUpperCase() !== 'NE' && prazdne(nb.hasivo)) chyba('NEBEZPECI_HASIVO', `${p}.karta.nebezpeci[${nb.id}]`, `Nebezpečí „${nb.popis}“: chybí vhodné hasivo (návod HZS).`);
+    if (prazdne(nb.popis)) chyba('NEBEZPECI_POPIS', `${c}.nebezpeci[${nb.id}]`, 'Nebezpečí: řádek bez popisu – vyplňte, nebo vepište „NE“ (předtištěné řádky vzoru HZS SČK se nemažou).');
+    else if (!jeNe(nb.popis) && prazdne(nb.hasivo)) chyba('NEBEZPECI_HASIVO', `${c}.nebezpeci[${nb.id}]`, `Nebezpečí „${nb.popis}“: chybí vhodné hasivo (návod HZS SČK).`);
   }
 
-  if (k.fve.pritomna === null) chyba('FVE_ROZHODNUTI', `${p}.karta.fve.pritomna`, 'Není uvedeno, zda je v objektu FVE (uveďte ano/ne).');
+  if (k.fve.pritomna === null) chyba('FVE_ROZHODNUTI', `${c}.fve.pritomna`, 'Není uvedeno, zda je v objektu FVE (okénko FVE vzoru – uveďte ano/ne).');
   if (k.fve.pritomna === true) {
-    if (prazdne(k.fve.vykonKWp)) chyba('FVE_VYKON', `${p}.karta.fve.vykonKWp`, 'FVE: chybí výkon v kWp (návod HZS).');
-    if (prazdne(k.fve.vypinacSilovaCast)) chyba('FVE_VYPINAC', `${p}.karta.fve.vypinacSilovaCast`, 'FVE: chybí umístění vypínače silové části.');
-    upoz('FVE_DC', `${p}.karta.fve`, 'FVE: DC část může být zásahově relevantní i po odpojení – uveďte v doporučení veliteli.');
+    if (prazdne(k.fve.vykonKWp)) chyba('FVE_VYKON', `${c}.fve.vykonKWp`, 'FVE: chybí výkon v kWp (návod HZS SČK).');
+    if (prazdne(k.fve.vypinacSilovaCast)) chyba('FVE_VYPINAC', `${c}.fve.vypinacSilovaCast`, 'FVE: chybí umístění vypínače silové části.');
+    if (!/FVE|fotovolt|stejnosměr|\bDC\b|panel/i.test(k.doporuceni || '')) upoz('FVE_DC', `${c}.doporuceni`, 'FVE: stejnosměrná (DC) část zůstává pod napětím i po vypnutí hlavního vypínače – uveďte to v doporučení veliteli zásahu (srov. Hanuška 1996, kap. 2.2.2: prostory pod napětím i po vypnutí hlavního vypínače).');
   }
 
-  if (!k.vodniZdroje.length) chyba('VODA', `${p}.karta.vodniZdroje`, 'Chybí vodní zdroje (nebo „NE“).');
+  if (!k.vodniZdroje.length) chyba('VODA', `${c}.vodniZdroje`, 'Vodní zdroje: žádná položka – uveďte zdroj vody pro hašení (nebo položku „NE“).');
   for (const v of k.vodniZdroje) {
-    if (v.typ === 'hydrant' && (prazdne(v.prutokLs) || !v.overenPrutok)) chyba('HYDRANT_PRUTOK', `${p}.karta.vodniZdroje[${v.id}]`, 'Vnější hydrant: chybí ověřený průtok v l/s (návod HZS).');
-    if (v.typ === 'nadrz' && prazdne(v.objemM3)) chyba('NADRZ_OBJEM', `${p}.karta.vodniZdroje[${v.id}]`, 'Nádrž: chybí objem v m³.');
-    if (prazdne(v.gps?.sirka) || prazdne(v.gps?.delka)) upoz('VODA_GPS', `${p}.karta.vodniZdroje[${v.id}]`, 'Vodní zdroj: chybí GPS (vzor je uvádí).');
+    if (v.typ === 'hydrant' && (prazdne(v.prutokLs) || !v.overenPrutok)) chyba('HYDRANT_PRUTOK', `${c}.vodniZdroje[${v.id}]`, 'Vnější hydrant: chybí ověřený průtok v l/s (návod HZS SČK).');
+    if (v.typ === 'nadrz' && prazdne(v.objemM3)) chyba('NADRZ_OBJEM', `${c}.vodniZdroje[${v.id}]`, 'Požární nádrž: chybí objem v m³.');
+    if (!jeNe(v.popis) && (prazdne(v.gps?.sirka) || prazdne(v.gps?.delka))) upoz('VODA_GPS', `${c}.vodniZdroje[${v.id}]`, 'Vodní zdroj: chybí GPS (vzor ji uvádí).');
   }
 
-  if (prazdne(k.doporuceni)) chyba('DOPORUCENI', `${p}.karta.doporuceni`, 'Chybí doporučení pro velitele zásahu (uveďte i co se stane při vypnutí energií).');
+  if (prazdne(k.doporuceni)) chyba('DOPORUCENI', `${c}.doporuceni`, 'Doporučení pro velitele zásahu není vyplněné (uveďte i, co se stane při vypnutí energií).');
+  else if (!/vyp[ií]n|vypn|odpoj|energi|STOP|elektr|\bel\.|plyn|proud/i.test(k.doporuceni)) upoz('DOPORUCENI_ENERGIE', `${c}.doporuceni`, 'Doporučení: uveďte, co se stane při vypnutí energií (návod HZS SČK).');
+  if (prazdne(k.schvalil.jmeno) || prazdne(k.schvalil.funkce)) upoz('SCHVALIL', `${c}.schvalil.jmeno`, 'Schválil: doplňte jméno a funkci (tabulka SCHVÁLIL vzoru HZS SČK).');
 }
 
-function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false) {
+function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false, karta = null) {
   const v = list.vykres;
   if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
   if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: měřítko importovaného výkresu není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
   if (!evak && v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
   if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
   if (!evak && !v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
-  if (!evak && prazdne(v.razitko.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: razítko bez zpracovatele.`);
+  // popisové pole: prázdné údaje se tisknou z operativní karty (zpracoval, schválil)
+  if (!evak && prazdne(v.razitko.zpracoval) && prazdne(karta?.zpracoval.jmeno)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí zpracovatel.`);
+  if (!evak && prazdne(v.razitko.schvalil) && prazdne(karta?.schvalil.jmeno)) upoz('RAZITKO_SCHVALIL', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí, kdo schválil – popisové pole nese razítko a podpis statutárního zástupce právnické nebo podnikající fyzické osoby (Hanuška 1996, kap. 2.3.1).`);
   if (!v.prvky.length) upoz('VYKRES_PRAZDNY', `${p}.vykres.prvky`, `List „${list.nazev}“: výkres je prázdný.`);
   for (const pr of v.prvky) {
     if (pr.znackaId && mameKatalog && !ids.has(pr.znackaId)) chyba('ZNACKA_NEEXISTUJE', `${p}.vykres.prvky[${pr.id}]`, `Prvek odkazuje na neexistující značku ${pr.znackaId} – označeno ke kontrole.`);

@@ -1,6 +1,6 @@
 // Datový model Požárního plánovače (DZP). Čistý ES modul bez závislostí – běží v prohlížeči i v Node.
-// Pole karty kopírují vzor operativní karty HZS Středočeského kraje (podklady/VZOR_OPERATIVNI_KARTA.docx).
-// Pravidlo vzoru: pole se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
+// Pole karty kopírují vzor operativní karty HZS Středočeského kraje (podklady/VZOR_operativni_karta_list_A4.docx).
+// Pravidlo návodu: předpřipravená okénka se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
 
 import { prazdnaEvak } from './evakuace.js';
 import { prazdnyEvakPlan } from './kresleni/evakplan.js';
@@ -29,7 +29,7 @@ const now = () => new Date().toISOString();
 
 export const prazdnaKarta = () => ({
   stupenPoplachu: '',
-  uzemniOdbor: '',               // místně příslušný ÚO HZS
+  uzemniOdbor: '',               // „Stanice HZS“ ve vzoru (místně příslušná stanice)
   objekt: {
     nazev: '', provozovatel: '', ic: '', adresa: '',
     gps: { sirka: null, delka: null },
@@ -40,20 +40,43 @@ export const prazdnaKarta = () => ({
     ucelStavby: '', podlazi: '', pudorysM: '', konstrukce: '', unikoveCesty: '', celkovaVyskaM: '',
     steny: '', priccky: '', vytahy: '', zastavenaPlochaM2: '', stropy: '', strecha: '',
     typUnikoveCesty: '', pozarniUseky: '',
+    vytahEvakuacni: null, vytahPozarni: null,   // ano/ne – značka E/P v okénku VÝTAHY (vzor: „[E] 1 X“)
   },
-  nebezpeci: [],                 // {id, popis, hasivo, znackaId}; bez nebezpečí = jediná položka s popisem "NE"
+  // {id, popis, hasivo, znackaId}; vzor má dva předtištěné řádky (hořlaviny, výbušniny) – bez nebezpečí se do nich vepíše "NE"
+  nebezpeci: [{ id: uid('p'), popis: '', hasivo: '', znackaId: 'DZP-003' }, { id: uid('p'), popis: '', hasivo: '', znackaId: 'DZP-053' }],
   fve: { pritomna: null, popis: '', vykonKWp: null, pocetPanelu: null, baterie: null, vypinacSilovaCast: '', hasivo: '' },
-  media: {                       // uzávěry a vypínače – text nebo "NE"
-    hlavniUzaverVody: '', vedlejsiUzaverVody: '', hlavniUzaverPlynu: '', vedlejsiUzaverPlynu: '',
-    hlavniUzaverTopeni: '', vedlejsiUzaverTopeni: '', hlavniVypinacEl: '', vedlejsiVypinacEl: '',
+  media: {                       // uzávěry médií v pořadí vzoru – umístění nebo "NE"
+    hlavniUzaverPlynu: '', hlavniUzaverVody: '', hlavniUzaverTopeni: '', hlavniVypinacEl: '', totalStop: '', centralStop: '',
   },
-  pbz: { eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '', vytahEvakuacni: '', vytahPozarni: '' },
+  // KTPO, OPPO: umístění nebo "NE"; ostatní PBZ: '' neuvedeno, "NE" v objektu není, jinak je (upřesnění nebo "ANO")
+  pbz: { ktpo: '', oppo: '', eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '' },
   vodniZdroje: [],               // {id, typ: hydrant|nadrz|jiny, popis, prutokLs, objemM3, gps, znackaId, overenPrutok}
   doporuceni: '',                // pouze podstatné; musí obsahovat, co se stane při vypnutí energií
-  znalostObjektu: { jmeno: '', mobil: '' },
+  znalostObjektu: { jmeno: '', mobil: '', funkce: '' },
   zpracoval: { jmeno: '', cisloOsvedceni: '', datum: '' },
   schvalil: { jmeno: '', funkce: '', datum: '' },
+  mimoVzor: [],                  // {nazev, hodnota} – údaje ze starší verze karty, které vzor nemá (netisknou se, viz migrujKartu)
 });
+
+// Starší verze karty měla vedlejší uzávěry (vzor A4 je nemá) a výtahy mezi PBZ. Vyplněné údaje se neztratí:
+// výtahy se přesunou do charakteru objektu, ostatní do mimoVzor (formulář je ukáže, kontrola na ně upozorní).
+function migrujKartu(k) {
+  const nic = (v) => v === null || v === undefined || String(v).trim() === '';
+  const jeNe = (v) => String(v).trim().toUpperCase() === 'NE';
+  const odloz = (nazev, v) => { if (!nic(v) && !jeNe(v) && !k.mimoVzor.some((x) => x.nazev === nazev && x.hodnota === String(v))) k.mimoVzor.push({ nazev, hodnota: String(v) }); };
+  if (!Array.isArray(k.mimoVzor)) k.mimoVzor = [];
+  for (const [klic, nazev] of [['vedlejsiUzaverVody', 'Vedlejší uzávěr vody'], ['vedlejsiUzaverPlynu', 'Vedlejší uzávěr plynu'], ['vedlejsiUzaverTopeni', 'Vedlejší uzávěr topení'], ['vedlejsiVypinacEl', 'Vedlejší vypínač el. proudu']]) {
+    if (klic in k.media) { odloz(nazev, k.media[klic]); delete k.media[klic]; }
+  }
+  for (const [klic, nazev] of [['vytahEvakuacni', 'Výtah evakuační'], ['vytahPozarni', 'Výtah požární']]) {
+    if (!(klic in k.pbz)) continue;
+    const v = k.pbz[klic]; delete k.pbz[klic];
+    if (nic(v)) continue;
+    if (k.charakter[klic] === null) k.charakter[klic] = !jeNe(v);
+    if (!jeNe(v) && String(v).trim().toUpperCase() !== 'ANO') { if (nic(k.charakter.vytahy)) k.charakter.vytahy = String(v).trim(); else if (String(v).trim() !== String(k.charakter.vytahy).trim()) odloz(`${nazev} (dříve mezi PBZ)`, v); }
+  }
+  return k;
+}
 
 export const novyList = (typ, nazev) => {
   if (!TYPY_LISTU.includes(typ)) throw new Error(`Neznámý typ listu: ${typ}`);
@@ -200,7 +223,7 @@ export function migruj(data) {
   p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.dotaznik = { ...prazdnyDotaznik(), ...(p.dotaznik || {}) }; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
-    if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});
+    if (l.typ === 'karta') l.karta = migrujKartu(sloz(prazdnaKarta(), l.karta || {}));
     if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
     if (l.typ === 'op_zaklad') l.opZaklad = sloz(prazdnyOpZaklad(), l.opZaklad || {});
     if (l.typ === 'op_text') l.opText = sloz(prazdnyOpText(), l.opText || {});

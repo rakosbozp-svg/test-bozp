@@ -1,36 +1,66 @@
-// Náhled textové části operativní karty (rozvržení podle vzoru HZS SCK, list A4). Obsah dodává kartaData.js (sdílený s PDF).
+// Náhled operativní karty (list A4 podle vzoru HZS SČK) pro obrazovku a tisk z prohlížeče.
+// Rozvržení i obsah jsou společné s PDF (js/kartaRozvrzeni.js, js/kartaData.js); rozměry jsou v mm a písmo je stejné (Roboto).
 import { esc } from './formular.js';
 import { najdiZnacku } from './znacky.js';
-import { sestavKartu } from './kartaData.js';
+import { rozvrzeniListu, umistiBunky, VELIKOSTI_PISMA, IKONA_MM } from './kartaRozvrzeni.js';
+import { jeZnackaKarty, svgZnackyKarty } from './kartaZnacky.js';
 
-const hodn = (v) => (v === null || v === undefined || String(v).trim() === '' ? '<span class="chybi">…</span>' : esc(v));
-const radky = (v) => (v === null || v === undefined || String(v).trim() === '' ? '<span class="chybi">…</span>' : esc(v).replace(/\n/g, '<br>'));
-const znacka = (id) => { const z = id && najdiZnacku(id); return z ? `<img src="${z.png}" alt="${esc(z.nazev)}">` : ''; };
+const segment = (s) => {
+  if (s.chybi) return '<span class="chybi">…</span>';
+  const tridy = [s.b && 'b', s.u && 'u', s.odznak && 'odznak'].filter(Boolean).join(' ');
+  const styl = [s.velikost && s.velikost !== 1 ? `font-size:${s.velikost}em` : '', s.c ? `color:${s.c}` : ''].filter(Boolean).join(';');
+  return tridy || styl ? `<span${tridy ? ` class="${tridy}"` : ''}${styl ? ` style="${styl}"` : ''}>${esc(s.t)}</span>` : esc(s.t);
+};
+const text = (seg) => seg.map(segment).join('');
+const znacka = (id, mm) => {
+  if (!id) return '';
+  if (jeZnackaKarty(id)) return svgZnackyKarty(id, mm);
+  const z = najdiZnacku(id); return z ? `<img src="${esc(z.png)}" alt="${esc(z.nazev)}" title="${esc(z.id)} – ${esc(z.nazev)}" style="max-height:${mm}mm">` : '';
+};
+
+function tabulka(t) {
+  const radky = umistiBunky(t).map((r) => `<tr${r.minH ? ` style="height:${r.minH}mm"` : ''}>${r.bunky.map((b) => {
+    const tridy = [b.zn !== undefined && 'zn', b.stred && 'str', b.svisleStred && 'sv', r.pas && 'pas'].filter(Boolean).join(' ');
+    const attr = `${(b.span || 1) > 1 ? ` colspan="${b.span}"` : ''}${(b.rowspan || 1) > 1 ? ` rowspan="${b.rowspan}"` : ''}${tridy ? ` class="${tridy}"` : ''}${b.fill ? ` style="background:${b.fill}"` : ''}`;
+    const obsah = b.zn !== undefined ? znacka(b.zn, 8) : `${b.ikony?.length ? `<span class="ikony">${b.ikony.map((id) => znacka(id, IKONA_MM)).join('')}</span>` : ''}${text(b.seg || [])}`;
+    return `<td${attr}>${obsah}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<table class="okt"><colgroup>${t.mriz.map((w) => `<col style="width:${w}mm">`).join('')}</colgroup><tbody>${radky}</tbody></table>`;
+}
 
 export function nahledKarty(list, projekt) {
-  const d = sestavKartu(list.karta, projekt), h = d.hlava, c = d.charakter;
-  const dvojice = (x) => { const v = [...x.media, ...x.pbz]; let o = ''; for (let i = 0; i < v.length; i += 2) { const a = v[i], b = v[i + 1]; o += `<tr><th>${a[0]}</th><td>${hodn(a[1])}</td>${b ? `<th>${b[0]}</th><td>${hodn(b[1])}</td>` : '<th></th><td></td>'}</tr>`; } return o; };
-  return `<article class="a4">
-  <table class="ok hlava"><tr><td class="nadpis zl" colspan="2">O P E R A T I V N Í &nbsp; K A R T A</td><td class="zl stupen">STUPEŇ POPLACHU<br><b>${hodn(h.stupen)}</b><br>${hodn(h.uo)}</td></tr>
-    <tr><td colspan="2"><b>OBJEKT:</b> ${hodn(h.objekt)}</td><td><b>PROVOZOVATEL:</b> ${hodn(h.provozovatel)}${h.ic ? `, IČ: ${esc(h.ic)}` : ''}</td></tr>
-    <tr><td colspan="2"><b>ADRESA:</b> ${hodn(h.adresa)}</td><td><b>GPS:</b> ${hodn(h.gps)}</td></tr>
-    <tr><td colspan="2"><b>PROVOZ:</b> pracovní doba: ${hodn(h.pracovniDoba)}<br>kontakt: ${hodn(h.kontaktTelefon)} – ${hodn(h.kontaktJmeno)}</td><td><b>OBSAZENÍ OSOBAMI:</b> ${hodn(h.obsazeni)}</td></tr>
-    <tr><td colspan="2"><b>PŘÍJEZD Z:</b> ${hodn(h.prijezd)}</td><td><b>OMEZENÍ:</b> ${hodn(h.omezeni)}</td></tr></table>
-  <div class="pruh sed">CHARAKTER OBJEKTU</div>
-  <table class="ok"><tr><td colspan="2"><b>ÚČEL STAVBY:</b> ${hodn(c.ucel)}</td><td><b>PODLAŽÍ:</b> ${hodn(c.podlazi)}</td></tr>
-    <tr><td><b>PŮDORYS (m):</b> ${hodn(c.pudoryM)}</td><td><b>KONSTRUKCE:</b> ${hodn(c.konstrukce)}</td><td><b>ÚNIKOVÉ CESTY:</b> ${hodn(c.unikoveCesty)}</td></tr>
-    <tr><td><b>CELKOVÁ VÝŠKA (m):</b> ${hodn(c.vyska)}</td><td><b>STĚNY:</b> ${hodn(c.steny)}</td><td><b>PŘÍČKY:</b> ${hodn(c.priccky)} &nbsp; <b>VÝTAHY:</b> ${hodn(c.vytahy)}</td></tr>
-    <tr><td><b>ZASTAVĚNÁ PLOCHA (m²):</b> ${hodn(c.plocha)}</td><td><b>STROPY:</b> ${hodn(c.stropy)}</td><td><b>STŘECHA:</b> ${hodn(c.strecha)}</td></tr>
-    <tr><td colspan="2"><b>POŽÁRNÍ ÚSEKY:</b> ${hodn(c.useky)}</td><td><b>TYP ÚNIKOVÉ CESTY:</b> ${hodn(c.typUnik)}</td></tr></table>
-  <div class="pruh cer">!!! N E B E Z P E Č Í !!!</div>
-  <table class="ok">${d.nebezpeci.map((n) => `<tr><td class="zn">${znacka(n.znackaId)}</td><td colspan="3">${radky(n.text)}</td></tr>`).join('') || '<tr><td colspan="4"><span class="chybi">…</span></td></tr>'}</table>
-  <div class="pruh zel">ZÁVĚRY MÉDIÍ / POŽÁRNĚ BEZPEČNOSTNÍ ZAŘÍZENÍ</div>
-  <table class="ok media">${dvojice(d)}</table>
-  <div class="pruh mod">VODNÍ ZDROJE A HASEBNÍ LÁTKY</div>
-  <table class="ok">${d.vody.map((v) => `<tr><td class="zn">${znacka(v.znackaId)}</td><td colspan="3">${radky(v.text)}</td></tr>`).join('') || '<tr><td colspan="4"><span class="chybi">…</span></td></tr>'}</table>
-  <div class="pruh zl">DOPORUČENÍ PRO VELITELE ZÁSAHU</div>
-  <div class="dop">${radky(d.doporuceni)}<p>Znalost o objektu má: ${hodn(d.znalost.jmeno)}${d.znalost.mobil ? `, mob.: ${esc(d.znalost.mobil)}` : ''}</p></div>
-  <table class="ok podpisy"><tr><td><b>ZPRACOVAL</b><br>${hodn(d.zpracoval.jmeno)}<br>č. osvědčení: ${hodn(d.zpracoval.cislo)}<br>datum: ${esc(d.zpracoval.datum)}</td><td><b>SCHVÁLIL</b><br>${hodn(d.schvalil.jmeno)}<br>${esc(d.schvalil.funkce)}<br>datum: ${esc(d.schvalil.datum)}</td></tr></table>
-  ${d.revize.length ? `<p class="revize">Revize: ${d.revize.map(esc).join('; ')}</p>` : ''}
-</article>`;
+  const R = rozvrzeniListu(list, projekt);
+  const podpisy = R.podpisy.map((p) => `<table><tr><th>${esc(p.nadpis)}</th></tr>${p.radky.map(([a, b]) => `<tr><td><span class="st">${esc(a)}</span>${esc(b)}</td></tr>`).join('')}</table>`).join('');
+  return `<div class="karta-obal"><p class="karta-varovani" hidden role="status"></p><article class="a4 karta-a4" style="--pt:${VELIKOSTI_PISMA[0]}pt"><div class="ok-ram">
+    ${R.tabulky.map(tabulka).join('')}
+    <div class="ok-dop">${text(R.doporuceni)}</div>
+    <div class="ok-podpisy">${podpisy}</div>
+    ${R.revize ? `<p class="ok-revize">${esc(R.revize)}</p>` : ''}
+  </div></article></div>`;
+}
+
+// Zmenší písmo náhledu (stejné kroky jako PDF), aby se karta vešla na jeden list A4; jinak zobrazí upozornění (netiskne se).
+// Volá se po vložení náhledu do stránky (měří se skutečná výška). Vrací { pt, jednaStrana }.
+export function prizpusobNahled(koren) {
+  const a = koren.querySelector('.karta-a4'), ram = a?.querySelector('.ok-ram'), info = koren.querySelector('.karta-varovani');
+  if (!a || !ram) return null;
+  const sonda = document.createElement('div'); sonda.style.cssText = 'position:absolute;visibility:hidden;height:100mm;width:1px';
+  document.body.appendChild(sonda); const pxNaMm = sonda.getBoundingClientRect().height / 100; sonda.remove();
+  if (!pxNaMm) return null;                                                   // náhled není vidět (skrytá záložka)
+  let vysledek = null;
+  a.style.zoom = '';                                                          // měří se ve skutečné velikosti
+  ram.classList.add('meri');
+  for (const pt of VELIKOSTI_PISMA) {
+    a.style.setProperty('--pt', `${pt}pt`);
+    if (ram.getBoundingClientRect().height / pxNaMm <= 277) { vysledek = { pt, jednaStrana: true }; break; }
+  }
+  ram.classList.remove('meri');
+  vysledek ||= { pt: VELIKOSTI_PISMA.at(-1), jednaStrana: false };
+  const obal = koren.querySelector('.karta-obal'), sirka = a.getBoundingClientRect().width;   // na obrazovce zmenšit na šířku sloupce (tisk má zoom 1)
+  if (obal && sirka > obal.clientWidth && obal.clientWidth > 0) a.style.zoom = String(Math.max(0.35, obal.clientWidth / sirka));
+  if (info) {
+    info.hidden = vysledek.jednaStrana;
+    info.textContent = vysledek.jednaStrana ? '' : `Karta se nevejde na jednu stranu A4 ani při písmu ${String(vysledek.pt).replace('.', ',')} pt – zkraťte texty (nejčastěji doporučení). Textová část karty má být na jednom listu A4 (Hanuška 1996, kap. 3.1).`;
+  }
+  return vysledek;
 }

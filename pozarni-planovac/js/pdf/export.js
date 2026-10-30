@@ -39,7 +39,7 @@ async function bajtyZnacky(z) {
   return new Uint8Array(await (await fetch(z.png)).arrayBuffer());
 }
 
-// projekt: celý projekt; volby: { listy: pole id (výchozí všechny), katalog: Map(id → značka) }. Vrací Uint8Array s PDF.
+// projekt: celý projekt; volby: { listy: pole id (výchozí všechny), katalog: Map(id → značka), varovani: pole pro upozornění }. Vrací Uint8Array s PDF.
 export async function exportujPdf(projekt, volby = {}) {
   const L = await nactiPdfLib(), katalog = volby.katalog || new Map();
   const vybrane = projekt.listy.filter((l) => !volby.listy || volby.listy.includes(l.id));
@@ -64,8 +64,12 @@ export async function exportujPdf(projekt, volby = {}) {
   for (const id of bajty.keys()) emb.set(id, await pdfDoc.embedPng(bajty.get(id)));
 
   const objekt = projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '';
+  const karta = projekt.listy.find((l) => l.karta)?.karta || null;   // výchozí údaje razítka výkresů (zpracoval, schválil)
   for (const l of vybrane) {
-    if (l.typ === 'karta') await vykresliKartu(ctxZaklad, l, projekt);
+    if (l.typ === 'karta') {
+      const r = await vykresliKartu(ctxZaklad, l, projekt);
+      if (!r.jednaStrana) volby.varovani?.push(`Operativní karta „${l.nazev}“ se nevešla na jednu stranu A4 ani při písmu ${String(r.pt).replace('.', ',')} pt (má ${r.stran} ${r.stran >= 5 ? "stran" : "strany"}). Zkraťte texty – textová část karty má být na jednom listu A4 (Hanuška 1996, kap. 3.1).`);
+    }
     else if (l.typ === 'text') await vykresliTextovyList(ctxZaklad, l);
     else if (l.typ === 'op_sap') await vykresliTextovyList(ctxZaklad, { nazev: `Operativní plán – výpočet SaP: ${l.nazev}`, text: (nastavKontextSaP(l.opSap, kontextSaP(projekt)), sapJakoText(l.opSap)) });
     else if (l.typ === 'op_zaklad') await vykresliTextovyList(ctxZaklad, { nazev: `Operativní plán – základní text: ${l.nazev}`, text: schemaJakoText(l.opZaklad, SCHEMA_ZAKLAD) });
@@ -73,14 +77,16 @@ export async function exportujPdf(projekt, volby = {}) {
     else if (l.typ === 'evak_text') await vykresliTextovyList(ctxZaklad, { nazev: 'Požární evakuační plán – textová část', text: evakJakoText(l.evak, projekt) });
     else if (l.vykres) {
       const v = l.vykres, { W, H } = rozlozeniListu(v), page = pdfDoc.addPage([W * MM, H * MM]);
-      const svg = renderListu(v, { objektNazev: objekt, nazevListu: l.nazev, znacky: katalog, symbolHref: (id) => uri.get(id) || '', prilohy: projekt.prilohy });
+      const svg = renderListu(v, { objektNazev: objekt, nazevListu: l.nazev, znacky: katalog, symbolHref: (id) => uri.get(id) || '', prilohy: projekt.prilohy, karta });
       await vykresliSvgDoPdf(svg, { ...ctxZaklad, page });
     }
   }
-  const zprac = projekt.listy.find((l) => l.karta)?.karta.zpracoval.jmeno || '';
+  // metadata podle druhu dokumentace (evakuační plán není DZP)
+  const evak = projekt.typ === 'evakuacni_plan';
+  const zprac = (evak ? projekt.listy.find((l) => l.evak)?.evak.zpracoval.jmeno : karta?.zpracoval.jmeno) || '';
   pdfDoc.setTitle(`${projekt.nazev}${objekt && objekt !== projekt.nazev ? ` – ${objekt}` : ''}`);
-  pdfDoc.setAuthor(zprac); pdfDoc.setSubject('Dokumentace zdolávání požárů'); pdfDoc.setCreator('Požární plánovač'); pdfDoc.setProducer('Požární plánovač (pdf-lib)');
-  pdfDoc.setLanguage('cs-CZ'); pdfDoc.setKeywords(['DZP', 'operativní karta']);
+  pdfDoc.setAuthor(zprac); pdfDoc.setSubject(evak ? 'Požární evakuační plán' : 'Dokumentace zdolávání požárů'); pdfDoc.setCreator('Požární plánovač'); pdfDoc.setProducer('Požární plánovač (pdf-lib)');
+  pdfDoc.setLanguage('cs-CZ'); pdfDoc.setKeywords(evak ? ['požární evakuační plán'] : ['DZP', projekt.typ === 'operativni_plan' ? 'operativní plán' : 'operativní karta']);
   return pdfDoc.save();
 }
 
@@ -88,4 +94,5 @@ export function stahniBajty(bajty, jmeno, mime = 'application/pdf') {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bajty], { type: mime })); a.download = jmeno;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-export const jmenoPdf = (nazev) => `${String(nazev || 'dokumentace').replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '') || 'dokumentace'}.pdf`;
+// Název souboru: jen písmena, číslice, _ a -; nejvýš 100 znaků (dlouhý název by překročil limit souborového systému 255 bajtů).
+export const jmenoPdf = (nazev) => `${String(nazev || 'dokumentace').replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 100).replace(/_+$/, '') || 'dokumentace'}.pdf`;
