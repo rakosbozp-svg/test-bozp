@@ -12,14 +12,14 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
 
 ## Co aplikace počítá a doplňuje sama
 - **Výpočet SaP** (Hanuška 1996, část druhá) krok za krokem se vzorci; navíc:
-  - nejednoznačnost metodiky u doby volného rozvoje (tBR první × poslední jednotky) se **spočte oběma způsoby** – protokol ukáže, zda varianta podle vzorce vede k více silám;
+  - počítá pro **lokalizaci** požáru (kap. 3.3) – bez doby bojového rozvinutí první i poslední jednotky výsledek nevydá; **celá plocha** objektu/prostoru při v1 > 2 m/min, neuvedené v1, v malém prostoru, v prostředí s nebezpečím výbuchu a u kapalin (kap. 4.2) a pak plocha hašení z fronty (kap. 4.3); družstvo obslouží nejvýš **jednu proudnici B**; **100% záloha hasičů**, když doba lokalizace není kratší než ochranná doba dýchacího přístroje (str. 35–36); hašení kapalin pěnou s chlazením nádrží (příklad LTO, str. 63–64). Ověřeno na řešeném příkladu metodiky (str. 58–61: tVR 45 min, t3 16 min, R 57,6 m, Qh 2 023,2 l/min) a všech 243 hodnotách tabulky č. 1;
   - **vydatnost vody** se, není-li zadána, vezme z hydrantu v kartě s **ověřeným** průtokem (l/s × 60, největší z ověřených).
 - **Vzdálenost hydrantu / vodního zdroje od objektu** vzdušnou čarou z GPS; GPS lze vložit najednou z Mapy.cz/Google i ve stupních-minutách-vteřinách.
 - Údaje z PBŘ a zpráv (pravidla + OCR), převod karta ↔ operativní plán, dotazník → karta/plán, kontrola úplnosti, legenda výkresu z použitých značek, měřítko a rozvržení evakuačního plánu.
 
 ## Co zůstává na zpracovateli (nejde dopočítat – vyžaduje místo, HZS nebo normu)
 - Skutečný stav na místě (uzávěry, vypínače, látky, FVE), kontakty, stupeň poplachu a územní odbor HZS, ověřený průtok hydrantu (zkouška).
-- Rozhodnutí u nejednoznačností metodiky (výpočet ukáže obě varianty) a schválení DZP s HZS.
+- Taktické volby ve výpočtu SaP (varianta požáru, hlavní směr, forma šíření, fronta hašení) a schválení DZP s HZS.
 - Evakuační plány: barvy podle ISO 3864-4 jsou přibližné (normu nemáme), z ČSN ISO 23601 chybí str. 5–6, čl. 7.4 a příloha A; z 16 evakuačních značek je 5 dodaných, 7 náhrad ze značek DZP a 4 chybí (přenosný hasicí přístroj, výtah, schodiště, elektrické zařízení) – dodejte oficiální ISO 7010 (nahrají se v projektu evakuačního plánu).
 - Vyplnitelné PDF dotazníku je ověřené testy, ne ve všech prohlížečích PDF.
 - V Artifacts nefungují stažení (export PDF, záloha) – pro práci používejte soubor HTML.

@@ -1,6 +1,6 @@
 // Formulář výpočtu SaP (list „OP – výpočet SaP“). Výsledek se přepočítává při každé změně a ukazuje vzorce s dosazenými hodnotami.
 import { esc, dostan, nastav, naCislo, zCisla } from './formular.js';
-import { PROSTORY, TABULKA1, DOBA_VYJEZDU, UHLY, DRUZSTVA, PROUDNICE, PRACE_MV, CAS_VYKON, vypocetSaP, shrnutiSaP, novaJednotka } from './sap.js';
+import { PROSTORY, TABULKA1, DOBA_VYJEZDU, UHLY, DRUZSTVA, PROUDNICE, PRACE_MV, CAS_VYKON, CELA_PLOCHA, vypocetSaP, shrnutiSaP, novaJednotka } from './sap.js';
 
 const vyber = (c, label, volby, d, sirka = '') => `<label class="f ${sirka}"><span>${esc(label)}</span><select data-sap="${c}">${volby.map(([k, n]) => `<option value="${esc(k)}" ${String(dostan(d, c)) === String(k) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
 const cis = (c, label, d, tip = '') => `<label class="f f-s"><span>${esc(label)}</span><input type="text" inputmode="decimal" data-sap="${c}" data-typ="cislo" value="${esc(zCisla(dostan(d, c)))}" ${tip ? `title="${esc(tip)}"` : ''}></label>`;
@@ -29,18 +29,19 @@ export function vykresliSap(list, host) {
       <label class="f f-s"><span>Bojové rozvinutí tBR (min)</span><input type="text" inputmode="decimal" data-jed="${j.id}" data-klic="tBR" data-typ="cislo" value="${esc(zCisla(j.tBR))}"></label>
       <button type="button" class="btn mal" data-sap-akce="smaz" data-id="${j.id}">Odebrat</button></div>`).join('') || '<p class="prazdno">Zatím žádná jednotka.</p>';
   host.innerHTML = `<p class="napoveda">Výpočet podle Metodického návodu (Hanuška 1996), část druhá. Každý krok se vypisuje se vzorcem a dosazenými hodnotami. Aplikace nenahrazuje úvahu zpracovatele (volba nejsložitější varianty, hlavní směr nasazení, forma šíření) – správnost ověřuje zpracovatel a HZS.</p>
-    ${sek('doby', '1. Soustředění jednotek a doby', 'Kap. 3.2 a 4.1: tDO = tv + 60·L/45; tVR = tZP + tOH + tDO + tBR první jednotky. Doby tZP a tOH vyplývají z operativně taktické studie; tBR informativně podle tab. 10.',
+    ${sek('doby', '1. Soustředění jednotek a doby', 'Kap. 3.2 a 4.1: tDO = tv + 60·L/45; tVR = tZP + tOH + tDO + tBR první jednotky (řešený příklad str. 60). Doby tZP a tOH vyplývají z operativně taktické studie; tBR informativně podle tab. 10. Výpočet se provádí pro lokalizaci požáru – vyplňte tBR první i poslední jednotky.',
       `${cis('tZP', 'Doba zpozorování tZP (min)', d)}${cis('tOH', 'Doba ohlášení tOH (min)', d)}`)}
     <section class="sek sek-seda" id="sek-sap-jednotky"><h3>Jednotky PO podle poplachového plánu</h3><div class="seznam">${jed}</div><button type="button" class="btn" data-sap-akce="pridej">+ Přidat jednotku</button></section>
-    ${sek('pozar', '2. Parametry požáru', 'Kap. 4.2 a 4.3, tabulka č. 1. Vlastní hodnoty Io/Ip/v1 zadávejte jen se zdůvodněním (např. smáčedlo 2/3–1/2 Ip, údaje výrobce).',
+    ${sek('pozar', '2. Parametry požáru', 'Kap. 4.2 a 4.3, tabulka č. 1. Vlastní hodnoty Io/Ip/v1 zadávejte jen se zdůvodněním (např. smáčedlo 2/3–1/2 Ip, údaje výrobce). Při v1 > 2 m/min, v malých prostorách, v prostředí s nebezpečím výbuchu a u hořlavých kapalin je plochou požáru celá plocha objektu nebo prostoru (kap. 4.2) – zadejte ji níže.',
       `${prostorSelect(d)}${cis('ioVlastni', 'Vlastní Io (l/m/min)', d)}${cis('ipVlastni', 'Vlastní Ip (l/m²/min)', d)}${cis('v1Vlastni', 'Vlastní v1 (m/min)', d)}
       ${vyber('forma', 'Forma šíření', [['kruh', 'kruhová (neomezená)'], ['uhel', 'úhlová (omezená dvěma stěnami)'], ['pravouhla', 'pravoúhlá (po celé šířce prostoru)']], d)}
       ${d.forma === 'uhel' ? vyber('uhel', 'Úhel šíření β', Object.keys(UHLY).sort((a, b) => b - a).map((k) => [k, `${k}° (f = ${zCisla(UHLY[k])})`]), d, 'f-s') : ''}
       ${d.forma === 'pravouhla' ? `${cis('a', 'Šířka prostoru a (m)', d)}${cis('n', 'Počet směrů šíření n', d)}` : ''}
       ${vyber('h', 'Hloubka hašení h', [['5', '5 m – ruční proudnice C, B'], ['10', '10 m – lafetové proudnice']], d)}
-      ${cis('plochaUseku', 'Plocha požárního úseku (m²) – pro pravidlo 85 %', d)}
-      ${vyber('rPro', 'Rádius pro výpočet', [['lokalizace', 'v době lokalizace (kap. 4.2 c)'], ['prvni', 'v době nasazení prvních proudů']], d)}`)}
-    ${sek('haseni', '3. Hašení a proudy', 'Kap. 5.2–5.3, tabulka č. 4. Počet hasičů na proudnici k: C 1–2, B 2–3, v zakouření 3–4 (tab. 10).',
+      ${cis('plochaUseku', 'Plocha požárního úseku / objektu nebo prostoru (m²)', d, 'Pro pravidlo 85 % a pro případy, kdy je plochou požáru celá plocha (kap. 4.2)')}
+      ${vyber('celaPlocha', 'Celá plocha je plochou požáru', CELA_PLOCHA, d)}
+      ${vyber('rPro', 'Rádius pro výpočet', [['lokalizace', 'v době lokalizace (kap. 4.2 c) – metodika'], ['prvni', 'v době nasazení prvních proudů – jen orientačně']], d)}`)}
+    ${sek('haseni', '3. Hašení a proudy', 'Kap. 5.2–5.3, tabulka č. 4. Počet hasičů na proudnici k: C 1–2, B 2–3, v zakouření 3–4 (tab. 10). Hoří-li celá plocha, počítejte podle fronty hašení (kap. 4.3, řešený příklad str. 60–61). Družstvo obslouží nejvýš jednu proudnici B (kap. 5.4).',
       `${vyber('zpusob', 'Dodávka na hašení podle', [['plocha', 'plochy hašení: Qh = Sh·Ip'], ['fronta', 'fronty hašení: Qh = Oh·Io']], d)}${d.zpusob === 'fronta' ? cis('Oh', 'Fronta hašení Oh (m)', d) : ''}
       ${vyber('qprH', 'Proudnice na hašení', PROUDNICE, d)}${vyber('qprO', 'Proudnice na ochlazování', PROUDNICE, d)}${cis('kH', 'Hasičů na proudnici – hašení', d)}${cis('kO', 'Hasičů na proudnici – ochlazování', d)}`)}
     ${sek('ochlazovani', '4. Ochlazování a ochrana (nepovinné)', 'Kap. 5.2, tabulka č. 2: hořící nádrž 30 l/m/min (při hoření v jímce 60), sousední nádrž 12 l/m/min na polovinu obvodu.',

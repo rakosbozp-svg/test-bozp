@@ -29,7 +29,12 @@ test('doby, rádius, plocha požáru a hašení – kruhová forma (vzorce kap. 
 
 test('pravidlo 85 % plochy požárního úseku, úhlová a pravoúhlá forma, fronta hašení', () => {
   const d = zaklad(); d.plochaUseku = 500;
-  let v = vypocetSaP(d).vysledky; assert.equal(v.Sp, 500); assert.equal(v.Sh, 500);
+  // > 85 % úseku: plocha požáru = celý úsek; plochu hašení pak určuje fronta hašení (kap. 4.3, příklad str. 60–61)
+  let r = vypocetSaP(d), v = r.vysledky; assert.equal(v.Sp, 500); assert.equal(v.Sh, null); assert.equal(v.Npr, undefined);
+  assert.ok(r.chybi.some((x) => /fronta hašení Oh – hoří celá plocha/.test(x)));
+  d.zpusob = 'fronta'; d.Oh = 20;
+  v = vypocetSaP(d).vysledky; assert.equal(v.Sp, 500); assert.equal(v.Sh, 100); blizko(v.Qh, 20 * 56.2, 0.01);
+  d.zpusob = 'plocha'; d.Oh = null;
   d.plochaUseku = null; d.forma = 'uhel'; d.uhel = '90';
   v = vypocetSaP(d).vysledky; blizko(v.Sp, 0.25 * Math.PI * 24.6 ** 2, 0.5);
   d.forma = 'pravouhla'; d.a = 20; d.n = 1;
@@ -48,7 +53,8 @@ test('ochlazování nádrží, technika, voda, dýchací přístroj, dálková d
   blizko(v.To, (10 * 30 * 6) / 35, 0.01);
   assert.equal(v.Ncerp, Math.ceil((10 + 0.01 * 500 * 8 + 7.5) / 65));
   blizko(v.Vp, 1 * 0.01 * 800 * 6 * 10 * 3, 0.01);   // 1440 l = údaj tab. 5 pro P6 (800 l/min, 6 %)
-  assert.equal(v.NA, Math.max(Math.ceil(v.Qp / 600), Math.ceil(v.Npr / 2)));
+  // + 1 družstvo 1+5 pro pěnotvornou proudnici (tabulka kap. 5.4: 2 pěnotvorné proudnice na družstvo)
+  assert.equal(v.NA, Math.max(Math.ceil(v.Qp / 600), Math.ceil(v.Npr / 2)) + 1);
   assert.match(shrnutiSaP(d), /proudů/);
   assert.ok(sapJakoText(d).includes('Ochranná doba přístroje'));
 });
@@ -59,16 +65,80 @@ test('neúplné vstupy se hlásí, výpočet nic nedomýšlí', () => {
   assert.match(shrnutiSaP(prazdnySap()), /není úplný/);
 });
 
-test('nejednoznačnost metodiky (tBR první × poslední jednotky) se spočte oběma způsoby', async () => {
-  const d = zaklad(), { vysledky: v, kroky } = vypocetSaP(d);
-  // hlavní výpočet tVR = 5 + 2 + 6 + 3 = 16; varianta podle vzorce tBR(Po) = 5 → 18
-  blizko(v.tVR, 16); blizko(v.varianta.tVR, 18);
-  const k = kroky.find((x) => x.oddil === 'Kontrola');
-  assert.match(k.vzorec, /tVR = 18 min místo 16 min/);
-  assert.equal(v.varianta.vic, v.varianta.Npr !== v.Npr || v.varianta.NA !== v.NA);
-  if (v.varianta.vic) assert.match(shrnutiSaP(d), /Podle vzorce v metodice/); else assert.doesNotMatch(shrnutiSaP(d), /Podle vzorce v metodice/);
-  // stejné tBR obou jednotek → žádná varianta
-  d.jednotky[1].tBR = 3; assert.equal(vypocetSaP(d).vysledky.varianta, undefined);
+test('řešený příklad metodiky, montáž (str. 58–61): tVR 45, t3 16, R 57,6, celá hala, Qh 2 023,2', () => {
+  const d = prazdnySap();
+  // stanice HZS: tDO = 2 + 60·4,5/45 = 8; JSDHP II: tDO = 10 + 60·5,25/45 = 17 (str. 60); tBR první 2, poslední 4 min
+  Object.assign(d, { tZP: 30, tOH: 5, prostor: '1.1', forma: 'pravouhla', a: 36, n: 1, plochaUseku: 2340, zpusob: 'fronta', Oh: 36, QcVolba: 'cas20', Qc: 2000 });
+  d.jednotky.push({ id: 'a', nazev: 'Stanice HZS', druh: 'profi', L: 4.5, tBR: 2 }, { id: 'b', nazev: 'JSDHP II', druh: 'dobro', L: 5.25, tBR: 4 });
+  const { vysledky: v, kroky, chybi } = vypocetSaP(d);
+  assert.deepEqual(chybi, []);
+  blizko(v.tVR, 45); blizko(v.t3, 16); blizko(v.R, 57.6, 0.001);
+  assert.equal(v.Sp, 2340); assert.ok(v.cela, 'R/L = 88,6 % → celá plocha haly');
+  blizko(v.Qh, 2023.2, 0.01);
+  assert.match(kroky.find((k) => k.nazev === 'Doba volného rozvoje požáru').vzorec, /tBR\(Pr\).*str\. 60/);
+  assert.doesNotMatch(shrnutiSaP(d), /Podle vzorce v metodice|nejednoznačnost/);
+});
+
+test('bez doby bojového rozvinutí poslední jednotky není výsledek (žádný tichý rádius k prvním proudům)', () => {
+  const d = zaklad(); d.jednotky[1].tBR = null;
+  const { vysledky: v, chybi } = vypocetSaP(d);
+  assert.equal(v.Npr, undefined); assert.equal(v.R, null);
+  assert.ok(chybi.some((x) => /poslední jednotky tBR/.test(x)));
+  assert.match(shrnutiSaP(d), /není úplný/);
+  // vědomá volba „první proudy“ je jen orientační a shrnutí to říká
+  d.rPro = 'prvni'; assert.match(shrnutiSaP(d), /POZOR: rádius je počítán k nasazení prvních proudů/);
+});
+
+test('kap. 4.2: celá plocha při v1 > 2 m/min, u neuvedené v1, v malém prostoru a u kapalin', () => {
+  const d = zaklad(); d.prostor = '3.1';   // sklady hořlavých kapalin, v1 = 2,5
+  let r = vypocetSaP(d);
+  assert.ok(r.chybi.some((x) => /plocha objektu nebo prostoru.*v1 = 2,5 m\/min > 2/.test(x)));
+  d.plochaUseku = 5000; r = vypocetSaP(d);
+  assert.equal(r.vysledky.Sp, 5000); assert.ok(r.chybi.some((x) => /fronta hašení Oh/.test(x)));
+  d.zpusob = 'fronta'; d.Oh = 30; r = vypocetSaP(d);
+  blizko(r.vysledky.Qh, 30 * 51.9, 0.01); assert.equal(r.vysledky.Sh, 150);
+  const k = zaklad(); k.prostor = '3.14'; k.plochaUseku = 120; k.celaPlocha = 'kapaliny';   // benzin, v1 v tab. „–“
+  r = vypocetSaP(k); assert.equal(r.vysledky.Sp, 120); assert.equal(r.vysledky.Sh, 120); blizko(r.vysledky.Qh, 120 * 24, 0.01);
+  const m = zaklad(); m.plochaUseku = 40; m.celaPlocha = 'mistnost';
+  r = vypocetSaP(m); assert.equal(r.vysledky.Sp, 40); assert.equal(r.vysledky.Sh, 40); assert.match(shrnutiSaP(m), /\(celá plocha\)/);
+});
+
+test('družstvo obslouží nejvýš jednu proudnici B; 1+2 proudnici B neobslouží', () => {
+  const d = zaklad(); d.qprH = '400'; d.qprO = '400'; d.druzstvo = '1+8'; d.Qc = 2000;
+  const v = vypocetSaP(d).vysledky;
+  assert.ok(v.NA >= v.Npr, `${v.NA} automobilů pro ${v.Npr} proudnic B`);
+  d.druzstvo = '1+2'; assert.ok(vypocetSaP(d).chybi.some((x) => /1\+2 obsluhuje jen proudnici C/.test(x)));
+});
+
+test('100% záloha hasičů, když doba lokalizace není kratší než ochranná doba dýchacího přístroje', () => {
+  const d = zaklad(); d.dych = { pL: 20, VL: 4, prace: 'max' };   // To = 10·20·4/70 = 11,4 min < t3 = 19 min
+  const v = vypocetSaP(d).vysledky;
+  blizko(v.To, 800 / 70, 0.01); assert.ok(v.NHa100 > v.NHa);
+  assert.match(shrnutiSaP(d), new RegExp(`přibližně ${v.NHa100} hasičů včetně 100% zálohy`));
+  d.dych = { pL: 30, VL: 6, prace: 'stredni' };   // To = 51,4 min > t3
+  assert.equal(vypocetSaP(d).vysledky.NHa100, undefined);
+});
+
+test('celkový počet automobilů pokryje i techniku k dodávce hasiva; záporné vstupy se nepřijmou', () => {
+  const d = zaklad(); d.qprH = '800'; d.qprO = '800'; d.druzstvo = '1+8'; d.Qc = 800; d.QcVolba = 'vlastni';
+  const v = vypocetSaP(d).vysledky;
+  assert.equal(v.NAcelkem, Math.max(v.NA, v.NAN));
+  assert.match(shrnutiSaP(d), new RegExp(`${v.NAcelkem} požárních automobilů`));
+  const z = zaklad(); z.tZP = -20;
+  const r = vypocetSaP(z); assert.equal(r.vysledky.Npr, undefined); assert.ok(r.chybi.some((x) => /tZP \(nesmí být záporná\)/.test(x)));
+  const i = zaklad(); i.ipVlastni = 0; assert.ok(vypocetSaP(i).chybi.some((x) => /vlastní Ip musí být kladné/.test(x)));
+});
+
+test('hořlavá kapalina hašená pěnou: voda jen na ochlazování (řešený příklad LTO, str. 63–64)', () => {
+  const d = prazdnySap();
+  Object.assign(d, { tZP: 5, tOH: 2, nadrzD: 9, nadrzIo: 30, sousedniD: 9, sousedniIo: 12, sousedniM: 1, Qc: 2000, QcVolba: 'cas20' });
+  d.jednotky.push({ id: 'a', nazev: 'HZS', druh: 'profi', L: 3, tBR: 3 }, { id: 'b', nazev: 'JSDH', druh: 'dobro', L: 6, tBR: 5 });
+  d.pena = { N: 1, qpr: 800, pp: 6 };
+  const { vysledky: v, chybi } = vypocetSaP(d);
+  assert.deepEqual(chybi, []);
+  blizko(v.Qo, 848.2 + 169.6, 0.1);   // str. 64: chlazení hořící 848,2 + sousední 169,6 l/min
+  assert.equal(v.Nh, 0); assert.equal(v.No, Math.ceil((848.23 + 169.65) / 200));
+  assert.match(shrnutiSaP(d), /1 pěnotvorných proudnic/);
 });
 
 test('vydatnost vody z ověřeného hydrantu v kartě, když není zadána (neověřený se nepoužije)', async () => {
@@ -79,7 +149,7 @@ test('vydatnost vody z ověřeného hydrantu v kartě, když není zadána (neov
   assert.equal(k.vydatnost.lmin, 450); assert.match(k.vydatnost.popis, /„Polní“ 7,5 l\/s × 60 \(největší z 2 ověřených hydrantů\)/);
   nastavKontextSaP(d, k);
   const krok = vypocetSaP(d).kroky.find((x) => x.nazev === 'Porovnání se zdrojem vody');
-  assert.match(krok.vzorec, /vydatnost 450 l\/min \(vydatnost nezadána – z karty: ověřený průtok hydrantu „Polní“/);
+  assert.match(krok.vzorec, /vydatnost zdroje 450 l\/min \(vydatnost nezadána – z karty: ověřený průtok hydrantu „Polní“/);
   d.vydatnost = 1200;   // zadaná hodnota má přednost
   assert.doesNotMatch(vypocetSaP(d).kroky.find((x) => x.nazev === 'Porovnání se zdrojem vody').vzorec, /z karty/);
   assert.deepEqual(kontextSaP({ listy: [{ typ: 'karta', karta: { vodniZdroje: [hydrant(20, false, 'x')] } }] }), {});

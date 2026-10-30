@@ -149,5 +149,5 @@ function kontrolaSap(list, projekt, upoz) {
   if (provadi === false) return;
   const { chybi } = vypocetSaP(list.opSap);
   if (chybi.length) upoz('OP_SAP_VSTUPY', `listy[${list.id}].opSap`, `Výpočet SaP „${list.nazev}“ není úplný – chybí: ${chybi.join('; ')}.`);
-  upoz('OP_SAP_OVERIT', `listy[${list.id}].opSap`, 'Výpočet SaP je pomůcka podle metodiky (Hanuška 1996, část druhá); vstupy i výsledek ověřte. Pozn.: doba volného rozvoje počítá s bojovým rozvinutím první jednotky (ve vzorci zdroje je index „Po“, ve vysvětlivce a schématu „Pr“).');
+  upoz('OP_SAP_OVERIT', `listy[${list.id}].opSap`, 'Výpočet SaP je pomůcka podle metodiky (Hanuška 1996, část druhá); vstupy i výsledek ověřte. Doba volného rozvoje počítá s bojovým rozvinutím první jednotky (vysvětlivka a schéma str. 28–29, řešený příklad str. 60; index „Po“ ve vzorci je tisková chyba).');
 }
