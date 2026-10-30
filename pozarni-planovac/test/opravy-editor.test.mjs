@@ -207,3 +207,29 @@ test('DXF: text v zrcadleném bloku zůstane čitelný a na místě', () => {
   const t = r.primitiva.find((q) => q.t === 'text');
   close(t.uhel, 0); assert.ok(t.x < 50 && t.x > 46, `začátek textu vlevo od bodu vložení (${t.x})`); close(t.y, 0);
 });
+
+// ---------- SVG, souřadnice importu ----------
+test('SVG: styly z <style> (třídy), <use> se <symbol> a zhuštěné příznaky oblouku', async () => {
+  const { nactiSvg, parsujCestu } = await import('../js/kresleni/import/svg.js');
+  const r = nactiSvg('<svg viewBox="0 0 100 100"><style>.st0{fill:none;stroke:#ff0000;stroke-width:.5} rect.vypln { fill: #00ff00 }</style><rect class="st0" x="1" y="1" width="10" height="10"/><rect class="vypln" x="20" y="1" width="5" height="5"/><path class="st0" style="stroke:#0000ff" d="M0 50 L10 50"/></svg>');
+  assert.deepEqual(r.primitiva.map((p) => [p.t, p.barva, p.vypln ?? null]), [['cara', '#ff0000', null], ['plocha', '#00ff00', '#00ff00'], ['cara', '#0000ff', null]]);
+  const s = nactiSvg('<svg viewBox="0 0 100 100"><defs><symbol id="d" viewBox="0 0 10 10"><path d="M0 0 L10 0" stroke="#000"/></symbol></defs><use href="#d" x="20" y="30" width="20" height="20"/><use xlink:href="#d" x="50" y="0"/></svg>');
+  assert.equal(s.primitiva.length, 2); assert.deepEqual(s.primitiva[0].body, [[20, 30], [40, 30]]); assert.deepEqual(s.primitiva[1].body, [[50, 0], [60, 0]]);
+  assert.deepEqual(parsujCestu('M0 0a5 5 0 0110 0').at(0).body.at(-1), [10, 0]);
+  assert.deepEqual(parsujCestu('M 1 1 A 2 2 0 0 1 5 1').at(0).body.at(-1), [5, 1], 'oddělené příznaky (dveře v PDF)');
+  assert.deepEqual(parsujCestu('M10,10L20-5h5v5z')[0].body, [[10, 10], [20, -5], [25, -5], [25, 0]]);
+});
+
+test('import ve vzdálených (geodetických) souřadnicích se posune k počátku; další import téže soustavy navazuje', () => {
+  const v = M.novyList('situace').vykres, X = -740000, Y = 1050000;
+  const cara = (a, b) => ({ id: `e_${Math.random().toString(36).slice(2, 8)}`, druh: 'cara', vrstva: 'dxf_x', puvod: 'dxf', body: [a, b], tloustka: 0.25, barva: '#000000', styl: 'plna' });
+  vlozVektor(v, { prvky: [cara([X + 10.123, Y + 5], [X + 60, Y + 5])], vrstvy: [], meritko: { overeno: true } });
+  assert.deepEqual(v.posunSouradnic, [-740000, 1050000]); close(v.prvky[0].body[0][0], 10.123); close(v.prvky[0].body[0][1], 5);
+  vlozVektor(v, { prvky: [cara([X + 10.123, Y + 20], [X + 60, Y + 20])], vrstvy: [], meritko: { overeno: true } });
+  close(v.prvky[1].body[0][0], 10.123, 1e-9);
+  vlozVektor(v, { prvky: [cara([1, 1], [2, 2])], vrstvy: [], meritko: { overeno: true } });
+  assert.deepEqual(v.prvky[2].body, [[1, 1], [2, 2]], 'místní souřadnice se neposouvají');
+  const w = M.novyList('situace').vykres; w.prvky.push(cara([X, Y], [X + 1, Y]));
+  vlozVektor(w, { prvky: [cara([X + 5, Y], [X + 6, Y])], vrstvy: [], meritko: { overeno: true } });
+  assert.equal(w.posunSouradnic, undefined, 'starší výkres už ve vzdálených souřadnicích zůstane v nich'); close(w.prvky[1].body[0][0], X + 5);
+});
