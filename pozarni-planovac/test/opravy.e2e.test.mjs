@@ -139,3 +139,25 @@ test('import cizího projektu: hodnoty se nespustí jako skript; projekt bez dat
   assert.doesNotMatch(await p.locator('.dash').textContent(), /Invalid Date/);
   assert.deepEqual(p.chyby, []);
 });
+
+test('evakuační plán: poloha přehledového plánu a pokyny vedle plánu (uloží se, undo, skrytí polí)', skip, async () => {
+  const p = await stranka();
+  await p.evaluate(() => { location.hash = '#/evakuace'; }); await p.waitForSelector('#d-novy');
+  await p.fill('#d-novy [name=nazev]', 'Evak D'); await p.click('#d-novy button'); await p.waitForSelector('.editor');
+  await p.click('#listy a:has-text("Únikový plán")'); await p.waitForSelector('.ed-svg svg'); await p.click('[data-p=vlastnosti]');
+  const poloha = () => p.locator('#panel-obsah label.f:has-text("Poloha přehledového plánu") select');
+  assert.equal(await poloha().inputValue(), 'vpravo-dole');
+  await poloha().selectOption('vlevo-nahore');
+  const vedle = p.locator('#panel-obsah label.chk:has-text("vyvěšeny vedle plánu") input');
+  assert.equal(await p.locator('#panel-obsah textarea').count(), 2);
+  await vedle.check(); await p.waitForFunction(() => document.querySelectorAll('#panel-obsah textarea').length === 0);
+  await p.click('.ed-scena', { position: { x: 5, y: 5 } }); await p.keyboard.press('Control+z');
+  await p.waitForFunction(() => document.querySelectorAll('#panel-obsah textarea').length === 2);   // undo vrátí pokyny na plán
+  await p.keyboard.press('Control+y'); await p.waitForFunction(() => document.querySelectorAll('#panel-obsah textarea').length === 0);
+  await ulozeno(p); await p.reload(); await p.waitForSelector('.editor');
+  await p.click('#listy a:has-text("Únikový plán")'); await p.waitForSelector('.ed-svg svg'); await p.click('[data-p=vlastnosti]');
+  assert.equal(await poloha().inputValue(), 'vlevo-nahore'); assert.equal(await p.locator('#panel-obsah label.chk:has-text("vyvěšeny vedle plánu") input').isChecked(), true);
+  await p.selectOption('#panel-obsah label.f:has-text("Přehledový plán") select', 'ne');
+  await p.waitForFunction(() => ![...document.querySelectorAll('#panel-obsah label.f')].some((l) => l.textContent.includes('Poloha přehledového plánu')));
+  assert.deepEqual(p.chyby, []);
+});

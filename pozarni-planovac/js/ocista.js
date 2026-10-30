@@ -79,6 +79,8 @@ function vykres(v, typ, vychoziVrstvy) {
   const e = v.evakPlan;
   if (jeObj(e)) {
     for (const k of ['kategorie', 'objekt', 'podlazi', 'pokynyPozar', 'pokynyEvakuace', 'zhotovitel', 'datum', 'cisloPlanu', 'cisloRevize', 'prehled']) text(e, k);
+    if ('prehledPoloha' in e && !POLOHY_LEGENDY.includes(e.prehledPoloha)) e.prehledPoloha = 'vpravo-dole';
+    ano(e, 'pokynyVedle', false);
     if (e.jsteZde !== null && e.jsteZde !== undefined) {
       if (!jeObj(e.jsteZde)) e.jsteZde = null;
       else { cislo(e.jsteZde, 'x', 0); cislo(e.jsteZde, 'y', 0); cislo(e.jsteZde, 'dx', 22); cislo(e.jsteZde, 'dy', -16); text(e.jsteZde, 'text'); }

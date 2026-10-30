@@ -47,7 +47,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
     const { zKarty } = udajeRazitka(v, { karta, objektNazev: karta?.objekt.nazev || '' });
     const pz = v.pozadi, pr = pz && ed.projekt.prilohy[pz.prilohaId];
     html = `<h3>List</h3>
-      ${v.evakPlan ? evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) : ''}
+      ${v.evakPlan ? evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg, zaskrt }) : ''}
       ${vyberHtml(v.evakPlan ? 'Orientace' : 'Orientace A4', [['na_sirku', 'Na šířku'], ['na_vysku', 'Na výšku']], v.orientace, zmen((t) => { v.orientace = t; }))}
       ${vyberHtml('Měřítko tisku', [...new Set([...P.MERITKA, v.meritko.pomer])].sort((a, b) => a - b).map((m) => [String(m), `1 : ${m}`]), String(v.meritko.pomer), zmen((t) => { zmenMeritko(ed, Number(t)); }))}
       ${tlacitko('Navrhnout měřítko podle obsahu', () => { const n = P.navrhniMeritko(v); if (!n) return oznam('Výkres je prázdný – není z čeho měřítko navrhnout.'); v.meritko.pomer = n; P.vycentrujOkno(v); ed.commit(); })}
@@ -138,7 +138,7 @@ function zmenMeritko(ed, pomer) {
 
 
 // Nastavení listu „Evakuační plán – podlaží“ (údaje záhlaví, popisového pole, pokynů, „Jste zde“, přehledového plánu).
-function evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) {
+function evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg, zaskrt }) {
   const e = v.evakPlan, jz = e.jsteZde;
   const plocha = (label, hodnota, fn) => `<label class="f"><span>${label}</span><textarea rows="5" data-h="${reg(fn)}">${esc(hodnota)}</textarea></label>`;
   return `<h4>Evakuační plán</h4>
@@ -151,9 +151,12 @@ function evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) {
     ${pole('Číslo plánu', e.cisloPlanu, zmen((t) => { e.cisloPlanu = t; }))}
     ${pole('Číslo revize', e.cisloRevize, zmen((t) => { e.cisloRevize = t; }))}
     ${vyberHtml('Přehledový plán', [['auto', 'Automaticky (je-li zobrazena jen část)'], ['ano', 'Vždy'], ['ne', 'Nezobrazovat (malý objekt)']], e.prehled, zmen((t) => { e.prehled = t; }))}
-    <p class="napoveda">Texty bezpečnostních pokynů zadejte ručně – v příkladech normy se čísla linek liší, proto se nepředvyplňují.</p>
+    ${e.prehled !== 'ne' ? vyberHtml('Poloha přehledového plánu', [['vpravo-dole', 'Vpravo dole'], ['vlevo-dole', 'Vlevo dole'], ['vpravo-nahore', 'Vpravo nahoře'], ['vlevo-nahore', 'Vlevo nahoře']], e.prehledPoloha || 'vpravo-dole', zmen((t) => { e.prehledPoloha = t; })) : ''}
+    ${zaskrt('Bezpečnostní pokyny jsou vyvěšeny vedle plánu (ne na plánu)', !!e.pokynyVedle, zmen((c) => { e.pokynyVedle = c; }))}
+    <p class="napoveda">ČSN ISO 23601, čl. 7.4: pokyny jsou součástí plánu nebo v jeho blízkosti.</p>
+    ${e.pokynyVedle ? '' : `<p class="napoveda">Texty bezpečnostních pokynů zadejte ručně – v příkladech normy se čísla linek liší, proto se nepředvyplňují.</p>
     ${plocha('Bezpečnostní pokyny – POŽÁR (každý pokyn na nový řádek)', e.pokynyPozar, zmen((t) => { e.pokynyPozar = t; }))}
-    ${plocha('Bezpečnostní pokyny – EVAKUACE', e.pokynyEvakuace, zmen((t) => { e.pokynyEvakuace = t; }))}
+    ${plocha('Bezpečnostní pokyny – EVAKUACE', e.pokynyEvakuace, zmen((t) => { e.pokynyEvakuace = t; }))}`}
     <h4>Jste zde</h4>
     ${jz ? `${pole('Text štítku', jz.text, zmen((t) => { jz.text = t || 'Jste zde'; }))}
       ${pole('Posun štítku vodorovně (mm)', zCisla(jz.dx), zmen((t) => { const n = naCislo(t); if (!Number.isNaN(n) && n !== null) jz.dx = n; }), { cislo: true })}

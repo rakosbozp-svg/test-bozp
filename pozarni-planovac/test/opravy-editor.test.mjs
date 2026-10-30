@@ -233,3 +233,13 @@ test('import ve vzdálených (geodetických) souřadnicích se posune k počátk
   vlozVektor(w, { prvky: [cara([X + 5, Y], [X + 6, Y])], vrstvy: [], meritko: { overeno: true } });
   assert.equal(w.posunSouradnic, undefined, 'starší výkres už ve vzdálených souřadnicích zůstane v nich'); close(w.prvky[1].body[0][0], X + 5);
 });
+
+test('očista evakuačního plánu: poloha přehledového plánu a pokyny vedle plánu', () => {
+  const p = M.novyProjekt({ nazev: 'E', typ: 'evakuacni_plan' }), e = p.listy.find((l) => l.typ === 'evak_plan').vykres.evakPlan;
+  e.prehledPoloha = '"><b>'; e.pokynyVedle = 'ano';
+  const f = M.migruj(JSON.parse(JSON.stringify(p))).listy.find((l) => l.typ === 'evak_plan').vykres.evakPlan;
+  assert.equal(f.prehledPoloha, 'vpravo-dole'); assert.equal(f.pokynyVedle, false);
+  e.prehledPoloha = 'vlevo-nahore'; e.pokynyVedle = true;
+  const g = M.migruj(JSON.parse(JSON.stringify(p))).listy.find((l) => l.typ === 'evak_plan').vykres.evakPlan;
+  assert.equal(g.prehledPoloha, 'vlevo-nahore'); assert.equal(g.pokynyVedle, true);
+});
