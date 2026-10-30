@@ -195,7 +195,7 @@ export function vypocetSaP(d) {
   if (R !== null) {
     const shTxt = (vz) => (R <= h ? 'Sh = Sp (R ≤ h, kap. 4.3)' : vz);
     if (d.forma === 'kruh') { Sp = Math.PI * R ** 2; Sh = R <= h ? Sp : Math.PI * (R ** 2 - (R - h) ** 2); krok('Požár', 'Plocha požáru a hašení – kruhová forma', `Sp = π·R², ${shTxt('Sh = π·[R² − (R − h)²]')}, h = ${f(h)} m`, `Sp = ${f(Sp)} m², Sh = ${f(Sh)} m²`); }
-    if (d.forma === 'uhel') { const fk = UHLY[d.uhel] ?? 0.5; Sp = fk * Math.PI * R ** 2; Sh = R <= h ? Sp : fk * Math.PI * (R ** 2 - (R - h) ** 2); krok('Požár', `Plocha požáru a hašení – úhlová forma (β = ${d.uhel}°, f = ${fk})`, `Sp = f·π·R², ${shTxt('Sh = f·π·[R² − (R − h)²]')}, h = ${f(h)} m`, `Sp = ${f(Sp)} m², Sh = ${f(Sh)} m²`); }
+    if (d.forma === 'uhel') { const fk = UHLY[d.uhel] ?? 0.5; Sp = fk * Math.PI * R ** 2; Sh = R <= h ? Sp : fk * Math.PI * (R ** 2 - (R - h) ** 2); krok('Požár', `Plocha požáru a hašení – úhlová forma (β = ${d.uhel}°, f = ${f(fk, 3)})`, `Sp = f·π·R², ${shTxt('Sh = f·π·[R² − (R − h)²]')}, h = ${f(h)} m`, `Sp = ${f(Sp)} m², Sh = ${f(Sh)} m²`); }
     if (d.forma === 'pravouhla') {
       const a = kladne(d.a), n = kladne(d.n) ?? 1;
       if (a === null) chybi.push('šířka prostoru a (pravoúhlá forma)');
@@ -295,11 +295,13 @@ export function vypocetSaP(d) {
 }
 
 // Krátké shrnutí výsledku (do základního textu OP).
+// 1 proud, 2–4 proudy, 5 proudů (čeština); n je celé číslo
+const poc = (n, jeden, dva, pet) => `${f(n, 0)} ${n === 1 ? jeden : n >= 2 && n <= 4 ? dva : pet}`;
 export function shrnutiSaP(d) {
   const { vysledky: v, chybi } = vypocetSaP(d);
   if (v.Npr === undefined) return `Výpočet SaP není úplný – chybí: ${chybi.join('; ')}.`;
   const NAc = v.NAcelkem, hasici = v.NHa100 ?? v.NHa;
-  return [`Výpočet SaP (Hanuška 1996, část druhá): Qp = ${f(v.Qp, 0)} l/min, ${v.Npr} proudů (${v.Nh} hašení, ${v.No} ochlazování/ochrana)${v.Npena ? `, ${f(v.Npena, 0)} pěnotvorných proudnic` : ''}, ${NAc} požárních automobilů (${v.NA} pro družstva ${d.druzstvo}${v.NAN !== null ? `, ${v.NAN} k dodávce hasiva` : ''}), přibližně ${hasici} hasičů${v.NHa100 ? ' včetně 100% zálohy pro dýchací techniku' : ''}.`,
+  return [`Výpočet SaP (Hanuška 1996, část druhá): Qp = ${f(v.Qp, 0)} l/min, ${poc(v.Npr, 'proud', 'proudy', 'proudů')} (${v.Nh} hašení, ${v.No} ochlazování/ochrana)${v.Npena ? `, ${poc(v.Npena, 'pěnotvorná proudnice', 'pěnotvorné proudnice', 'pěnotvorných proudnic')}` : ''}, ${poc(NAc, 'požární automobil', 'požární automobily', 'požárních automobilů')} (${v.NA} pro družstva ${d.druzstvo}${v.NAN !== null ? `, ${v.NAN} k dodávce hasiva` : ''}), přibližně ${poc(hasici, 'hasič', 'hasiči', 'hasičů')}${v.NHa100 ? ' včetně 100% zálohy pro dýchací techniku' : ''}.`,
     v.Sp !== null && v.Sp !== undefined ? `Plocha požáru ${f(v.Sp)} m²${v.cela ? ' (celá plocha)' : ''}${v.Oh ? `, fronta hašení ${f(v.Oh)} m (plocha hašení ${f(v.Sh)} m²)` : v.Sh !== null && v.Sh !== undefined ? `, plocha hašení ${f(v.Sh)} m²` : ''}.` : v.Oh ? `Fronta hašení ${f(v.Oh)} m.` : '',
     v.rPrvni ? 'POZOR: rádius je počítán k nasazení prvních proudů, ne k lokalizaci – metodika počítá SaP pro lokalizaci požáru (kap. 3.3); výsledek je jen orientační.' : '',
     v.voda === false ? 'Vydatnost zdroje vody nestačí – nutná dálková doprava vody.' : v.voda === true ? 'Vydatnost zdroje vody vyhovuje.' : '',
@@ -311,7 +313,8 @@ export function shrnutiSaP(d) {
 export function sapJakoText(d) {
   const { kroky, chybi } = vypocetSaP(d), o = ['VÝPOČET SIL A PROSTŘEDKŮ (Hanuška 1996, část druhá)', ''];
   let odd = '';
-  for (const k of kroky) { if (k.oddil !== odd) { odd = k.oddil; o.push(odd.toUpperCase()); } o.push(`${k.nazev}: ${k.vzorec} = ${k.vysledek}`); }
+  // vzorec a výsledek na zvláštních řádcích – vzorec bývá i popis nebo více vzorců, „ = výsledek“ by tvořilo nepravdivé rovnice
+  for (const k of kroky) { if (k.oddil !== odd) { odd = k.oddil; o.push(odd.toUpperCase()); } o.push(`${k.nazev}: ${k.vzorec}`, `    výsledek: ${k.vysledek}`); }
   if (chybi.length) o.push('', `CHYBÍ VSTUPY: ${chybi.join('; ')}`);
   o.push('', 'SHRNUTÍ', shrnutiSaP(d));
   if (d.poznamka?.trim()) o.push('', 'POZNÁMKA', d.poznamka.trim());

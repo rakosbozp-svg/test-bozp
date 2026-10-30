@@ -262,3 +262,9 @@ test('revize: poznámky z PBŘ se nezahodí, když pole OP už má vlastní text
   assert.equal(navrh.find((x) => x.cesta === 'udaje.rozvody').stavajici, 'Rozvaděč RH v 1.NP (zjištěno na místě)');
   assert.ok(navrh.some((x) => x.cil === 'projekt' && /^Zdroj tepla/.test(x.hodnota.text)), 'kotel zůstane v poznámkách');
 });
+
+test('PBŘ: řádek „Popisek: hodnota“ se nepřilepí k předchozímu (Místo stavby → Investor → podlaží)', () => {
+  const r = rozborPbr([['Místo stavby: Průmyslová 1832/14, 272 01 Kladno', 'Investor: Barvy Holding a.s., IČ: 11122233', 'Počet nadzemních podlaží (NP): 1']], { jePbr: true });
+  assert.equal(r.nalezy.find((n) => n.klic === 'adresa').hodnota, 'Průmyslová 1832/14, 272 01 Kladno');
+});
+

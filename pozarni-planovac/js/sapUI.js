@@ -68,7 +68,10 @@ export function pripojSap(list, host, { onZmena, prekresli, zapisShrnuti }) {
     if (e.type === 'change' && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text'))) return;   // jinak by překreslení výsledků při opuštění pole „spolklo“ klik
     const v = hodnota(el); if (v === undefined) return;
     if (el.dataset.sap === 'QcVolba') { d.QcVolba = v; if (CAS_VYKON[v]?.[0]) d.Qc = CAS_VYKON[v][0]; onZmena(); prekresli(); return; }
-    if (el.dataset.sap === 'Qc') d.QcVolba = 'vlastni';
+    if (el.dataset.sap === 'Qc') {                                         // ruční výkon: volba techniky se přepne (i na obrazovce)
+      d.QcVolba = Object.entries(CAS_VYKON).find(([, [q]]) => q !== null && q === v)?.[0] || 'vlastni';
+      const volba = host.querySelector('[data-sap="QcVolba"]'); if (volba) volba.value = d.QcVolba;
+    }
     if (el.dataset.sap) { nastav(d, el.dataset.sap, v); onZmena(); if (el.tagName === 'SELECT' && ['forma', 'zpusob'].includes(el.dataset.sap)) prekresli(); else obnov(); }
     else if (el.dataset.jed) { const j = d.jednotky.find((x) => x.id === el.dataset.jed); if (j) { j[el.dataset.klic] = v; onZmena(); obnov(); } }
   };

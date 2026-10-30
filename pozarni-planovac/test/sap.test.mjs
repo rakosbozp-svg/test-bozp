@@ -123,7 +123,7 @@ test('celkový počet automobilů pokryje i techniku k dodávce hasiva; záporn�
   const d = zaklad(); d.qprH = '800'; d.qprO = '800'; d.druzstvo = '1+8'; d.Qc = 800; d.QcVolba = 'vlastni';
   const v = vypocetSaP(d).vysledky;
   assert.equal(v.NAcelkem, Math.max(v.NA, v.NAN));
-  assert.match(shrnutiSaP(d), new RegExp(`${v.NAcelkem} požárních automobilů`));
+  assert.match(shrnutiSaP(d), new RegExp(`${v.NAcelkem} požární(ch)? automobil(y|ů)?\\b`));
   const z = zaklad(); z.tZP = -20;
   const r = vypocetSaP(z); assert.equal(r.vysledky.Npr, undefined); assert.ok(r.chybi.some((x) => /tZP \(nesmí být záporná\)/.test(x)));
   const i = zaklad(); i.ipVlastni = 0; assert.ok(vypocetSaP(i).chybi.some((x) => /vlastní Ip musí být kladné/.test(x)));
@@ -138,7 +138,7 @@ test('hořlavá kapalina hašená pěnou: voda jen na ochlazování (řešený p
   assert.deepEqual(chybi, []);
   blizko(v.Qo, 848.2 + 169.6, 0.1);   // str. 64: chlazení hořící 848,2 + sousední 169,6 l/min
   assert.equal(v.Nh, 0); assert.equal(v.No, Math.ceil((848.23 + 169.65) / 200));
-  assert.match(shrnutiSaP(d), /1 pěnotvorných proudnic/);
+  assert.match(shrnutiSaP(d), /1 pěnotvorná proudnice, 4 požární automobily/);
 });
 
 test('vydatnost vody z ověřeného hydrantu v kartě, když není zadána (neověřený se nepoužije)', async () => {

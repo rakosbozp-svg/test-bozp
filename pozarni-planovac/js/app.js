@@ -266,7 +266,7 @@ function zdroje(typ) {
   return o;
 }
 const vyberZdroje = (zd) => `<label class="rk-field"><span class="rk-field__label">Zdroj</span><select class="rk-field__control" name="zdroj">${zd.map((x) => `<option value="${esc(x.klic)}">${esc(x.nazev)}</option>`).join('')}</select></label>`;
-const zkrat = (v) => { const t = typeof v === 'boolean' ? (v ? 'ano' : 'ne') : v && typeof v === 'object' ? String(v.popis ?? v.text ?? Object.values(v).filter((x) => typeof x === 'string' && x.trim()).join(' | ')) : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
+const zkrat = (v) => { const t = typeof v === 'boolean' ? (v ? 'ano' : 'ne') : typeof v === 'number' ? String(v).replace('.', ',') : v && typeof v === 'object' ? String(v.popis ?? v.text ?? Object.values(v).filter((x) => typeof x === 'string' && x.trim()).join(' | ')) : String(v ?? ''); return t.length > 160 ? `${t.slice(0, 160)}…` : t; };
 
 async function potvrdNavrh(navrh, titul, uvod = '') {
   if (!navrh.length) { await oznam('Ve zdroji nejsou žádné nové údaje k převzetí (prázdná pole se nepřebírají, shodné hodnoty se přeskočí).', { titul }); return null; }
@@ -467,9 +467,10 @@ function obsah(list) {
     host.innerHTML = `<label class="f"><span>Text listu „${esc(list.nazev)}“</span><textarea rows="24" id="t-text">${esc(list.text)}</textarea></label>`;
     $('#t-text').oninput = (e) => { list.text = e.target.value; uloz(); };
   } else {
+    const projekt = S.p;   // import podkladu může doběhnout až po přepnutí projektu – uloží se do projektu, kde začal
     S.ed = vytvorEditor({
-      host, projekt: S.p, list, katalog: katalogProjektu(S.p, katalog),
-      naZmenu: () => { uloz(); if (S.panel === 'uplnost') panel(); },
+      host, projekt, list, katalog: katalogProjektu(projekt, katalog),
+      naZmenu: () => { if (S.p !== projekt) { projekt.zmeneno = new Date().toISOString(); U.uloz(projekt); return; } uloz(); if (S.panel === 'uplnost') panel(); },
       naVyber: () => { if (S.panel === 'vlastnosti' || S.panel === 'vrstvy') panel(); },
     });
   }

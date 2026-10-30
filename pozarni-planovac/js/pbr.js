@@ -62,6 +62,7 @@ export function rozborPbr(stranky, volby = {}) {
   // Hranice: krátký řádek bez interpunkce na konci (nadpis „Vytápění“, „Požární výška:“), řádek s odrážkou nebo číslem stránky
   // a před řádkem začínajícím odrážkou / písmenem kapitoly „l) …“ / číslem „2. …“.
   const ODRAZKA = /^(?:[-–•]+\s|[a-n]\)\s|\d{1,2}[.)]\s+\p{Lu}|\d{1,3}$)/u;
+  const POLOZKA = /^\p{Lu}[\p{L}\d ()/.,–-]{1,45}:(?:\s|$)/u;
   // Záhlaví a zápatí: stejný řádek (čísla stran se ignorují) na začátku nebo konci více stran – vynechá se, jinak by se lepil do vět.
   // Kandidáti jsou jen první a poslední 2 neprázdné řádky strany (údaj opakovaný uprostřed textu, např. v souhrnu a kap. b), zůstane).
   const klicR = (r) => norm(r).replace(/\d+/g, '#');
@@ -85,7 +86,8 @@ export function rozborPbr(stranky, volby = {}) {
     if (casti.length && casti[casti.length - 1].endsWith('-') && /^\p{Ll}/u.test(n)) { casti[casti.length - 1] = casti[casti.length - 1].slice(0, -1); casti.push(n); delka += n.length - 1; }
     else {
       // odrážka zalomená na další řádek (dlouhý řádek bez interpunkce) pokračuje
-      const hranice = delka && (volby.odstavce || ODRAZKA.test(n) || (((ODRAZKA.test(pred) && (pred.length < 70 || /[.;:]$/.test(pred))) || (pred.length <= 40 && !/[.,;–-]$/.test(pred)) || /:$/.test(pred)) && /^[\p{Lu}•–-]/u.test(n)));
+      // řádek „Popisek: hodnota“ (Investor:, Počet podlaží (NP):) začíná nový údaj – jinak by se přilepil k předchozímu (Místo stavby: …)
+      const hranice = delka && (volby.odstavce || ODRAZKA.test(n) || POLOZKA.test(n) || (((ODRAZKA.test(pred) && (pred.length < 70 || /[.;:]$/.test(pred))) || (pred.length <= 40 && !/[.,;–-]$/.test(pred)) || /:$/.test(pred)) && /^[\p{Lu}•–-]/u.test(n)));
       const odd = delka ? (hranice ? HRANICE : ' ') : '';
       casti.push(odd + n); delka += odd.length + n.length;
     }
@@ -337,7 +339,9 @@ export function navrhZPbr(nalezy, cile, souborNazev = 'PBŘ') {
         const pol = c.hodnotaPolozky || n.hodnota, seznam = data[c.pridat] || [];
         if (c.pridat === 'nebezpeci' && seznam.some((x) => String(x.popis ?? '').trim())) continue;   // prázdné předtištěné řádky vzoru se nepočítají
         if (seznam.some((x) => String(x.popis || '').trim().toLowerCase() === String(pol.popis || '').trim().toLowerCase())) continue;
-        o.push({ cil: c.cil, pridat: c.pridat, popis: n.popis, hodnota: pol, stavajici: null, zdroj, neoznacit: !!n.neoznacit });
+        // karta už hydrant má: nový se nabídne neoznačený (PBŘ popisuje požadavek projektu, ne nutně jiný hydrant)
+        const uzMa = c.pridat === 'vodniZdroje' && pol.typ === 'hydrant' && seznam.some((x) => x.typ === 'hydrant');
+        o.push({ cil: c.cil, pridat: c.pridat, popis: uzMa ? `${n.popis} – POZOR: karta už vnější hydrant má, přidejte jen, jde-li o jiný` : n.popis, hodnota: pol, stavajici: null, zdroj, neoznacit: !!n.neoznacit || uzMa });
         continue;
       }
       const hodnota = c.hodnota !== undefined ? c.hodnota : c.text && typeof n.hodnota === 'object' ? n.hodnota.popis : n.hodnota, s = st(data, c.cesta);
