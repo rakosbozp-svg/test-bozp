@@ -376,6 +376,7 @@ function editor() {
       <details class="listy-sprava" ${window.innerWidth > 1100 ? 'open' : ''}><summary>Správa listů</summary><div class="listy-akce"><select id="l-typ" aria-label="Typ nového listu">${(M.LISTY_PRO_DOKUMENT[p.typ] || M.TYPY_LISTU).map((t) => `<option value="${t}">${M.TYPY_LISTU_NAZVY[t]}</option>`).join('')}</select><button class="btn mal" id="l-pridej">${ikona('plus', 14)}List</button>
       ${list && !list.virtualni ? `<button class="btn mal" id="l-prejm">Přejmenovat</button><button class="btn mal" id="l-kopie">Kopie</button><button class="btn mal" id="l-nahoru" title="Posunout nahoru" aria-label="Posunout nahoru">${ikona('nahoru', 14)}</button><button class="btn mal" id="l-dolu" title="Posunout dolů" aria-label="Posunout dolů">${ikona('dolu', 14)}</button><button class="btn mal nebezp" id="l-smaz">Smazat</button>` : ''}</div></details></nav>
     <section class="stred">
+      <button type="button" class="skok-uplnost" id="skok-uplnost" hidden></button>
       <div class="zalozky" id="zalozky-formular" role="tablist"></div>
       <div id="obsah"></div></section>
     <aside class="panel"><div class="zalozky" id="zalozky-panel" role="tablist">${dostupne.map((k) => `<button role="tab" data-p="${k}" class="${S.panel === k ? 'akt' : ''}">${PANELY[k]}</button>`).join('')}</div><div id="panel-obsah"></div></aside>
@@ -391,6 +392,8 @@ function editor() {
   }
   // přepnutí záložek nepřekresluje editor (zachová pohled, výběr a historii)
   app.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { S.panel = b.dataset.p; app.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('akt', x === b)); panel(); }; });
+  // na úzké obrazovce je panel pod formulářem – odkaz nahoře ukáže stav kontroly a skočí na ni
+  $('#skok-uplnost').onclick = () => { S.panel = 'uplnost'; app.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('akt', x.dataset.p === 'uplnost')); panel(); $('#panel-obsah').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   zalozky(list); obsah(list); panel();
 }
 
@@ -478,17 +481,19 @@ function obsah(list) {
 
 function panel(jenUplnost = false) {
   const host = $('#panel-obsah'); if (!host) return;
+  const nalezy = zkontrolujUplnost(S.p, katalog), skok = $('#skok-uplnost');
+  if (skok) { const sh = souhrnUplnosti(nalezy); skok.hidden = false; skok.textContent = `Kontrola úplnosti: ${sh.chyby} ${sh.chyby === 1 ? 'chyba' : sh.chyby >= 2 && sh.chyby <= 4 ? 'chyby' : 'chyb'}, ${sh.upozorneni} upozornění – zobrazit ↓`; skok.classList.toggle('ma-chyby', sh.chyby > 0); }
   host.onclick = host.onchange = host.oninput = null;
   if ((S.panel === 'vlastnosti' || S.panel === 'vrstvy') && S.ed) { vykresliPanelVykresu(S.panel, host, S.ed); return; }
   if (S.panel === 'uplnost') {
-    označ(panelUplnosti(S.p, katalog, host));
+    označ(panelUplnosti(S.p, katalog, host, nalezy));
     host.onclick = (e) => { const b = e.target.closest('[data-cesta]'); if (b) skoc(b.dataset.cesta); };
   } else {
     if (!jenUplnost) {
       if (S.panel === 'metodika') host.innerHTML = M.jeEvakuace(S.p) ? METODIKA_EVAK : METODIKA.replace('<details open>', `${S.p.typ === 'operativni_plan' ? METODIKA_OP : ''}<details open>`);
       if (S.panel === 'projekt') panelProjektu(S.p, host, (prekreslit) => { uloz(true); if (prekreslit) editor(); else $('.nazev-projektu').textContent = S.p.nazev; });
     }
-    označ(zkontrolujUplnost(S.p, katalog));
+    označ(nalezy);
   }
 }
 function označ(nalezy) {

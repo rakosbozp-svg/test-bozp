@@ -220,7 +220,10 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .chybi { color: #c62828; font-weight: 700; }
 .vykres-info { padding: var(--space-3); }
 
+.skok-uplnost { display: none; }
 @media (max-width: 1100px) {
+  .skok-uplnost:not([hidden]) { display: block; width: 100%; margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: var(--radius-md); background: var(--bg-100); color: var(--ink); font: 600 14px/1.3 var(--font-sans); text-align: left; cursor: pointer; }
+  .skok-uplnost.ma-chyby { border-left-color: var(--danger); }
   .editor, .editor-vykres { grid-template-columns: 1fr; }
   .panel { position: static; max-height: none; }
   .ed-scena { height: 62vh; }
@@ -240,7 +243,7 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 }
 @media print {
   body { background: #fff; }
-  .top, .hlaska, .listy, .panel, .zalozky { display: none !important; }
+  .top, .hlaska, .listy, .panel, .zalozky, .skok-uplnost { display: none !important; }
   main { padding: 0; max-width: none; }
   .editor { display: block; }
   .stred { border: 0; padding: 0; box-shadow: none; }
