@@ -78,6 +78,9 @@ function prvekSvg(p, ctx) {
 }
 // Poškozený prvek (např. z cizího souboru) nesmí shodit vykreslení celého listu.
 const prvekBezpecne = (p, ctx) => { try { return prvekSvg(p, ctx); } catch { return ''; } };
+const kontext = (v, o) => { const pomer = v.meritko.pomer, s = 1000 / pomer; return { s, k: (mm) => mm / s, pomer, prvky: v.prvky, evak: !!v.evakPlan, znacka: (id) => (o.znacky.has(id) ? o.symbolHref(id) : null) }; };
+// SVG jednoho prvku (stejné jako v celém listu) – editor jím při tažení překresluje jen tažené prvky.
+export const svgPrvku = (v, p, o) => prvekBezpecne(p, kontext(v, o));
 
 function pravitko(L, s, k) {
   const ram = L.ram; let d = DELKY_PRAVITKA.find((x) => x * s >= 15) ?? 5000;
@@ -224,7 +227,7 @@ function razitko(v, o, L) {
 export function renderListu(v, o) {
   const L = rozlozeniListu(v), pomer = v.meritko.pomer, s = 1000 / pomer, k = (mm) => mm / s;
   const ram = L.ram, ox = ram.x - v.okno.x * s, oy = ram.y - v.okno.y * s;
-  const ctx = { s, k, pomer, prvky: v.prvky, evak: !!v.evakPlan, znacka: (id) => (o.znacky.has(id) ? o.symbolHref(id) : null) };
+  const ctx = kontext(v, o);
   const oo = { ...o, nazevZnacky: (id) => o.znacky.get(id)?.nazev || id };
   const sirkaSvete = ram.w / s, vyskaSvete = ram.h / s;
 
