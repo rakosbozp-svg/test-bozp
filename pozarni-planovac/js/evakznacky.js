@@ -71,7 +71,7 @@ export function vyberEvakZnacku(projekt, naZmena) {
         <div class="zd-mriz" role="list">${EVAK_SLOTY.map((s) => {
           const st = stavSlotu(projekt, s), z = katalogEvak(projekt).find((x) => x.id === s.id);
           return `<div class="zd-bunka" role="listitem" data-slot="${s.id}">
-            <button type="button" class="zd-vyber" data-vyber="${s.id}" ${st === 'chybi' ? 'disabled' : ''} title="${esc(popis[st])}">${z ? `<img src="${z.png}" alt="">` : '<span class="zn zn-prazdna">chybí</span>'}<span>${esc(s.nazev)}</span></button>
+            <button type="button" class="zd-vyber" data-vyber="${s.id}" ${st === 'chybi' ? 'disabled' : ''} title="${esc(popis[st])}">${z ? `<img src="${esc(/^(data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/=]*|[\w./-]+)$/.test(z.png || '') ? z.png : '')}" alt="">` : '<span class="zn zn-prazdna">chybí</span>'}<span>${esc(s.nazev)}</span></button>
             <small>${esc(popis[st])}</small>
             <label class="btn mal">Nahrát…<input type="file" class="sr-only" accept="image/png,image/jpeg,image/svg+xml" data-nahrat="${s.id}"></label>
             ${st === 'nahrano' ? `<button type="button" class="btn mal" data-odebrat="${s.id}">Odebrat</button>` : ''}</div>`;
