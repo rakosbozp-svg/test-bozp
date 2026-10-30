@@ -1,5 +1,5 @@
 // Knihovna značek PRO EVAKUAČNÍ PLÁN – oddělená od katalogu značek DZP (ČAHD).
-// Norma ČSN ISO 23601 (čl. 5 k) vyžaduje v plánu stejné značky, jaké jsou v objektu, v souladu s ISO 7010.
+// Norma ČSN ISO 23601 (čl. 5) vyžaduje v plánu stejné značky, jaké jsou v objektu, v souladu s ISO 7010.
 // Oficiální značky dodá uživatel (nahrání souboru). Tam, kde existuje podobná značka DZP (ČAHD), nabízí se jako NÁHRADA
 // označená „ISO 7010 neověřeno“ – kontrola úplnosti na ni upozorní. Nic se nevymýšlí: chybějící značka zůstane prázdná.
 import { najdiZnacku } from './znacky.js';
@@ -23,6 +23,7 @@ export const EVAK_SLOTY = [
   { id: 'EVAK-014', nazev: 'Nouzový východ – směr vpravo', dzp: null },
   { id: 'EVAK-015', nazev: 'Směrová šipka (otáčí se na výkresu)', dzp: null },
   { id: 'EVAK-016', nazev: 'Směrová šipka šikmá', dzp: null },
+  { id: 'EVAK-017', nazev: 'Opatření pro osoby se zdravotním postižením (evakuační prostředek, bezbariérový východ)', dzp: null },   // ČSN ISO 23601, čl. 7.3
 ];
 export const jeEvakZnacka = (id) => typeof id === 'string' && id.startsWith('EVAK-');
 
