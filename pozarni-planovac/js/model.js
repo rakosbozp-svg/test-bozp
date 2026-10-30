@@ -16,7 +16,7 @@ export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'eva
 export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text', evak_plan: 'Evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy', op_sap: 'OP – výpočet SaP' };
 export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan', 'evakuacni_plan'];
 export const TYPY_DOKUMENTU_NAZVY = { operativni_karta: 'Operativní karta (DZP)', operativni_plan: 'Operativní plán (DZP)', evakuacni_plan: 'Požární evakuační plán' };
-// Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (půdorys a text jsou společné).
+// Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (společný je jen list Text).
 export const LISTY_PRO_DOKUMENT = {
   operativni_karta: ['karta', 'situace', 'pudorys', 'schema', 'text'],
   operativni_plan: ['op_zaklad', 'op_sap', 'op_text', 'situace', 'pudorys', 'schema', 'karta', 'text'],
@@ -107,6 +107,7 @@ export const novyList = (typ, nazev) => {
       prvky: [],                    // viz js/kresleni/prvky.js
       legenda: [],                  // id použitých značek (synchronizuje editor)
       legendaZobrazit: true,
+      legendaPoloha: 'vpravo-dole',  // roh rámu výkresu s legendou (DZP)
       razitko: { nazev: '', zpracoval: '', datum: '', schvalil: '' },
     };
     if (typ === 'evak_plan') { list.vykres.format = 'A3'; list.vykres.sit10m = false; list.vykres.evakPlan = prazdnyEvakPlan(); }   // A3 je minimum podle ČSN ISO 23601
@@ -137,7 +138,7 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
   if (typ === 'evakuacni_plan') {
-    p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 (požární evakuační plán); vzhled plánu ČSN ISO 23601 zatím neověřen';
+    p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 a § 40 (požární evakuační plán); grafické listy podle výtahu požadavků ČSN ISO 23601 (nezávazná)';
     p.listy.push(novyList('evak_text', 'Evakuační plán – text'), novyList('evak_plan', 'Únikový plán – 1. podlaží'));
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
@@ -223,6 +224,13 @@ export function migruj(data) {
   opravId(p);
   if (!TYPY_DOKUMENTU.includes(p.typ)) p.typ = 'operativni_karta';
   if (Array.isArray(p.listy)) p.listy = p.listy.filter((l) => l && TYPY_LISTU.includes(l.typ));
+  // Druh dokumentace smí mít jen své listy (DZP a evakuační plán se nemíchají – i u souboru upraveného mimo aplikaci).
+  // Cizí list se nezahodí: přesune se do p.vyrazeneListy (zůstane v souboru projektu) a kontrola úplnosti na to upozorní.
+  if (Array.isArray(p.listy) && p.listy.some((l) => !LISTY_PRO_DOKUMENT[p.typ].includes(l.typ))) {
+    p.vyrazeneListy = [...(Array.isArray(p.vyrazeneListy) ? p.vyrazeneListy : []), ...p.listy.filter((l) => !LISTY_PRO_DOKUMENT[p.typ].includes(l.typ))];
+    p.listy = p.listy.filter((l) => LISTY_PRO_DOKUMENT[p.typ].includes(l.typ));
+    p.listy.forEach((l, i) => { l.poradi = i; });
+  }
   if (typeof p.nazev !== 'string') p.nazev = String(p.nazev ?? 'Projekt');
   p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.dotaznik = { ...prazdnyDotaznik(), ...(p.dotaznik || {}) }; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];

@@ -69,6 +69,15 @@ test('§ 33/2/f v jednotlivých podlažích: rozsah plánu proti označení podl
   assert.ok(!upozorneni(p).includes('EVAK_F_PODLAZI'));
 });
 
+test('import: list DZP v evakuačním plánu se vyřadí (nezahodí) a nepočítá se jako grafika § 33/2/f', () => {
+  const p = M.novyProjekt({ typ: 'evakuacni_plan' }), d = M.novyProjekt();
+  p.listy.push(d.listy.find((l) => l.typ === 'situace'), { ...M.novyList('pudorys', 'Půdorys DZP') });
+  const q = M.nactiProjekt(M.serializuj(p));
+  assert.deepEqual(q.listy.map((l) => l.typ), ['evak_text', 'evak_plan']);
+  assert.deepEqual(q.vyrazeneListy.map((l) => l.typ), ['situace', 'pudorys']);
+  assert.ok(zkontrolujUplnost(q).some((n) => n.kod === 'VYRAZENE_LISTY'));
+});
+
 test('starší projekty bez druhu evakuace se načtou beze změny; evak data se doplní', () => {
   const p = M.nactiProjekt(M.serializuj(M.novyProjekt({ typ: 'evakuacni_plan' })));
   delete p.listy[0].evak.overeni; const q = M.migruj(p);

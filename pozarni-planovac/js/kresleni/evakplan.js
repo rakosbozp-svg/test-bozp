@@ -131,7 +131,8 @@ function pokynySvg(r, e, idKlip) {
 export function polozkyLegendy(v, pouziteZnacky, nazevZnacky) {
   const polozky = [];
   if (v.evakPlan?.jsteZde) polozky.push({ kruh: true, text: 'Jste zde' });
-  if (v.prvky.some((p) => p.druh === 'trasa')) polozky.push({ cesta: true, text: 'Úniková cesta' });
+  const vid = new Set(v.vrstvy.filter((l) => l.viditelna).map((l) => l.id)), zname = new Set(v.vrstvy.map((l) => l.id));   // jen vykreslované (viz viditelnePrvky v prvky.js)
+  if (v.prvky.some((p) => p.druh === 'trasa' && (vid.has(p.vrstva) || !zname.has(p.vrstva)))) polozky.push({ cesta: true, text: 'Úniková cesta' });
   for (const id of pouziteZnacky) polozky.push({ znacka: id, text: nazevZnacky(id) });
   return polozky;
 }

@@ -7,7 +7,8 @@ import { vypocetSaP } from './sap.js';
 import { kontrolaOp, kontrolaOpZaklad, kontrolaOpText } from './operativniplan.js';
 import { EVAK_SLOTY, jeEvakZnacka, stavSlotu } from './evakznacky.js';
 import { KATEGORIE, MIN_ZNACKA_MM, MIN_PISMO_MM, MIN_VELIKOST_PISMA, ID_VYCHOD, ID_SHROMAZDISTE, rozlozeniEvak, rozlozeniPokynu, rozlozeniLegendy, rozlozeniPopisu, polozkyLegendy, prehledJeZobrazen } from './kresleni/evakplan.js';
-import { bboxVsech, bboxPrvku, pouziteZnacky } from './kresleni/prvky.js';
+import { bboxVsech, bboxPrvku, pouziteZnacky, viditelnePrvky } from './kresleni/prvky.js';
+import { udajeRazitka, prekryvaLegenda } from './kresleni/render.js';
 import { KAPITALKY } from './sirkaPisma.js';
 import { najdiZnacku } from './znacky.js';
 import { SEKCE, POPISEK, PBZ, PBZ_UMISTENI, BEZ_NE, stavPbz } from './kartaPole.js';
@@ -29,6 +30,7 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
 
   if (!projekt.listy.length) chyba('PROJ_BEZ_LISTU', 'listy', 'Projekt nemá žádný list.');
   if (!projekt.revize.length) upoz('REVIZE_CHYBI', 'revize', 'Chybí záznam o revizi dokumentace.');
+  if (projekt.vyrazeneListy?.length) upoz('VYRAZENE_LISTY', 'listy', `Při načtení byly vyřazeny listy, které do tohoto druhu dokumentace nepatří (DZP a evakuační plán se nemíchají): ${projekt.vyrazeneListy.map((l) => `${l.nazev || l.typ} (${l.typ})`).join(', ')}. Zůstávají uložené v souboru projektu.`);
   const evak = projekt.typ === 'evakuacni_plan';
   if (projekt.typ === 'operativni_plan') kontrolaOp(projekt, chyba, upoz);
   if (!evak) kontrolaGrafikyDzp(projekt, upoz);
@@ -115,11 +117,14 @@ function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false, k
   if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
   if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: měřítko importovaného výkresu není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
   if (!evak && v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
-  if (!v.legenda.length) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: chybí legenda (vložte značky do výkresu).`);
+  if (!evak && !v.legendaZobrazit && v.prvky.some((x) => x.druh === 'znacka')) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: legenda je vypnutá – značka, která není v příloze č. 1 metodiky, se musí uvést a popsat v legendě na tomtéž výkresu (Hanuška 1996, kap. 2.3).`);
   if (!evak && !v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);
-  // popisové pole: prázdné údaje se tisknou z operativní karty (zpracoval, schválil)
-  if (!evak && prazdne(v.razitko.zpracoval) && prazdne(karta?.zpracoval.jmeno)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí zpracovatel.`);
-  if (!evak && prazdne(v.razitko.schvalil) && prazdne(karta?.schvalil.jmeno)) upoz('RAZITKO_SCHVALIL', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí, kdo schválil – popisové pole nese razítko a podpis statutárního zástupce právnické nebo podnikající fyzické osoby (Hanuška 1996, kap. 2.3.1).`);
+  // popisové pole: prázdné údaje se tisknou z operativní karty (zpracoval, schválil) – kontroluje se to, co se vytiskne
+  const raz = evak ? null : udajeRazitka(v, { karta });
+  if (raz && prazdne(raz.zpracoval)) upoz('RAZITKO', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí zpracovatel.`);
+  if (raz && prazdne(raz.schvalil)) upoz('RAZITKO_SCHVALIL', `${p}.vykres.razitko`, `List „${list.nazev}“: v popisovém poli chybí, kdo schválil – popisové pole nese razítko a podpis statutárního zástupce právnické nebo podnikající fyzické osoby (Hanuška 1996, kap. 2.3.1).`);
+  const podLegendou = evak ? [] : prekryvaLegenda(v);
+  if (podLegendou.length) upoz('LEGENDA_PREKRYV', `${p}.vykres.prvky[${podLegendou[0]}]`, `List „${list.nazev}“: legenda zakrývá ${podLegendou.length}× prvek výkresu – přesuňte legendu do jiného rohu (panel List) nebo posuňte výřez.`);
   if (!v.prvky.length) upoz('VYKRES_PRAZDNY', `${p}.vykres.prvky`, `List „${list.nazev}“: výkres je prázdný.`);
   for (const pr of v.prvky) {
     if (pr.znackaId && mameKatalog && !ids.has(pr.znackaId)) chyba('ZNACKA_NEEXISTUJE', `${p}.vykres.prvky[${pr.id}]`, `Prvek odkazuje na neexistující značku ${pr.znackaId} – označeno ke kontrole.`);
@@ -173,7 +178,7 @@ function kontrolaEvakPlanu(list, projekt, p, chyba, upoz) {
   else if (!naListu(e.jsteZde.x, e.jsteZde.y)) upoz('EVAK_JSTE_ZDE_MIMO', cesta, `${n}: bod „Jste zde“ leží mimo výřez listu nebo pod přehledovým plánem – na vytištěném plánu není vidět.`);
   if (!v.legendaZobrazit) upoz('EVAK_LEGENDA', cesta, `${n}: legenda je vypnutá – plán ji má obsahovat (${ISO}, čl. 7.5).`);
   else {
-    const nazev = (id) => EVAK_SLOTY.find((z) => z.id === id)?.nazev || id, Lg = rozlozeniLegendy(L.evak.legenda, polozkyLegendy(v, pouziteZnacky(v.prvky), nazev));
+    const nazev = (id) => EVAK_SLOTY.find((z) => z.id === id)?.nazev || id, Lg = rozlozeniLegendy(L.evak.legenda, polozkyLegendy(v, pouziteZnacky(viditelnePrvky(v)), nazev));
     if (Lg.skryto) upoz('EVAK_LEGENDA_PRETEKA', cesta, `${n}: do legendy se nevejde ${Lg.skryto} ${Lg.skryto === 1 ? 'položka' : Lg.skryto <= 4 ? 'položky' : 'položek'} – zvětšete formát listu nebo omezte počet druhů značek (${ISO}, čl. 7.5).`);
   }
   const vychody = znacky.filter((x) => ID_VYCHOD.includes(x.znackaId));

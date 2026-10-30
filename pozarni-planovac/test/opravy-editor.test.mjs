@@ -21,7 +21,7 @@ test('snímek obsahuje celý list: změna orientace, razítka, severky, sítě, 
   v.legenda = ['Z1']; assert.equal(H.push(P.snimek(v)), false, 'odvozená legenda není změna');
   for (let i = 0; i < 7; i++) P.obnovZeSnimku(v, H.undo());
   assert.equal(v.orientace, 'na_sirku'); assert.equal(v.razitko.zpracoval, ''); assert.equal(v.severka.uhel, null); assert.equal(v.sit10m, true);
-  assert.equal(v.legendaZobrazit, true); assert.equal('legendaPoloha' in v, false); assert.equal(v.meritkoZdroj, null);
+  assert.equal(v.legendaZobrazit, true); assert.equal(v.legendaPoloha, 'vpravo-dole'); assert.equal(v.meritkoZdroj, null);
   assert.equal(P.snimek(v), H.s[0], 'stejný stav → stejný text snímku');
 });
 
