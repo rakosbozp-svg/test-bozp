@@ -75,6 +75,7 @@ function vykres(v, typ, vychoziVrstvy) {
     else { ano(v.meritkoZdroj, 'overeno', false); text(v.meritkoZdroj, 'zdroj'); text(v.meritkoZdroj, 'popis'); }
   }
   if (Array.isArray(v.legenda)) v.legenda = v.legenda.filter((x) => typeof x === 'string');
+  if ('posunSouradnic' in v && !(Array.isArray(v.posunSouradnic) && v.posunSouradnic.length === 2 && v.posunSouradnic.every(Number.isFinite))) delete v.posunSouradnic;
   const e = v.evakPlan;
   if (jeObj(e)) {
     for (const k of ['kategorie', 'objekt', 'podlazi', 'pokynyPozar', 'pokynyEvakuace', 'zhotovitel', 'datum', 'cisloPlanu', 'cisloRevize', 'prehled']) text(e, k);

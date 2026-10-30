@@ -15,9 +15,31 @@ const MAX_BEZ_VAROVANI = 12000;
 
 export const koncovka = (n) => (/\.([a-z0-9]+)$/i.exec(n || '') || [])[1]?.toLowerCase() || '';
 
+// Geodetické souřadnice (S-JTSK: statisíce až miliony metrů) ukládá prohlížeč v SVG s přesností float32 (krok 6–12 cm),
+// výkres by v editoru „zubatěl“. Takový import se posune k počátku; posun se zapamatuje (v.posunSouradnic, metry)
+// a použije pro další importy ve stejné soustavě, aby na sebe navazovaly. Místní souřadnice (SVG, PDF, kresba) se neposouvají.
+const DALEKO = 1e5;
+function rozsah(prvky) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const b = (x, y) => { if (Number.isFinite(x) && Number.isFinite(y)) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } };
+  for (const p of prvky) { if (Array.isArray(p.body)) for (const q of p.body) b(q[0], q[1]); b(p.cx, p.cy); b(p.x, p.y); }
+  return Number.isFinite(x0) ? { x0, y0, x1, y1 } : null;
+}
+const daleko = (r) => !!r && Math.max(Math.abs(r.x0), Math.abs(r.x1), Math.abs(r.y0), Math.abs(r.y1)) > DALEKO;
+function posunKPocatku(v, prvky) {
+  const r = rozsah(prvky); if (!daleko(r)) return;
+  let pos = Array.isArray(v.posunSouradnic) ? v.posunSouradnic : null;
+  if (!pos) {
+    if (daleko(rozsah(v.prvky))) return;                       // výkres už má vzdálené souřadnice (starší import) – zůstat v nich
+    pos = [Math.floor(r.x0 / 100) * 100, Math.floor(r.y0 / 100) * 100]; v.posunSouradnic = pos;
+  }
+  for (const p of prvky) P.posunPrvek(p, -pos[0], -pos[1]);
+}
+
 // Vloží vektorový výsledek do výkresu (čistá funkce nad modelem – testovatelná bez prohlížeče).
 export function vlozVektor(v, { prvky, vrstvy, meritko }) {
   const prazdny = !v.prvky.length && !v.pozadi;
+  posunKPocatku(v, prvky);
   if (prazdny) { const n = P.navrhniMeritko({ ...v, prvky }); if (n) v.meritko.pomer = n; }
   const pomer = v.meritko.pomer;
   for (const p of prvky) if (p.druh === 'text') { p.vyska = normalizujVelikost(Math.max(1, ((p.vyskaM ?? 0.003) * 1000) / pomer)); delete p.vyskaM; }
