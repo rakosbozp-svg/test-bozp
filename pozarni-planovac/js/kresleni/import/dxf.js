@@ -102,6 +102,16 @@ const bod = (M, x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]
 const meritkoM = (M) => Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2]));
 const jeUniformni = (M) => Math.abs(Math.hypot(M[0], M[1]) - Math.hypot(M[2], M[3])) < 1e-9 * Math.max(1, Math.hypot(M[0], M[1])) && Math.abs(M[0] * M[2] + M[1] * M[3]) < 1e-9 * Math.max(1, Math.hypot(M[0], M[1]) ** 2);
 const rotM = (deg) => { const r = (deg * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); return [c, s, -s, c, 0, 0]; };
+// Objektový souřadný systém (OCS) entity podle směru vysunutí 210/220/230 („arbitrary axis algorithm“ z referenční příručky DXF).
+// Zrcadlené entity (příkaz MIRROR) mají vysunutí (0, 0, −1): osa x OCS míří proti ose x světa. Vrací 2D matici (průmět do XY).
+function ocs(e) {
+  const nx = cislo(e, 210, 0), ny = cislo(e, 220, 0), nz = cislo(e, 230, 1), d = Math.hypot(nx, ny, nz);
+  if (!(d > 0) || (Math.abs(nx) < 1e-12 && Math.abs(ny) < 1e-12 && nz > 0)) return I;
+  const N = [nx / d, ny / d, nz / d], kriz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], norm = (a) => { const l = Math.hypot(...a) || 1; return a.map((x) => x / l); };
+  const Ax = norm(Math.abs(N[0]) < 1 / 64 && Math.abs(N[1]) < 1 / 64 ? kriz([0, 1, 0], N) : kriz([0, 0, 1], N)), Ay = norm(kriz(N, Ax));
+  return [Ax[0], Ax[1], Ay[0], Ay[1], 0, 0];
+}
+const OCS_ENTITY = new Set(['LWPOLYLINE', 'POLYLINE', 'CIRCLE', 'ARC', 'TEXT', 'ATTRIB', 'SOLID', 'TRACE', 'INSERT']);   // souřadnice v OCS (LINE, SPLINE, ELLIPSE, MTEXT jsou ve WCS)
 
 function obloukBody(cx, cy, r, a0, a1, krok = 4) {
   let d = a1 - a0; while (d <= 0) d += 360;
@@ -142,6 +152,7 @@ export function prevedEntity(vysl, opts = {}) {
     let vrstva = prvniH(e, 8) ?? '0';
     if (vrstva === '0' && rodic?.vrstva) vrstva = rodic.vrstva;
     const zaklad = { vrstva, barva: barvaE(e, vrstva, rodic) };
+    if (OCS_ENTITY.has(e.typ) && !(e.typ === 'POLYLINE' && (cislo(e, 70) & 8))) { const O = ocs(e); if (O !== I) M = nasob(M, O); }
     const T = (x, y) => bod(M, x, y);
     switch (e.typ) {
       case 'LINE': pridej({ t: 'cara', body: [T(cislo(e, 10), cislo(e, 20)), T(cislo(e, 11), cislo(e, 21))], zav: false, ...zaklad }); break;
@@ -164,11 +175,11 @@ export function prevedEntity(vysl, opts = {}) {
       case 'ARC': pridej({ t: 'cara', body: obloukBody(cislo(e, 10), cislo(e, 20), cislo(e, 40), cislo(e, 50), cislo(e, 51, 360)).map(([x, y]) => T(x, y)), zav: false, ...zaklad }); break;
       case 'ELLIPSE': {
         const cx = cislo(e, 10), cy = cislo(e, 20), mx = cislo(e, 11), my = cislo(e, 21), ratio = cislo(e, 40, 1), t0 = cislo(e, 41, 0), t1 = cislo(e, 42, 2 * Math.PI);
-        const a = Math.hypot(mx, my), b = a * ratio, rot = Math.atan2(my, mx), n = 48, body = [];
+        const a = Math.hypot(mx, my), b = a * ratio * (cislo(e, 230, 1) < 0 ? -1 : 1), rot = Math.atan2(my, mx), n = 48, body = [];
         let d = t1 - t0; while (d <= 0) d += 2 * Math.PI;
         for (let i = 0; i <= n; i++) { const tt = t0 + (d * i) / n, x = a * Math.cos(tt), y = b * Math.sin(tt); body.push(T(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot))); }
         const cela = Math.abs(d - 2 * Math.PI) < 1e-6;
-        if (cela && jeUniformni(M)) { const c = T(cx, cy), k = Math.hypot(M[0], M[1]); pridej({ t: 'elipsa', cx: c[0], cy: c[1], rx: a * k, ry: b * k, uhel: ((rot * 180) / Math.PI) + (Math.atan2(M[1], M[0]) * 180) / Math.PI, ...zaklad }); }
+        if (cela && jeUniformni(M)) { const c = T(cx, cy), k = Math.hypot(M[0], M[1]); pridej({ t: 'elipsa', cx: c[0], cy: c[1], rx: a * k, ry: Math.abs(b) * k, uhel: ((rot * 180) / Math.PI) + (Math.atan2(M[1], M[0]) * 180) / Math.PI, ...zaklad }); }
         else pridej({ t: 'cara', body, zav: cela, ...zaklad });
         break;
       }
@@ -189,15 +200,21 @@ export function prevedEntity(vysl, opts = {}) {
       case 'TEXT': case 'ATTRIB': case 'ATTDEF': {
         if (e.typ === 'ATTDEF') break;
         const t = dekodujText(retez(e, 1)); if (!t) break;
-        const h1 = prvniH(e, 72), h2 = prvniH(e, 73);
-        const al = (h1 && Number(h1) !== 0) || (h2 && Number(h2) !== 0) ? [cislo(e, 11), cislo(e, 21)] : [cislo(e, 10), cislo(e, 20)];
-        pridej(textPrim(t, al[0], al[1], cislo(e, 40, 1), cislo(e, 50), M, zaklad, { halign: Number(h1 || 0), valign: Number(h2 || 0) }));
+        const h1 = Number(prvniH(e, 72) || 0), h2 = Number(prvniH(e, 73) || 0);
+        if ((h1 === 3 || h1 === 5) && prvniH(e, 11) !== undefined) {   // zarovnaný / přizpůsobený text: od bodu 10 ve směru k bodu 11
+          const x0 = cislo(e, 10), y0 = cislo(e, 20);
+          pridej(textPrim(t, x0, y0, cislo(e, 40, 1), (Math.atan2(cislo(e, 21) - y0, cislo(e, 11) - x0) * 180) / Math.PI, M, zaklad, { halign: 0, valign: 0 }));
+          break;
+        }
+        const al = h1 !== 0 || h2 !== 0 ? [cislo(e, 11), cislo(e, 21)] : [cislo(e, 10), cislo(e, 20)];
+        pridej(textPrim(t, al[0], al[1], cislo(e, 40, 1), cislo(e, 50), M, zaklad, { halign: h1, valign: h2 }));
         break;
       }
       case 'MTEXT': {
         const raw = e.p.filter((x) => x[0] === 3).map((x) => x[1]).join('') + retez(e, 1);
         const t = dekodujMtext(raw); if (!t) break;
         let uhel = cislo(e, 50); if (prvniH(e, 11) !== undefined) uhel = (Math.atan2(cislo(e, 21), cislo(e, 11)) * 180) / Math.PI;
+        else { const O = ocs(e); if (O !== I) { const r = (uhel * Math.PI) / 180, u = bod(O, Math.cos(r), Math.sin(r)); uhel = (Math.atan2(u[1], u[0]) * 180) / Math.PI; } }
         const ap = cislo(e, 71, 1);
         pridej(textPrim(t, cislo(e, 10), cislo(e, 20), cislo(e, 40, 1), uhel, M, zaklad, { mtext: true, ap, sirka: cislo(e, 41, 0) }));
         break;
@@ -216,7 +233,7 @@ export function prevedEntity(vysl, opts = {}) {
         }
         if (!blokD) { nep[`INSERT neexistujícího bloku`] = (nep[`INSERT neexistujícího bloku`] || 0) + 1; break; }
         for (let r = 0; r < radku; r++) for (let s = 0; s < sloupcu; s++) {
-          const Mi = nasob(M, nasob([1, 0, 0, 1, ix + s * ds, iy + r * dr], nasob(rotM(rot), nasob([sx, 0, 0, sy, 0, 0], [1, 0, 0, 1, -blokD.base[0], -blokD.base[1]]))));
+          const Mi = nasob(M, nasob([1, 0, 0, 1, ix, iy], nasob(rotM(rot), nasob([1, 0, 0, 1, s * ds, r * dr], nasob([sx, 0, 0, sy, 0, 0], [1, 0, 0, 1, -blokD.base[0], -blokD.base[1]])))));   // pole MINSERT v natočených osách bloku
           for (const ch of blokD.entity) entita(ch, Mi, zaklad, hloubka + 1);
         }
         break;
@@ -259,6 +276,12 @@ export function prevedEntity(vysl, opts = {}) {
     else { dx = o.halign === 1 || o.halign === 4 ? -sirka / 2 : o.halign === 2 ? -sirka : 0; dy = o.valign === 3 ? -h : o.valign === 2 ? -h / 2 : 0; if (o.halign === 4) dy = -h / 2; }
     const r = (uhel * Math.PI) / 180, px = x + dx * Math.cos(r) - dy * Math.sin(r), py = y + dx * Math.sin(r) + dy * Math.cos(r);
     const P = bod(M, px, py);
+    if (M[0] * M[3] - M[1] * M[2] < 0) {   // zrcadlené (MIRROR, záporné měřítko bloku): čitelný text na stejném místě
+      const c = Math.cos(r), s = Math.sin(r), u = [M[0] * c + M[2] * s, M[1] * c + M[3] * s], w = [-M[0] * s + M[2] * c, -M[1] * s + M[3] * c], lw = Math.hypot(...w) || 1;
+      if (u[0] >= 0) return { t: 'text', x: P[0] + (w[0] / lw) * vyska, y: P[1] + (w[1] / lw) * vyska, vyskaJ: vyska, uhel: (Math.atan2(u[1], u[0]) * 180) / Math.PI, text: t, ...zaklad };
+      const E = bod(M, px + sirka * c, py + sirka * s);
+      return { t: 'text', x: E[0], y: E[1], vyskaJ: vyska, uhel: (Math.atan2(-u[1], -u[0]) * 180) / Math.PI, text: t, ...zaklad };
+    }
     return { t: 'text', x: P[0], y: P[1], vyskaJ: vyska, uhel: uhel + rotM2, text: t, ...zaklad };
   }
   function bboxBloku(jmeno, cache) {

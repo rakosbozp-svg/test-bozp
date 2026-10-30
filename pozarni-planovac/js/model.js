@@ -7,6 +7,7 @@ import { prazdnyEvakPlan } from './kresleni/evakplan.js';
 import { prazdnyOpZaklad, prazdnyOpText } from './operativniplan.js';
 import { prazdnySap } from './sap.js';
 import { prazdnyDotaznik } from './dotaznik.js';
+import { ocistiProjekt } from './ocista.js';
 
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
@@ -169,7 +170,10 @@ export const kopirujList = (p, id) => {
   kopie.id = uid('list');
   kopie.nazev = `${orig.nazev} (kopie)`;
   const prefix = (it) => { if (it && it.id) it.id = uid('p'); };
-  if (kopie.vykres) kopie.vykres.prvky.forEach(prefix);
+  if (kopie.vykres) {   // nová id prvků; dveře musí dál odkazovat na svou stěnu (v kopii)
+    const nova = new Map(kopie.vykres.prvky.map((x) => { const stare = x.id; prefix(x); return [stare, x.id]; }));
+    for (const x of kopie.vykres.prvky) if (x.stenaId) x.stenaId = nova.get(x.stenaId) ?? null;
+  }
   for (const d of [kopie.opZaklad, kopie.opText, kopie.opSap]) if (d) for (const v of Object.values(d)) if (Array.isArray(v)) v.forEach(prefix);
   if (kopie.evak) { kopie.evak.osoby.forEach(prefix); kopie.evak.shromazdiste.forEach(prefix); }
   if (kopie.karta) { kopie.karta.nebezpeci.forEach(prefix); kopie.karta.vodniZdroje.forEach(prefix); }
@@ -230,6 +234,7 @@ export function migruj(data) {
     if (l.typ === 'op_sap') l.opSap = sloz(prazdnySap(), l.opSap || {});
     if (['situace', 'pudorys', 'schema', 'evak_plan'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
+  ocistiProjekt(p, { vychoziVrstvy: (typ) => novyList(typ).vykres.vrstvy });   // typy hodnot z cizího souboru (barvy, čísla, obrázky), chybějící id a datum
   return p;
 }
 

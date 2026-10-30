@@ -12,8 +12,10 @@ export async function nactiObrazek(soubor) {
     const k = Math.min(1, 3000 / Math.max(w, h));
     if (k < 1 || soubor.size > 4 * 1024 * 1024) {
       const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      data = c.toDataURL(soubor.type === 'image/png' && soubor.size < 4 * 1024 * 1024 ? 'image/png' : 'image/jpeg', 0.88); w = c.width; h = c.height;
+      const png = soubor.type === 'image/png' && soubor.size < 4 * 1024 * 1024, g = c.getContext('2d');
+      if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }   // JPEG nemá průhlednost – průhledné části PNG mají být bílé, ne černé
+      g.drawImage(img, 0, 0, c.width, c.height);
+      data = c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.88); w = c.width; h = c.height;
     } else data = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(soubor); });
     return { nazev: soubor.name, mime: soubor.type, data, w, h };
   } finally { URL.revokeObjectURL(url); }
