@@ -1,6 +1,6 @@
 // Panely editoru výkresu: Vlastnosti (prvek / list / podklad) a Vrstvy.
 import * as P from './prvky.js';
-import { esc } from './render.js';
+import { esc, udajeRazitka, datumCz, POLOHY_LEGENDY } from './render.js';
 import { naCislo, zCisla } from '../formular.js';
 import { zeptejSe, potvrd, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
@@ -16,14 +16,14 @@ export function vykresliPanelVykresu(druh, host, ed) {
   const vyber = ed.vyber();
 
   // --- stavební kameny ---
-  const pole = (label, hodnota, fn, { cislo = false, tip = '' } = {}) => `<label class="f"><span>${label}</span><input type="text" ${cislo ? 'inputmode="decimal"' : ''} data-h="${reg(fn)}" data-cislo="${cislo ? 1 : 0}" value="${esc(hodnota)}" ${tip ? `title="${esc(tip)}"` : ''}></label>`;
+  const pole = (label, hodnota, fn, { cislo = false, tip = '', napoveda = '' } = {}) => `<label class="f"><span>${label}</span><input type="text" ${cislo ? 'inputmode="decimal"' : ''} data-h="${reg(fn)}" data-cislo="${cislo ? 1 : 0}" value="${esc(hodnota)}" ${tip ? `title="${esc(tip)}"` : ''} ${napoveda ? `placeholder="${esc(napoveda)}"` : ''}></label>`;
   const vyberHtml = (label, hodnoty, akt, fn) => `<label class="f"><span>${label}</span><select data-h="${reg(fn)}">${hodnoty.map(([k, n]) => `<option value="${esc(k)}" ${k === akt ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
   const zaskrt = (label, hodnota, fn) => `<label class="chk"><input type="checkbox" data-h="${reg(fn)}" ${hodnota ? 'checked' : ''}> ${label}</label>`;
   const tlacitko = (label, fn, cls = '') => `<button type="button" class="btn mal ${cls}" data-h="${reg(fn)}" data-klik="1">${label}</button>`;
   const barvy = (label, aktualni, fn, povolNic = false) => `<div class="f"><span>${label}</span><div class="barvy-vyber">${Object.values(BARVY_E()).map(([c, n]) => `<button type="button" class="barva ${aktualni === c ? 'akt' : ''}" style="background:${c}" title="${esc(n)}" data-h="${reg(() => fn(c))}" data-klik="1"></button>`).join('')}${povolNic ? `<button type="button" class="barva zadna ${!aktualni ? 'akt' : ''}" title="Bez výplně" data-h="${reg(() => fn(null))}" data-klik="1">∅</button>` : ''}<input type="color" value="${/^#[0-9a-f]{6}$/i.test(aktualni || '') ? aktualni : '#000000'}" data-h="${reg(fn)}" aria-label="${label} – vlastní"></div></div>`;
   const velikost = (label, hodnota, fn, nahled) => {
     const i = reg(fn);
-    return `<div class="f vel" data-vel="${i}"><span>${label} (mm na papíře, ${VELIKOST_MIN}–${VELIKOST_MAX})</span><div class="vel-r"><button type="button" class="btn mal" data-vel-krok="-1" aria-label="Zmenšit o 0,1">−</button><input type="text" inputmode="decimal" data-vel-text value="${zCisla(hodnota)}" aria-label="${label}"><button type="button" class="btn mal" data-vel-krok="1" aria-label="Zvětšit o 0,1">+</button></div><input type="range" min="${VELIKOST_MIN}" max="${VELIKOST_MAX}" step="${VELIKOST_KROK}" value="${hodnota}" data-vel-range aria-label="${label} – posuvník"></div>`;
+    return `<div class="f vel" data-vel="${i}"><span>${label} (mm na papíře, ${VELIKOST_MIN}–${VELIKOST_MAX})</span><div class="vel-r"><button type="button" class="btn mal" data-vel-krok="-1" aria-label="Zmenšit o 0,1">−</button><input type="text" inputmode="decimal" data-vel-text value="${esc(zCisla(hodnota))}" aria-label="${label}"><button type="button" class="btn mal" data-vel-krok="1" aria-label="Zvětšit o 0,1">+</button></div><input type="range" min="${VELIKOST_MIN}" max="${VELIKOST_MAX}" step="${VELIKOST_KROK}" value="${esc(hodnota)}" data-vel-range aria-label="${label} – posuvník"></div>`;
   };
 
   let html = '';
@@ -43,7 +43,8 @@ export function vykresliPanelVykresu(druh, host, ed) {
           const cil = ed.v.vrstvy.find((x) => x.id !== l.id).id; ed.v.prvky.forEach((p) => { if (p.vrstva === l.id) p.vrstva = cil; }); ed.v.vrstvy.splice(i, 1); if (ed.S.aktVrstva === l.id) ed.nastavAktVrstvu(null); ed.commit();
         })}" data-klik="1">${ikona('zavrit', 16)}</button></li>`).reverse().join('') + `</ul>${tlacitko('+ Nová vrstva', async () => { const n = await zeptejSe('Název nové vrstvy'); if (n?.trim()) { ed.v.vrstvy.push({ id: `v_${Math.random().toString(36).slice(2, 8)}`, nazev: n.trim(), viditelna: true, zamcena: false }); ed.commit(); } })}`;
   } else if (vyber.length === 0) {
-    const v = ed.v, nast = ed.projekt.nastaveni;
+    const v = ed.v, nast = ed.projekt.nastaveni, karta = ed.projekt.listy.find((l) => l.karta)?.karta || null;
+    const { zKarty } = udajeRazitka(v, { karta, objektNazev: karta?.objekt.nazev || '' });
     const pz = v.pozadi, pr = pz && ed.projekt.prilohy[pz.prilohaId];
     html = `<h3>List</h3>
       ${v.evakPlan ? evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg }) : ''}
@@ -54,18 +55,20 @@ export function vykresliPanelVykresu(druh, host, ed) {
       ${v.evakPlan ? '' : zaskrt('Síť 10 × 10 m', v.sit10m, zmen((c) => { v.sit10m = c; }))}
       ${v.evakPlan ? '' : pole('Severka – úhel (° po směru hodin, 0 = nahoru)', v.severka.uhel === null ? '' : zCisla(v.severka.uhel), zmen((t) => { const n = naCislo(t); v.severka.uhel = t.trim() === '' ? null : Number.isNaN(n) ? v.severka.uhel : n; }), { cislo: true, tip: 'Prázdné = severka neurčena' })}
       ${zaskrt('Zobrazit legendu značek', v.legendaZobrazit, zmen((c) => { v.legendaZobrazit = c; }))}
+      ${v.evakPlan ? '' : vyberHtml('Poloha legendy ve výkresu', Object.entries(POLOHY_LEGENDY), POLOHY_LEGENDY[v.legendaPoloha] ? v.legendaPoloha : 'vpravo-dole', zmen((t) => { v.legendaPoloha = t; }))}
       ${v.meritkoZdroj ? `<p class="${v.meritkoZdroj.overeno ? '' : 'varuj'}">${ikona(v.meritkoZdroj.overeno ? 'ok' : 'pozor', 14)} Měřítko importu: ${esc(v.meritkoZdroj.popis)} – ${v.meritkoZdroj.overeno ? 'ověřeno' : 'NEOVĚŘENO'}.</p>${v.meritkoZdroj.overeno ? '' : tlacitko('Kalibrovat podle známé délky', () => ed.nastavNastroj('kalibrace'))}` : ''}
       ${v.evakPlan ? '' : `<h4>Razítko</h4>
-      ${['nazev:Název objektu', 'zpracoval:Zpracoval', 'schvalil:Schválil'].map((x) => { const [k, n] = x.split(':'); return pole(n, v.razitko[k], zmen((t) => { v.razitko[k] = t; })); }).join('')}
-      <label class="f"><span>Datum</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>`}
+      ${['nazev:Název objektu', 'zpracoval:Zpracoval (jméno, č. osvědčení)', 'schvalil:Schválil (jméno, funkce)'].map((x) => { const [k, n] = x.split(':'); return pole(n, v.razitko[k], zmen((t) => { v.razitko[k] = t; }), { napoveda: zKarty[k] ? `z karty: ${zKarty[k]}` : '' }); }).join('')}
+      <label class="f"><span>Datum${zKarty.datum ? ` (prázdné = z karty: ${esc(datumCz(zKarty.datum))})` : ''}</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>
+      ${zKarty.zpracoval || zKarty.schvalil || zKarty.datum ? '<p class="napoveda">Prázdná pole razítka se vyplní z operativní karty projektu (Zpracoval, Schválil, datum zpracování).</p>' : ''}`}
       <h4>Výchozí velikosti nových prvků</h4>
       ${velikost('Značka', nast.velikostZnacky, (n) => { nast.velikostZnacky = normalizujVelikost(n); ed.uloz(); })}
       ${velikost('Text', nast.velikostTextu, (n) => { nast.velikostTextu = normalizujVelikost(n); ed.uloz(); })}
       <h4>Podklad</h4>
-      ${pz && pr ? `<p><b>${esc(pz.nazev)}</b> (${pz.sirkaPx} × ${pz.vyskaPx} px)</p>
+      ${pz && pr ? `<p><b>${esc(pz.nazev)}</b> (${esc(pz.sirkaPx)} × ${esc(pz.vyskaPx)} px)</p>
         <p class="${pz.kalibrace ? '' : 'varuj'}">${pz.kalibrace ? `${ikona('ok', 14)} Zkalibrováno: ${f1(pz.kalibrace.delkaM)} m` : `${ikona('pozor', 14)} Měřítko podkladu NENÍ ověřeno – délky tras jsou jen orientační. Zkalibrujte podle známé délky.`}</p>
         ${tlacitko('Kalibrovat podle známé délky', () => ed.nastavNastroj('kalibrace'))}
-        <label class="f"><span>Krytí podkladu (0–1)</span><input type="range" min="0.1" max="1" step="0.05" value="${pz.kryti}" data-h="${reg((t) => { pz.kryti = Number(t); ed.commit(); })}" data-range="1"></label>
+        <label class="f"><span>Krytí podkladu (0–1)</span><input type="range" min="0.1" max="1" step="0.05" value="${esc(pz.kryti)}" data-h="${reg((t) => { pz.kryti = Number(t); ed.commit(); })}" data-range="1"></label>
         ${tlacitko('Odebrat podklad', async () => { if (await potvrd('Odebrat podklad z listu?', { ano: 'Odebrat', nebezpecne: true })) { v.pozadi = null; ed.commit(); } }, 'nebezp')}`
         : `<p class="napoveda">Žádný podklad. Tlačítkem Podklad… v liště vložíte obrázek (PNG/JPG), pak ho zkalibrujete podle známé délky.</p>`}`;
   } else if (vyber.length > 1) {
@@ -98,7 +101,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
     const maBarvu = 'barva' in p && p.druh !== 'plocha' && p.druh !== 'obdelnik' && p.druh !== 'elipsa' ? barvy('Barva', p.barva, c((x) => { p.barva = x; })) : '';
     const kontrola = p.kKontrole ? `<p class="varuj">${ikona('pozor', 14)} Převod z importu je nejistý – zkontrolujte polohu a vlastnosti.</p>${tlacitko('Označit jako zkontrolované', () => { delete p.kKontrole; ed.commit(); })}` : '';
     const prevod = p.druh === 'cara' ? tlacitko('Převést na stěnu', () => { ed.prevedDruh(p, 'stena'); ed.commit(); }) : p.druh === 'stena' ? tlacitko('Převést na čáru', () => { ed.prevedDruh(p, 'cara'); ed.commit(); }) : '';
-    html = `<h3>${NAZVY[p.druh]}</h3>${kontrola}${typ}${prevod}${maBarvu}${p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa' ? barvy('Barva obrysu', p.barva, c((x) => { p.barva = x; })) : ''}${vrstvaVyber(ed, vyber, vyberHtml, zmen)}
+    html = `<h3>${p.druh === 'plocha' && v.evakPlan ? 'Plocha' : NAZVY[p.druh]}</h3>${kontrola}${typ}${prevod}${maBarvu}${p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa' ? barvy('Barva obrysu', p.barva, c((x) => { p.barva = x; })) : ''}${vrstvaVyber(ed, vyber, vyberHtml, zmen)}
       ${tlacitko('Duplikovat', () => ed.prvkyKopie())}${tlacitko('Nahoru', () => zmenPoradi(ed, p, 1))}${tlacitko('Dolů', () => zmenPoradi(ed, p, -1))}${tlacitko('Smazat', () => ed.smazVyber(), 'nebezp')}`;
   }
   host.innerHTML = html;
@@ -124,10 +127,8 @@ function vrstvaVyber(ed, vyber, vyberHtml, zmen) {
   return vyberHtml('Vrstva', [...(spolecna ? [] : [['', '— různé —']]), ...ed.v.vrstvy.map((l) => [l.id, l.nazev])], spolecna, zmen((id) => { if (id) vyber.forEach((p) => { p.vrstva = id; }); }));
 }
 
-function zmenPoradi(ed, p, smer) {
-  const a = ed.v.prvky, i = a.indexOf(p), j = i + (smer > 0 ? 1 : -1);
-  if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; ed.commit();
-}
+// Pořadí kreslení se mění jen mezi prvky stejné vrstvy (mezi vrstvami rozhoduje pořadí vrstev).
+function zmenPoradi(ed, p, smer) { if (P.posunVPoradi(ed.v.prvky, p, smer)) ed.commit(); }
 
 // Změna měřítka tisku zachová střed zobrazeného výřezu.
 function zmenMeritko(ed, pomer) {
