@@ -61,7 +61,7 @@ export const prazdnaKarta = () => ({
 
 // Starší verze karty měla vedlejší uzávěry (vzor A4 je nemá) a výtahy mezi PBZ. Vyplněné údaje se neztratí:
 // výtahy se přesunou do charakteru objektu, ostatní do mimoVzor (formulář je ukáže, kontrola na ně upozorní).
-function migrujKartu(k) {
+function migrujKartu(k, puvodni = null) {
   const nic = (v) => v === null || v === undefined || String(v).trim() === '';
   const jeNe = (v) => String(v).trim().toUpperCase() === 'NE';
   const odloz = (nazev, v) => { if (!nic(v) && !jeNe(v) && !k.mimoVzor.some((x) => x.nazev === nazev && x.hodnota === String(v))) k.mimoVzor.push({ nazev, hodnota: String(v) }); };
@@ -75,6 +75,17 @@ function migrujKartu(k) {
     if (nic(v)) continue;
     if (k.charakter[klic] === null) k.charakter[klic] = !jeNe(v);
     if (!jeNe(v) && String(v).trim().toUpperCase() !== 'ANO') { if (nic(k.charakter.vytahy)) k.charakter.vytahy = String(v).trim(); else if (String(v).trim() !== String(k.charakter.vytahy).trim()) odloz(`${nazev} (dříve mezi PBZ)`, v); }
+  }
+  // Karta z doby před okénky TOTAL/CENTRAL STOP (uložená bez nich): starší import PBŘ zapsal STOP do hlavního vypínače
+  // („TOTAL STOP – místo“) a PBZ s poznámkou („NE (dle PBŘ se nenavrhuje)“). Jednou se převedou; nic se nemaže.
+  if (puvodni?.media && typeof puvodni.media === 'object' && !('totalStop' in puvodni.media)) {
+    const stop = /^(TOTAL|CENTRAL) STOP\s*[–-]\s*(.+)$/i.exec(String(k.media.hlavniVypinacEl ?? '').trim());
+    if (stop) { const kam = stop[1].toUpperCase() === 'TOTAL' ? 'totalStop' : 'centralStop'; if (nic(k.media[kam])) k.media[kam] = stop[2].trim(); }
+    for (const [kl, v] of Object.entries(k.pbz)) {
+      const t = String(v ?? '').trim();
+      if (/^NE \(dle (PBŘ|dokumentace) se nenavrhuje\)$/i.test(t)) k.pbz[kl] = 'NE';
+      else if (/^ano – dle (PBŘ|dokumentace) navrženo \(umístění doplňte\)$/i.test(t)) k.pbz[kl] = 'ANO';
+    }
   }
   return k;
 }
@@ -235,7 +246,7 @@ export function migruj(data) {
   p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.dotaznik = { ...prazdnyDotaznik(), ...(p.dotaznik || {}) }; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
-    if (l.typ === 'karta') l.karta = migrujKartu(sloz(prazdnaKarta(), l.karta || {}));
+    if (l.typ === 'karta') l.karta = migrujKartu(sloz(prazdnaKarta(), l.karta || {}), l.karta);
     if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
     if (l.typ === 'op_zaklad') l.opZaklad = sloz(prazdnyOpZaklad(), l.opZaklad || {});
     if (l.typ === 'op_text') l.opText = sloz(prazdnyOpText(), l.opText || {});

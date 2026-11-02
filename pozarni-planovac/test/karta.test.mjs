@@ -146,3 +146,21 @@ test('PBŘ: TOTAL STOP jde do vlastního okénka karty, PBZ jako „NE“ / „A
   pouzijNavrh([{ cil: 'karta', cesta: 'objekt.obsazeniOsobami', hodnota: 'denní směna 24 osob\nnoční směna 6 osob' }], new Set([0]), { karta: k });
   assert.equal(k.objekt.obsazeniOsobami, 'denní směna 24 osob; noční směna 6 osob');
 });
+
+test('starší karta z importu PBŘ: „NE (dle PBŘ se nenavrhuje)“ je „není“, TOTAL STOP z hlavního vypínače do vlastního okénka', async () => {
+  const { stavPbz, upresneniPbz } = await import('../js/kartaPole.js');
+  for (const [v, stav] of [['NE (dle PBŘ se nenavrhuje)', false], ['není', false], ['Nejsou', false], ['ne', false], ['nevím', null], ['?', null], ['', null], ['ANO', true], ['vrátnice', true], ['Nejbližší rozvaděč', true]]) assert.equal(stavPbz(v), stav, v);
+  assert.equal(upresneniPbz('ano – ústředna ve vrátnici'), 'ústředna ve vrátnici'); assert.equal(upresneniPbz('ANO'), ''); assert.equal(upresneniPbz('NE'), '');
+  const p = M.novyProjekt(), k = p.listy[0].karta;
+  delete k.media.totalStop; delete k.media.centralStop;
+  Object.assign(k.media, { hlavniVypinacEl: 'TOTAL STOP – v místnosti technologie č. místnosti 1.01 v 1.NP (dle PBŘ)' });
+  Object.assign(k.pbz, { eps: 'NE (dle PBŘ se nenavrhuje)', shz: 'NE (dle dokumentace se nenavrhuje)', zokt: 'ano – dle PBŘ navrženo (umístění doplňte)' });
+  const q = M.migruj(JSON.parse(JSON.stringify(p))), m = q.listy[0].karta;
+  assert.equal(m.media.totalStop, 'v místnosti technologie č. místnosti 1.01 v 1.NP (dle PBŘ)');
+  assert.equal(m.media.hlavniVypinacEl, 'TOTAL STOP – v místnosti technologie č. místnosti 1.01 v 1.NP (dle PBŘ)', 'hlavní vypínač zůstává');
+  assert.deepEqual([m.pbz.eps, m.pbz.shz, m.pbz.zokt], ['NE', 'NE', 'ANO']);
+  assert.deepEqual(sestavKartu(m, q).pbz.map((x) => x.zkratka), ['ZOKT']);
+  m.media.totalStop = ''; const r = M.migruj(JSON.parse(JSON.stringify(q))).listy[0].karta;
+  assert.equal(r.media.totalStop, '', 'nová karta se už nepřevádí – smazané okénko se znovu nedoplní');
+});
+

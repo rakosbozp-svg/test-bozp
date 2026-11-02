@@ -48,9 +48,11 @@ export const PBZ = [
 // KTPO a OPPO mají ve vzoru vlastní okénka s umístěním.
 export const PBZ_UMISTENI = [['ktpo', 'KTPO', 'klíčový trezor požární ochrany'], ['oppo', 'OPPO', 'obslužné pole požární ochrany']];
 
-// Hodnota PBZ: '' = neuvedeno, 'NE' = v objektu není, jinak je (text = upřesnění, nebo „ANO“ bez upřesnění).
-export const stavPbz = (v) => { const t = String(v ?? '').trim(); return t === '' ? null : t.toUpperCase() === 'NE' ? false : true; };
-export const upresneniPbz = (v) => { const t = String(v ?? '').trim(); return t && !['ANO', 'NE'].includes(t.toUpperCase()) ? t : ''; };
+// Hodnota PBZ: '' = neuvedeno, „NE“ / „není“ = v objektu není (i starší „NE (dle PBŘ se nenavrhuje)“), „nevím“ / „?“ = neuvedeno,
+// jinak je (text = upřesnění, „ANO“ nebo „ano – …“ bez upřesnění).
+const NENI = /^(ne|není|nejsou|nenavrhuje se|nenavrženo)(?![\p{L}\d])/iu, NEVIM = /^(nevím|nezn[aá]mo|\?)/iu, ANO = /^(ano|je|jsou)(?![\p{L}\d])[\s,;:–-]*/iu;
+export const stavPbz = (v) => { const t = String(v ?? '').trim(); return t === '' || NEVIM.test(t) ? null : NENI.test(t) ? false : true; };
+export const upresneniPbz = (v) => { const t = String(v ?? '').trim(); return stavPbz(t) === true ? t.replace(ANO, '').trim() : ''; };
 
 export const POPISEK = Object.fromEntries([
   ...SEKCE.flatMap((s) => s.pole.map(([c, p]) => [c, p])),
