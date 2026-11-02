@@ -50,7 +50,7 @@ export const prazdnaKarta = () => ({
     hlavniUzaverPlynu: '', hlavniUzaverVody: '', hlavniUzaverTopeni: '', hlavniVypinacEl: '', totalStop: '', centralStop: '',
   },
   // KTPO, OPPO: umístění nebo "NE"; ostatní PBZ: '' neuvedeno, "NE" v objektu není, jinak je (upřesnění nebo "ANO")
-  pbz: { ktpo: '', oppo: '', eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '' },
+  pbz: { ktpo: '', oppo: '', eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '', adsp: '' },
   vodniZdroje: [],               // {id, typ: hydrant|nadrz|jiny, popis, prutokLs, objemM3, gps, znackaId, overenPrutok}
   doporuceni: '',                // pouze podstatné; musí obsahovat, co se stane při vypnutí energií
   znalostObjektu: { jmeno: '', mobil: '', funkce: '' },

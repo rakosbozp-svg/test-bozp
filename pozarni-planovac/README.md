@@ -40,7 +40,8 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
   je vidět pixelace. Skutečné vektory jsou možné až z dodaných PNG E001–E019/F001–F006 nebo z CAD zdroje ČAHD.
   Názvy jsou text z PDF; `overeno: false` u všech, dokud je nepotvrdíš.
 - **Datový model** (`js/model.js`): projekt → listy (karta, situace, půdorys, schéma, text), pole karty dle vzoru HZS SČK A4
-  (`js/kartaPole.js`; pravidlo „NE“, předtištěné řádky hořlavin a výbušnin, TOTAL/CENTRAL STOP, KTPO, OPPO, PBZ je/není),
+  (`js/kartaPole.js`; pravidlo „NE“, předtištěné řádky hořlavin a výbušnin, TOTAL/CENTRAL STOP, KTPO, OPPO, PBZ je/není;
+  na konci seznamu PBZ navíc ADSP – autonomní detekce a signalizace požáru, PBZ podle vyhl. 246/2001 Sb., § 2 odst. 2 písm. a), vzor ji nemá),
   výkres s měřítkem/severkou/vrstvami/legendou, revize, migrace starších souborů (vedlejší uzávěry starší karty se zachovají jako
   „údaje mimo vzor“ a netisknou se), očista importovaných souborů (`js/ocista.js`), velikost prvků 1–500 (krok 0,1).
 - **Kontrola úplnosti** (`js/uplnost.js`): hlášení nesou popisky polí; „NE“ nejde u názvu, adresy a zpracovatele; hasivo u nebezpečí,

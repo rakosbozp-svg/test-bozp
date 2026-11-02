@@ -39,11 +39,14 @@ export const SEKCE = [
 ];
 
 // Požárně bezpečnostní zařízení v pořadí vzoru („* nehodící se smaž“); názvy podle návodu HZS SČK.
+// ADSP vzor nemá – je doplněna na konec (autonomní požární signalizace je PBZ podle vyhl. 246/2001 Sb., § 2 odst. 2 písm. a);
+// zařízení autonomní detekce a signalizace definuje vyhl. 23/2008 Sb., příloha č. 5).
 export const PBZ = [
   ['eps', 'EPS', 'elektrická požární signalizace'], ['zdhpp', 'ZDHPP', 'zařízení pro detekci hořlavých plynů a par'],
   ['apz', 'APZ', 'automatické protivýbuchové zařízení'], ['zdp', 'ZDP', 'zařízení dálkového přenosu'],
   ['shz', 'SHZ', 'stabilní hasicí zařízení'], ['pshz', 'PSHZ', 'polostabilní hasicí zařízení'],
   ['zokt', 'ZOKT', 'zařízení pro odvod kouře a tepla'], ['pk', 'PK', 'požární klapky'],
+  ['adsp', 'ADSP', 'autonomní detekce a signalizace požáru (autonomní hlásiče)'],
 ];
 // KTPO a OPPO mají ve vzoru vlastní okénka s umístěním.
 export const PBZ_UMISTENI = [['ktpo', 'KTPO', 'klíčový trezor požární ochrany'], ['oppo', 'OPPO', 'obslužné pole požární ochrany']];
