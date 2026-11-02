@@ -1,12 +1,13 @@
 // Datový model Požárního plánovače (DZP). Čistý ES modul bez závislostí – běží v prohlížeči i v Node.
-// Pole karty kopírují vzor operativní karty HZS Středočeského kraje (podklady/VZOR_OPERATIVNI_KARTA.docx).
-// Pravidlo vzoru: pole se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
+// Pole karty kopírují vzor operativní karty HZS Středočeského kraje (podklady/VZOR_operativni_karta_list_A4.docx).
+// Pravidlo návodu: předpřipravená okénka se nemažou; co nelze doplnit, má hodnotu "NE". Prázdné pole = zatím nevyplněno.
 
 import { prazdnaEvak } from './evakuace.js';
 import { prazdnyEvakPlan } from './kresleni/evakplan.js';
 import { prazdnyOpZaklad, prazdnyOpText } from './operativniplan.js';
 import { prazdnySap } from './sap.js';
 import { prazdnyDotaznik } from './dotaznik.js';
+import { ocistiProjekt } from './ocista.js';
 
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
@@ -15,7 +16,7 @@ export const TYPY_LISTU = ['karta', 'situace', 'pudorys', 'schema', 'text', 'eva
 export const TYPY_LISTU_NAZVY = { karta: 'Operativní karta', situace: 'Situace', pudorys: 'Půdorys', schema: 'Schéma', text: 'Text', evak_text: 'Evakuační plán – text', evak_plan: 'Evakuační plán – podlaží', op_zaklad: 'OP – základní text', op_text: 'OP – textová část přílohy', op_sap: 'OP – výpočet SaP' };
 export const TYPY_DOKUMENTU = ['operativni_karta', 'operativni_plan', 'evakuacni_plan'];
 export const TYPY_DOKUMENTU_NAZVY = { operativni_karta: 'Operativní karta (DZP)', operativni_plan: 'Operativní plán (DZP)', evakuacni_plan: 'Požární evakuační plán' };
-// Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (půdorys a text jsou společné).
+// Evakuační plán se NEMÍCHÁ s DZP: každý druh dokumentace smí mít jen své typy listů (společný je jen list Text).
 export const LISTY_PRO_DOKUMENT = {
   operativni_karta: ['karta', 'situace', 'pudorys', 'schema', 'text'],
   operativni_plan: ['op_zaklad', 'op_sap', 'op_text', 'situace', 'pudorys', 'schema', 'karta', 'text'],
@@ -29,7 +30,7 @@ const now = () => new Date().toISOString();
 
 export const prazdnaKarta = () => ({
   stupenPoplachu: '',
-  uzemniOdbor: '',               // místně příslušný ÚO HZS
+  uzemniOdbor: '',               // „Stanice HZS“ ve vzoru (místně příslušná stanice)
   objekt: {
     nazev: '', provozovatel: '', ic: '', adresa: '',
     gps: { sirka: null, delka: null },
@@ -40,20 +41,43 @@ export const prazdnaKarta = () => ({
     ucelStavby: '', podlazi: '', pudorysM: '', konstrukce: '', unikoveCesty: '', celkovaVyskaM: '',
     steny: '', priccky: '', vytahy: '', zastavenaPlochaM2: '', stropy: '', strecha: '',
     typUnikoveCesty: '', pozarniUseky: '',
+    vytahEvakuacni: null, vytahPozarni: null,   // ano/ne – značka E/P v okénku VÝTAHY (vzor: „[E] 1 X“)
   },
-  nebezpeci: [],                 // {id, popis, hasivo, znackaId}; bez nebezpečí = jediná položka s popisem "NE"
+  // {id, popis, hasivo, znackaId}; vzor má dva předtištěné řádky (hořlaviny, výbušniny) – bez nebezpečí se do nich vepíše "NE"
+  nebezpeci: [{ id: uid('p'), popis: '', hasivo: '', znackaId: 'DZP-003' }, { id: uid('p'), popis: '', hasivo: '', znackaId: 'DZP-053' }],
   fve: { pritomna: null, popis: '', vykonKWp: null, pocetPanelu: null, baterie: null, vypinacSilovaCast: '', hasivo: '' },
-  media: {                       // uzávěry a vypínače – text nebo "NE"
-    hlavniUzaverVody: '', vedlejsiUzaverVody: '', hlavniUzaverPlynu: '', vedlejsiUzaverPlynu: '',
-    hlavniUzaverTopeni: '', vedlejsiUzaverTopeni: '', hlavniVypinacEl: '', vedlejsiVypinacEl: '',
+  media: {                       // uzávěry médií v pořadí vzoru – umístění nebo "NE"
+    hlavniUzaverPlynu: '', hlavniUzaverVody: '', hlavniUzaverTopeni: '', hlavniVypinacEl: '', totalStop: '', centralStop: '',
   },
-  pbz: { eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '', vytahEvakuacni: '', vytahPozarni: '' },
+  // KTPO, OPPO: umístění nebo "NE"; ostatní PBZ: '' neuvedeno, "NE" v objektu není, jinak je (upřesnění nebo "ANO")
+  pbz: { ktpo: '', oppo: '', eps: '', zdhpp: '', apz: '', zdp: '', shz: '', pshz: '', zokt: '', pk: '' },
   vodniZdroje: [],               // {id, typ: hydrant|nadrz|jiny, popis, prutokLs, objemM3, gps, znackaId, overenPrutok}
   doporuceni: '',                // pouze podstatné; musí obsahovat, co se stane při vypnutí energií
-  znalostObjektu: { jmeno: '', mobil: '' },
+  znalostObjektu: { jmeno: '', mobil: '', funkce: '' },
   zpracoval: { jmeno: '', cisloOsvedceni: '', datum: '' },
   schvalil: { jmeno: '', funkce: '', datum: '' },
+  mimoVzor: [],                  // {nazev, hodnota} – údaje ze starší verze karty, které vzor nemá (netisknou se, viz migrujKartu)
 });
+
+// Starší verze karty měla vedlejší uzávěry (vzor A4 je nemá) a výtahy mezi PBZ. Vyplněné údaje se neztratí:
+// výtahy se přesunou do charakteru objektu, ostatní do mimoVzor (formulář je ukáže, kontrola na ně upozorní).
+function migrujKartu(k) {
+  const nic = (v) => v === null || v === undefined || String(v).trim() === '';
+  const jeNe = (v) => String(v).trim().toUpperCase() === 'NE';
+  const odloz = (nazev, v) => { if (!nic(v) && !jeNe(v) && !k.mimoVzor.some((x) => x.nazev === nazev && x.hodnota === String(v))) k.mimoVzor.push({ nazev, hodnota: String(v) }); };
+  if (!Array.isArray(k.mimoVzor)) k.mimoVzor = [];
+  for (const [klic, nazev] of [['vedlejsiUzaverVody', 'Vedlejší uzávěr vody'], ['vedlejsiUzaverPlynu', 'Vedlejší uzávěr plynu'], ['vedlejsiUzaverTopeni', 'Vedlejší uzávěr topení'], ['vedlejsiVypinacEl', 'Vedlejší vypínač el. proudu']]) {
+    if (klic in k.media) { odloz(nazev, k.media[klic]); delete k.media[klic]; }
+  }
+  for (const [klic, nazev] of [['vytahEvakuacni', 'Výtah evakuační'], ['vytahPozarni', 'Výtah požární']]) {
+    if (!(klic in k.pbz)) continue;
+    const v = k.pbz[klic]; delete k.pbz[klic];
+    if (nic(v)) continue;
+    if (k.charakter[klic] === null) k.charakter[klic] = !jeNe(v);
+    if (!jeNe(v) && String(v).trim().toUpperCase() !== 'ANO') { if (nic(k.charakter.vytahy)) k.charakter.vytahy = String(v).trim(); else if (String(v).trim() !== String(k.charakter.vytahy).trim()) odloz(`${nazev} (dříve mezi PBZ)`, v); }
+  }
+  return k;
+}
 
 export const novyList = (typ, nazev) => {
   if (!TYPY_LISTU.includes(typ)) throw new Error(`Neznámý typ listu: ${typ}`);
@@ -83,6 +107,7 @@ export const novyList = (typ, nazev) => {
       prvky: [],                    // viz js/kresleni/prvky.js
       legenda: [],                  // id použitých značek (synchronizuje editor)
       legendaZobrazit: true,
+      legendaPoloha: 'vpravo-dole',  // roh rámu výkresu s legendou (DZP)
       razitko: { nazev: '', zpracoval: '', datum: '', schvalil: '' },
     };
     if (typ === 'evak_plan') { list.vykres.format = 'A3'; list.vykres.sit10m = false; list.vykres.evakPlan = prazdnyEvakPlan(); }   // A3 je minimum podle ČSN ISO 23601
@@ -113,7 +138,7 @@ export function novyProjekt({ nazev = 'Nová DZP', typ = 'operativni_karta' } = 
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
   if (typ === 'evakuacni_plan') {
-    p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 (požární evakuační plán); vzhled plánu ČSN ISO 23601 zatím neověřen';
+    p.zdrojMetodiky = 'Vyhláška č. 246/2001 Sb., § 33 a § 40 (požární evakuační plán); grafické listy podle výtahu požadavků ČSN ISO 23601 (nezávazná)';
     p.listy.push(novyList('evak_text', 'Evakuační plán – text'), novyList('evak_plan', 'Únikový plán – 1. podlaží'));
     p.listy.forEach((l, i) => { l.poradi = i; });
   }
@@ -146,7 +171,10 @@ export const kopirujList = (p, id) => {
   kopie.id = uid('list');
   kopie.nazev = `${orig.nazev} (kopie)`;
   const prefix = (it) => { if (it && it.id) it.id = uid('p'); };
-  if (kopie.vykres) kopie.vykres.prvky.forEach(prefix);
+  if (kopie.vykres) {   // nová id prvků; dveře musí dál odkazovat na svou stěnu (v kopii)
+    const nova = new Map(kopie.vykres.prvky.map((x) => { const stare = x.id; prefix(x); return [stare, x.id]; }));
+    for (const x of kopie.vykres.prvky) if (x.stenaId) x.stenaId = nova.get(x.stenaId) ?? null;
+  }
   for (const d of [kopie.opZaklad, kopie.opText, kopie.opSap]) if (d) for (const v of Object.values(d)) if (Array.isArray(v)) v.forEach(prefix);
   if (kopie.evak) { kopie.evak.osoby.forEach(prefix); kopie.evak.shromazdiste.forEach(prefix); }
   if (kopie.karta) { kopie.karta.nebezpeci.forEach(prefix); kopie.karta.vodniZdroje.forEach(prefix); }
@@ -196,17 +224,25 @@ export function migruj(data) {
   opravId(p);
   if (!TYPY_DOKUMENTU.includes(p.typ)) p.typ = 'operativni_karta';
   if (Array.isArray(p.listy)) p.listy = p.listy.filter((l) => l && TYPY_LISTU.includes(l.typ));
+  // Druh dokumentace smí mít jen své listy (DZP a evakuační plán se nemíchají – i u souboru upraveného mimo aplikaci).
+  // Cizí list se nezahodí: přesune se do p.vyrazeneListy (zůstane v souboru projektu) a kontrola úplnosti na to upozorní.
+  if (Array.isArray(p.listy) && p.listy.some((l) => !LISTY_PRO_DOKUMENT[p.typ].includes(l.typ))) {
+    p.vyrazeneListy = [...(Array.isArray(p.vyrazeneListy) ? p.vyrazeneListy : []), ...p.listy.filter((l) => !LISTY_PRO_DOKUMENT[p.typ].includes(l.typ))];
+    p.listy = p.listy.filter((l) => LISTY_PRO_DOKUMENT[p.typ].includes(l.typ));
+    p.listy.forEach((l, i) => { l.poradi = i; });
+  }
   if (typeof p.nazev !== 'string') p.nazev = String(p.nazev ?? 'Projekt');
   p.revize ||= []; p.kontakty ||= []; p.poznamkyKOvereni ||= []; p.prilohy ||= {}; p.evakZnacky ||= {}; p.dotaznik = { ...prazdnyDotaznik(), ...(p.dotaznik || {}) }; p.nastaveni = { velikostZnacky: 8, velikostTextu: 3, ...(p.nastaveni || {}) };
   p.listy ||= [];
   for (const l of p.listy) {
-    if (l.typ === 'karta') l.karta = sloz(prazdnaKarta(), l.karta || {});
+    if (l.typ === 'karta') l.karta = migrujKartu(sloz(prazdnaKarta(), l.karta || {}));
     if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
     if (l.typ === 'op_zaklad') l.opZaklad = sloz(prazdnyOpZaklad(), l.opZaklad || {});
     if (l.typ === 'op_text') l.opText = sloz(prazdnyOpText(), l.opText || {});
     if (l.typ === 'op_sap') l.opSap = sloz(prazdnySap(), l.opSap || {});
     if (['situace', 'pudorys', 'schema', 'evak_plan'].includes(l.typ)) l.vykres = sloz(novyList(l.typ).vykres, l.vykres || {});
   }
+  ocistiProjekt(p, { vychoziVrstvy: (typ) => novyList(typ).vykres.vrstvy });   // typy hodnot z cizího souboru (barvy, čísla, obrázky), chybějící id a datum
   return p;
 }
 

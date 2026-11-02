@@ -44,6 +44,36 @@ export const jeLomena = (p) => ['stena', 'cara', 'trasa', 'plocha', 'volna'].inc
 export const jeUzavrena = (p) => p.druh === 'plocha';
 export const najdi = (prvky, id) => prvky.find((p) => p.id === id) || null;
 
+// Převod čára ↔ stěna (typicky po importu DXF): body, barva a vrstva zůstanou, tloušťka se nastaví výchozí pro nový druh.
+// Importované čáry se převedou na tenké stěny jako při importu (0,05 m), nakreslené na výchozí tloušťku stěny.
+export function prevedPrvek(p, druh) {
+  if (p.druh === druh) return p;
+  if (p.druh === 'cara' && druh === 'stena') { p.druh = 'stena'; p.tloustkaM = p.puvod ? 0.05 : VYCHOZI.stena.tloustkaM; delete p.tloustka; delete p.styl; }
+  else if (p.druh === 'stena' && druh === 'cara') { p.druh = 'cara'; p.tloustka = VYCHOZI.cara.tloustka; p.styl = 'plna'; delete p.tloustkaM; }
+  else throw new Error(`Převod ${p.druh} → ${druh} není možný`);
+  return p;
+}
+
+// Pořadí vykreslení (zdola nahoru) stejné jako v render.js: vrstvy v pořadí seznamu, uvnitř vrstvy pořadí v poli,
+// osiřelé prvky (neexistující vrstva) navrch. Výběr klepnutím musí brát nejvyšší viditelný prvek.
+export function poradiVykresleni(v) {
+  const idx = new Map(v.vrstvy.map((l, i) => [l.id, i])), vrstvy = v.vrstvy.map(() => []), osirele = [];
+  for (const p of v.prvky) { const i = idx.get(p.vrstva); (i === undefined ? osirele : vrstvy[i]).push(p); }
+  return [...vrstvy.flat(), ...osirele];
+}
+// Prvky, které se vykreslují (viditelné vrstvy a osiřelé prvky) – pro legendu a kontrolu překryvu.
+export function viditelnePrvky(v) {
+  const vid = new Set(v.vrstvy.filter((l) => l.viditelna).map((l) => l.id)), zname = new Set(v.vrstvy.map((l) => l.id));
+  return v.prvky.filter((p) => vid.has(p.vrstva) || !zname.has(p.vrstva));
+}
+// Posun prvku o jedno místo v pořadí kreslení – jen mezi prvky stejné vrstvy (jinde se pořadí neprojeví).
+export function posunVPoradi(prvky, p, smer) {
+  const i = prvky.indexOf(p), d = smer > 0 ? 1 : -1;
+  let j = i + d; while (j >= 0 && j < prvky.length && prvky[j].vrstva !== p.vrstva) j += d;
+  if (i < 0 || j < 0 || j >= prvky.length) return false;
+  [prvky[i], prvky[j]] = [prvky[j], prvky[i]]; return true;
+}
+
 // ---------- dveře ----------
 export function typDveriPodleSirky(w) { return w <= 1.1 ? 'jednokridle' : w <= 2.2 ? 'dvoukridle' : 'vrata'; }
 
@@ -236,24 +266,34 @@ export function kalibruj(pozadi, bodA, bodB, delkaM) {
 }
 
 // ---------- historie (undo / redo) ----------
+// Nejvýš `max` kroků a `maxZnaku` znaků snímků celkem (velké importované výkresy), nejstarší kroky se zahazují.
 export class Historie {
-  constructor(snap) { this.s = [snap]; this.i = 0; }
+  constructor(snap, { max = 150, maxZnaku = 40e6 } = {}) { this.s = [snap]; this.i = 0; this.max = max; this.maxZnaku = maxZnaku; this.znaku = snap.length; }
   push(snap) {
     if (snap === this.s[this.i]) return false;
-    this.s = this.s.slice(0, this.i + 1); this.s.push(snap);
-    if (this.s.length > 150) this.s.shift();
+    for (const x of this.s.splice(this.i + 1)) this.znaku -= x.length;
+    this.s.push(snap); this.znaku += snap.length;
+    while (this.s.length > 2 && (this.s.length > this.max || this.znaku > this.maxZnaku)) this.znaku -= this.s.shift().length;
     this.i = this.s.length - 1; return true;
   }
   undo() { return this.i > 0 ? this.s[--this.i] : null; }
   redo() { return this.i < this.s.length - 1 ? this.s[++this.i] : null; }
+  // Zahodí poslední krok, pokud vznikl ze stavu `pred` (zrušené gesto – nemá z něj zůstat ani redo). Vrací obnovený snímek.
+  zahodPosledni(pred) {
+    if (this.i < 1 || this.i !== this.s.length - 1 || this.s[this.i - 1] !== pred) return null;
+    this.znaku -= this.s.pop().length; this.i--; return this.s[this.i];
+  }
   get lzeZpet() { return this.i > 0; }
   get lzeVpred() { return this.i < this.s.length - 1; }
 }
 
-export const snimek = (v) => JSON.stringify({ prvky: v.prvky, vrstvy: v.vrstvy, okno: v.okno, pomer: v.meritko.pomer, pozadi: v.pozadi, evakPlan: v.evakPlan });
+// Snímek celého listu výkresu (prvky, vrstvy, měřítko, podklad, orientace, razítko, severka, síť, legenda, měřítko importu…)
+// kromě odvozeného seznamu značek legendy. Klíče v pevném pořadí, aby stejný stav dal stejný text (rozpoznání změny).
+export const snimek = (v) => { const o = {}; for (const k of Object.keys(v).sort()) if (k !== 'legenda') o[k] = v[k]; return JSON.stringify(o); };
 export function obnovZeSnimku(v, text) {
   const s = JSON.parse(text);
-  v.prvky = s.prvky; v.vrstvy = s.vrstvy; v.okno = s.okno; v.meritko.pomer = s.pomer; v.pozadi = s.pozadi; if (s.evakPlan) v.evakPlan = s.evakPlan;
+  for (const k of Object.keys(v)) if (k !== 'legenda' && !(k in s)) delete v[k];
+  Object.assign(v, s);
 }
 
 export { dist, delkaLomene };

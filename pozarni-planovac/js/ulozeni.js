@@ -45,11 +45,14 @@ export async function init() {
 
 export const rezimUloziste = () => rezim;
 export const dostupne = () => rezim !== 'pamet';
-export const seznam = () => [...cache.values()].map(({ id, nazev, typ, zmeneno }) => ({ id, nazev, typ, zmeneno })).sort((a, b) => b.zmeneno.localeCompare(a.zmeneno));
+// Řazení od naposledy změněného; starší záznamy bez data (nebo s jiným typem) nesmí seznam shodit.
+const txt = (x) => (typeof x === 'string' ? x : x == null ? '' : String(x));
+export const seznam = () => [...cache.values()].map(({ id, nazev, typ, zmeneno }) => ({ id, nazev, typ, zmeneno })).sort((a, b) => txt(b.zmeneno).localeCompare(txt(a.zmeneno)));
 export const nacti = (id) => (cache.has(id) ? nactiProjekt(cache.get(id).text) : null);
 
 // Vrací Promise<{ok, chyba?}>. Cache se aktualizuje okamžitě; ok:true znamená, že je zápis opravdu dokončen.
 export function uloz(p) {
+  if (typeof p?.id !== 'string' || !p.id) return Promise.resolve({ ok: false, chyba: 'Projekt nemá identifikátor' });   // nic nevložit do cache, co nejde uložit
   const r = zaznam(p); cache.set(r.id, r);
   if (rezim === 'idb') {
     fronta = fronta.then(() => tx('readwrite', (s) => s.put(r))).then(() => ({ ok: true }), (e) => ({ ok: false, chyba: e?.message || 'Zápis do úložiště prohlížeče selhal' }));
@@ -89,7 +92,7 @@ export function stahni(p) {
 
 // Záloha VŠECH projektů v prohlížeči (DZP i evakuační plány) do jednoho souboru; obnova přes „Importovat projekt“.
 export function zalohaJakoText(kdy = new Date()) {
-  const projekty = [...cache.values()].sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')).map((r) => JSON.parse(r.text));
+  const projekty = [...cache.values()].sort((a, b) => txt(a.nazev).localeCompare(txt(b.nazev), 'cs')).map((r) => JSON.parse(r.text));
   return JSON.stringify({ format: FORMAT_ZALOHY, verze: 1, vytvoreno: kdy.toISOString(), pocet: projekty.length, projekty }, null, 1);
 }
 export function stahniZalohu() {

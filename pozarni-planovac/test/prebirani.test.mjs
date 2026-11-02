@@ -48,5 +48,5 @@ test('operativní plán → karta: jen jednoznačná pole vybrané budovy', () =
   pouzijNavrh(n, new Set(n.map((_, i) => i)), { karta: k });
   assert.equal(k.objekt.nazev, 'Lakovna'); assert.equal(k.charakter.ucelStavby, 'lakování'); assert.equal(k.charakter.podlazi, '');
   assert.equal(k.objekt.obsazeniOsobami, '10 osob'); assert.equal(k.doporuceni, 'Pozor na ředidla'); assert.equal(k.stupenPoplachu, 'I.');
-  assert.equal(k.nebezpeci.length, 0);
+  assert.ok(k.nebezpeci.every((x) => x.popis === ''), 'nebezpečí se z textu plánu nepřebírají');
 });

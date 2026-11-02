@@ -3,13 +3,13 @@
 // Strukturované údaje karty (nebezpečí, vodní zdroje, PBZ) se do plánu převádějí jako text; opačně je nelze spolehlivě rozložit,
 // proto se z plánu do karty přebírají jen jednoznačná pole.
 import { dostan, nastav, zCisla } from './formular.js';
+import { PBZ as PBZ_KARTY, PBZ_UMISTENI, stavPbz, upresneniPbz } from './kartaPole.js';
 
 const nic = (v) => v === null || v === undefined || String(v).trim() === '';
 const tx = (v) => (nic(v) ? '' : String(v).trim());
 const radky = (arr) => arr.filter(Boolean).join('\n');
 
-const PBZ = { eps: 'EPS', zdhpp: 'ZDHPP', apz: 'APZ', zdp: 'ZDP', shz: 'SHZ', pshz: 'PSHZ', zokt: 'ZOKT', pk: 'PK', vytahEvakuacni: 'Výtah evakuační', vytahPozarni: 'Výtah požární' };
-const MEDIA = { hlavniUzaverVody: 'Hlavní uzávěr vody', vedlejsiUzaverVody: 'Vedlejší uzávěr vody', hlavniUzaverPlynu: 'Hlavní uzávěr plynu', vedlejsiUzaverPlynu: 'Vedlejší uzávěr plynu', hlavniUzaverTopeni: 'Hlavní uzávěr topení', vedlejsiUzaverTopeni: 'Vedlejší uzávěr topení', hlavniVypinacEl: 'Hlavní vypínač el. proudu', vedlejsiVypinacEl: 'Vedlejší vypínač el. proudu' };
+const MEDIA = { hlavniUzaverPlynu: 'Hlavní uzávěr plynu', hlavniUzaverVody: 'Hlavní uzávěr vody', hlavniUzaverTopeni: 'Hlavní uzávěr topení', hlavniVypinacEl: 'Hlavní vypínač el. proudu', totalStop: 'TOTAL STOP', centralStop: 'CENTRAL STOP' };
 const VODA = { hydrant: 'Vnější hydrant', nadrz: 'Požární nádrž', jiny: 'Jiný zdroj' };
 
 export function textNebezpeci(k) {
@@ -17,7 +17,12 @@ export function textNebezpeci(k) {
   if (n.length === 1 && n[0].popis.trim().toUpperCase() === 'NE') return 'NE';
   return radky(n.map((x) => `${x.popis.trim()}${nic(x.hasivo) ? '' : ` – vhodné hasivo: ${x.hasivo.trim()}`}`));
 }
-export const textPbz = (k) => radky(Object.entries(PBZ).filter(([c]) => !nic(k.pbz[c])).map(([c, n]) => `${n}: ${k.pbz[c].trim()}`));
+// PBZ jako text: KTPO/OPPO s umístěním, zařízení, která v objektu jsou (s upřesněním), evakuační/požární výtah.
+export const textPbz = (k) => radky([
+  ...PBZ_UMISTENI.filter(([c]) => !nic(k.pbz[c]) && tx(k.pbz[c]).toUpperCase() !== 'NE').map(([c, z, n]) => `${z} (${n}): ${tx(k.pbz[c])}`),
+  ...PBZ_KARTY.filter(([c]) => stavPbz(k.pbz[c]) === true).map(([c, z, n]) => `${z} (${n})${upresneniPbz(k.pbz[c]) ? `: ${upresneniPbz(k.pbz[c])}` : ''}`),
+  k.charakter.vytahEvakuacni === true ? 'Evakuační výtah' : '', k.charakter.vytahPozarni === true ? 'Požární výtah' : '',
+]);
 export function textVody(k) {
   return radky(k.vodniZdroje.map((v) => [`${VODA[v.typ] || 'Zdroj'}${nic(v.popis) ? '' : ` – ${v.popis.trim()}`}`,
     v.prutokLs !== null && v.prutokLs !== undefined ? `, průtok ${zCisla(v.prutokLs)} l/s (${v.overenPrutok ? 'ověřen' : 'NEOVĚŘEN'})` : '',
@@ -53,7 +58,8 @@ export function navrhZKarty(k, { opText, opZaklad }) {
   if (opZaklad) {
     dej('opZaklad', opZaklad, 'ots.stupenPoplachu', 'Stupeň požárního poplachu', tx(k.stupenPoplachu));
     dej('opZaklad', opZaklad, 'ots.osoby', 'Počet osob a směnnost', tx(k.objekt.obsazeniOsobami));
-    dej('opZaklad', opZaklad, 'ots.signalizace', 'EPS, ohlašovna', nic(k.pbz.eps) ? '' : `EPS: ${k.pbz.eps.trim()}`);
+    const eps = stavPbz(k.pbz.eps);
+    dej('opZaklad', opZaklad, 'ots.signalizace', 'EPS, ohlašovna', eps === null ? '' : eps ? `EPS: ano${upresneniPbz(k.pbz.eps) ? ` – ${upresneniPbz(k.pbz.eps)}` : ''}` : 'EPS: není');
     dej('opZaklad', opZaklad, 'ots.zasobovaniVodou', 'Zásobování vodou', textVody(k).replace(/\n/g, '; '));
   }
   return o;
@@ -75,15 +81,21 @@ export function navrhZPlanu({ opText, opZaklad }, budova, k) {
 
 const uid = () => `t_${Math.random().toString(36).slice(2, 10)}`;
 // Zapíše vybrané položky návrhu. cile = { opText, opZaklad, karta, projekt }. Položka: cesta | pridat (nová položka kolekce) | polozka {kolekce, id, pole} | odebrat {kolekce, id}. Vrací počet zapsaných.
+// Jednořádková pole karty (vše kromě doporučení a popisu FVE): víceřádkový text se spojí středníkem, aby se neslepil.
+const VICERADKOVE_KARTY = new Set(['doporuceni', 'fve.popis']);
+export const jednimRadkem = (t) => String(t).split(/\s*\n\s*/).filter(Boolean).join('; ');
 export function pouzijNavrh(navrh, vybrane, cile) {
   let n = 0;
   navrh.forEach((x, i) => {
     if (!vybrane.has(i)) return;
     const data = cile[x.cil]; if (!data) return;
-    if (x.pridat) (data[x.pridat] ||= []).push({ id: uid(), ...x.hodnota });
+    // „NE“ u nebezpečí: vepíše se do prázdných předtištěných řádků vzoru (hořlaviny, výbušniny), nová položka se nepřidá
+    const prazdneRadky = x.pridat === 'nebezpeci' && tx(x.hodnota?.popis).toUpperCase() === 'NE' ? (data.nebezpeci || []).filter((y) => nic(y.popis)) : [];
+    if (prazdneRadky.length) prazdneRadky.forEach((y) => { y.popis = 'NE'; });
+    else if (x.pridat) (data[x.pridat] ||= []).push({ id: uid(), ...x.hodnota });
     else if (x.odebrat) data[x.odebrat.kolekce] = (data[x.odebrat.kolekce] || []).filter((y) => y.id !== x.odebrat.id);
     else if (x.polozka) { const it = (data[x.polozka.kolekce] || []).find((y) => y.id === x.polozka.id); if (!it) return; it[x.polozka.pole] = x.hodnota; }   // pole položky kolekce (např. budova OP)
-    else nastav(data, x.cesta, x.hodnota);
+    else nastav(data, x.cesta, x.cil === 'karta' && typeof x.hodnota === 'string' && !VICERADKOVE_KARTY.has(x.cesta) ? jednimRadkem(x.hodnota) : x.hodnota);
     n++;
   });
   return n;

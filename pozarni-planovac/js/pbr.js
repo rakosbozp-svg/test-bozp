@@ -62,6 +62,7 @@ export function rozborPbr(stranky, volby = {}) {
   // Hranice: krátký řádek bez interpunkce na konci (nadpis „Vytápění“, „Požární výška:“), řádek s odrážkou nebo číslem stránky
   // a před řádkem začínajícím odrážkou / písmenem kapitoly „l) …“ / číslem „2. …“.
   const ODRAZKA = /^(?:[-–•]+\s|[a-n]\)\s|\d{1,2}[.)]\s+\p{Lu}|\d{1,3}$)/u;
+  const POLOZKA = /^\p{Lu}[\p{L}\d ()/.,–-]{1,45}:(?:\s|$)/u;
   // Záhlaví a zápatí: stejný řádek (čísla stran se ignorují) na začátku nebo konci více stran – vynechá se, jinak by se lepil do vět.
   // Kandidáti jsou jen první a poslední 2 neprázdné řádky strany (údaj opakovaný uprostřed textu, např. v souhrnu a kap. b), zůstane).
   const klicR = (r) => norm(r).replace(/\d+/g, '#');
@@ -85,7 +86,8 @@ export function rozborPbr(stranky, volby = {}) {
     if (casti.length && casti[casti.length - 1].endsWith('-') && /^\p{Ll}/u.test(n)) { casti[casti.length - 1] = casti[casti.length - 1].slice(0, -1); casti.push(n); delka += n.length - 1; }
     else {
       // odrážka zalomená na další řádek (dlouhý řádek bez interpunkce) pokračuje
-      const hranice = delka && (volby.odstavce || ODRAZKA.test(n) || (((ODRAZKA.test(pred) && (pred.length < 70 || /[.;:]$/.test(pred))) || (pred.length <= 40 && !/[.,;–-]$/.test(pred)) || /:$/.test(pred)) && /^[\p{Lu}•–-]/u.test(n)));
+      // řádek „Popisek: hodnota“ (Investor:, Počet podlaží (NP):) začíná nový údaj – jinak by se přilepil k předchozímu (Místo stavby: …)
+      const hranice = delka && (volby.odstavce || ODRAZKA.test(n) || POLOZKA.test(n) || (((ODRAZKA.test(pred) && (pred.length < 70 || /[.;:]$/.test(pred))) || (pred.length <= 40 && !/[.,;–-]$/.test(pred)) || /:$/.test(pred)) && /^[\p{Lu}•–-]/u.test(n)));
       const odd = delka ? (hranice ? HRANICE : ' ') : '';
       casti.push(odd + n); delka += odd.length + n.length;
     }
@@ -184,7 +186,9 @@ export function rozborPbr(stranky, volby = {}) {
   const vyp = najdi(/(TOTAL STOP|CENTRAL STOP|hlavní vypínač)[^.:\u2029]{0,80}?umístěn\p{L}*\s+/iu);
   if (vyp) {
     const misto = t.slice(vyp.i + vyp.m[0].length, vyp.i + vyp.m[0].length + 200).split(/\s[–-]\s|(?<=\p{L}{3})\.\s|\u2029/u)[0];
-    pridej('vypinac', 'Hlavní vypínač el. proudu', `${/TOTAL STOP/i.test(vyp.veta) ? 'TOTAL STOP' : /CENTRAL STOP/i.test(vyp.veta) ? 'CENTRAL STOP' : 'Hlavní vypínač'} – ${norm(misto)} (dle PBŘ)`, vyp.veta, vyp.i, [{ cil: 'karta', cesta: 'media.hlavniVypinacEl' }]);
+    // TOTAL STOP a CENTRAL STOP mají ve vzoru karty vlastní okénka (vedle hlavního vypínače); do textu OP jde celý údaj
+    const druh = /TOTAL STOP/i.test(vyp.veta) ? ['TOTAL STOP', 'media.totalStop'] : /CENTRAL STOP/i.test(vyp.veta) ? ['CENTRAL STOP', 'media.centralStop'] : ['Hlavní vypínač', 'media.hlavniVypinacEl'];
+    pridej('vypinac', 'Hlavní vypínač el. proudu', `${druh[0]} – ${norm(misto)} (dle PBŘ)`, vyp.veta, vyp.i, [{ cil: 'karta', cesta: druh[1], hodnota: `${norm(misto)} (dle PBŘ)`, popis: `${druh[0] === 'Hlavní vypínač' ? 'Hlavní vypínač el. proudu' : druh[0]} – umístění` }]);
   } else nenalezeno.push('umístění hlavního vypínače / TOTAL STOP');
 
   // H. PBZ (kap. j) – „nenavrhuje“ u EPS, SHZ, ZOKT; úsek končí nadpisem dalšího zařízení
@@ -194,8 +198,9 @@ export function rozborPbr(stranky, volby = {}) {
     const dalsi = ZAR.filter((z) => z[0] !== k).map((z) => { const j = t.slice(i + 10).search(z[1]); return j < 0 ? Infinity : j + i + 10; }).concat([(() => { const j = t.slice(i + 10).search(/(?<![\p{L}])k\)\s/u); return j < 0 ? Infinity : j + i + 10; })()]);
     const u = t.slice(i, Math.min(...dalsi, i + 2500));
     const ne = /(se nenavrhuje|nenavrhuj|není požadován|není nutn)/iu.exec(u), ano = /(bude instalován|je navržen|se navrhuje|je instalován)/iu.exec(u);
-    if (ne && (!ano || ne.index < ano.index)) pridej(k, n, 'NE (dle PBŘ se nenavrhuje)', vetaKolem(u, ne.index), i + ne.index, [{ cil: 'karta', cesta }]);
-    else if (ano) pridej(k, n, 'ano – dle PBŘ navrženo (umístění doplňte)', vetaKolem(u, ano.index), i + ano.index, [{ cil: 'karta', cesta }], { neoznacit: true });
+    // v kartě: „NE“ = není, „ANO“ = je (upřesnění doplní zpracovatel); do textu OP jde údaj i se zdrojem
+    if (ne && (!ano || ne.index < ano.index)) pridej(k, n, 'NE (dle PBŘ se nenavrhuje)', vetaKolem(u, ne.index), i + ne.index, [{ cil: 'karta', cesta, hodnota: 'NE', popis: `${n} – dle PBŘ se nenavrhuje: není` }]);
+    else if (ano) pridej(k, n, 'ano – dle PBŘ navrženo (umístění doplňte)', vetaKolem(u, ano.index), i + ano.index, [{ cil: 'karta', cesta, hodnota: 'ANO', popis: `${n} – dle PBŘ navrženo: je v objektu (umístění doplňte jako upřesnění)` }], { neoznacit: true });
   }
   const aut = najdi(/autonomní detekc\p{L}* a signalizac\p{L}* požár/iu);
   if (aut) pridej('autonomni', 'Autonomní detekce a signalizace požáru', aut.veta, aut.veta, aut.i, [{ poznamka: true }]);
@@ -226,6 +231,7 @@ export function rozborPbr(stranky, volby = {}) {
   if (!jePbr) for (const n of nalezy) {
     for (const k of ['popis', 'hodnota']) if (typeof n[k] === 'string') n[k] = preznac(n[k]);
     if (n.hodnota && typeof n.hodnota === 'object' && typeof n.hodnota.popis === 'string') n.hodnota.popis = preznac(n.hodnota.popis);
+    for (const c of n.cile) for (const k of ['popis', 'hodnota']) if (typeof c[k] === 'string') c[k] = preznac(c[k]);   // hodnoty určené jen pro kartu
   }
   for (const x of ['uzávěr vody', 'kontakty na provoz a osobu se znalostí objektu', 'ověřený průtok hydrantu', 'organizace PO mimo pracovní dobu']) nenalezeno.push(x);
   return { nalezy, nenalezeno, jePbr };
@@ -331,9 +337,11 @@ export function navrhZPbr(nalezy, cile, souborNazev = 'PBŘ') {
       const data = cile[c.cil]; if (!data) continue;
       if (c.pridat) {
         const pol = c.hodnotaPolozky || n.hodnota, seznam = data[c.pridat] || [];
-        if (c.pridat === 'nebezpeci' && seznam.length) continue;
+        if (c.pridat === 'nebezpeci' && seznam.some((x) => String(x.popis ?? '').trim())) continue;   // prázdné předtištěné řádky vzoru se nepočítají
         if (seznam.some((x) => String(x.popis || '').trim().toLowerCase() === String(pol.popis || '').trim().toLowerCase())) continue;
-        o.push({ cil: c.cil, pridat: c.pridat, popis: n.popis, hodnota: pol, stavajici: null, zdroj, neoznacit: !!n.neoznacit });
+        // karta už hydrant má: nový se nabídne neoznačený (PBŘ popisuje požadavek projektu, ne nutně jiný hydrant)
+        const uzMa = c.pridat === 'vodniZdroje' && pol.typ === 'hydrant' && seznam.some((x) => x.typ === 'hydrant');
+        o.push({ cil: c.cil, pridat: c.pridat, popis: uzMa ? `${n.popis} – POZOR: karta už vnější hydrant má, přidejte jen, jde-li o jiný` : n.popis, hodnota: pol, stavajici: null, zdroj, neoznacit: !!n.neoznacit || uzMa });
         continue;
       }
       const hodnota = c.hodnota !== undefined ? c.hodnota : c.text && typeof n.hodnota === 'object' ? n.hodnota.popis : n.hodnota, s = st(data, c.cesta);

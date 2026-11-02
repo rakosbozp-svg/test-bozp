@@ -70,29 +70,41 @@ const kubika = (p0, p1, p2, p3, n = 14) => { const o = []; for (let i = 1; i <= 
 const kvadrat = (p0, p1, p2, n = 10) => { const o = []; for (let i = 1; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]]); } return o; };
 
 // Vrací pole cest: { body:[[x,y]…], zav:boolean } v souřadnicích SVG (bez transformace).
+// Čte znak po znaku: příznaky oblouku jsou jednoznakové a mohou být bez oddělovače („a5 5 0 0110 0“ z optimalizátorů SVG).
 export function parsujCestu(d) {
-  const tok = [...String(d || '').matchAll(/([a-zA-Z])|(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)/g)].map((m) => (m[1] ? m[1] : parseFloat(m[2])));
-  const cesty = []; let cur = null, i = 0, cmd = '', x = 0, y = 0, sx = 0, sy = 0, px = null, py = null, pk = '';
-  const n = () => tok[i++];
-  const cislo = () => (typeof tok[i] === 'number');
-  while (i < tok.length) {
-    if (typeof tok[i] === 'string') cmd = tok[i++];
+  const t = String(d || ''), CISLO = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y;
+  let i = 0;
+  const mezera = () => { while (i < t.length && /[\s,]/.test(t[i])) i++; };
+  const n = () => { mezera(); CISLO.lastIndex = i; const m = CISLO.exec(t); if (!m) return null; i = CISLO.lastIndex; return parseFloat(m[0]); };
+  const priznak = () => { mezera(); const c = t[i]; if (c !== '0' && c !== '1') return null; i++; return Number(c); };
+  const cisla = (k) => { const a = []; for (let j = 0; j < k; j++) { const v = n(); if (v === null) return null; a.push(v); } return a; };
+  const cesty = []; let cur = null, cmd = '', x = 0, y = 0, sx = 0, sy = 0, px = null, py = null, pk = '';
+  for (;;) {
+    mezera(); if (i >= t.length) break;
+    const zac = i;
+    if (/[a-zA-Z]/.test(t[i])) cmd = t[i++];
+    else if (!cmd) { i++; continue; }
     else if (cmd === 'M') cmd = 'L'; else if (cmd === 'm') cmd = 'l';
     const rel = cmd === cmd.toLowerCase(), C = cmd.toUpperCase(), ox = rel ? x : 0, oy = rel ? y : 0;
     if (C === 'Z') { if (cur) { cur.zav = true; x = sx; y = sy; cesty.push(cur); cur = null; } pk = 'Z'; continue; }
-    if (C === 'M') { if (cur && cur.body.length > 1) cesty.push(cur); x = ox + n(); y = oy + n(); sx = x; sy = y; cur = { body: [[x, y]], zav: false }; pk = 'M'; continue; }
-    if (!cur) cur = { body: [[x, y]], zav: false };
-    if (C === 'L') { x = ox + n(); y = oy + n(); cur.body.push([x, y]); }
-    else if (C === 'H') { x = (rel ? x : 0) + n(); cur.body.push([x, y]); }
-    else if (C === 'V') { y = (rel ? y : 0) + n(); cur.body.push([x, y]); }
-    else if (C === 'C') { const a = [ox + n(), oy + n()], b = [ox + n(), oy + n()], e = [ox + n(), oy + n()]; cur.body.push(...kubika([x, y], a, b, e)); px = b[0]; py = b[1]; x = e[0]; y = e[1]; pk = 'C'; continue; }
-    else if (C === 'S') { const a = pk === 'C' ? [2 * x - px, 2 * y - py] : [x, y], b = [ox + n(), oy + n()], e = [ox + n(), oy + n()]; cur.body.push(...kubika([x, y], a, b, e)); px = b[0]; py = b[1]; x = e[0]; y = e[1]; pk = 'C'; continue; }
-    else if (C === 'Q') { const a = [ox + n(), oy + n()], e = [ox + n(), oy + n()]; cur.body.push(...kvadrat([x, y], a, e)); px = a[0]; py = a[1]; x = e[0]; y = e[1]; pk = 'Q'; continue; }
-    else if (C === 'T') { const a = pk === 'Q' ? [2 * x - px, 2 * y - py] : [x, y], e = [ox + n(), oy + n()]; cur.body.push(...kvadrat([x, y], a, e)); px = a[0]; py = a[1]; x = e[0]; y = e[1]; pk = 'Q'; continue; }
-    else if (C === 'A') { const rx = n(), ry = n(), fi = n(), fa = n(), fs = n(), ex = ox + n(), ey = oy + n(); cur.body.push(...oblouk(x, y, rx, ry, fi, fa, fs, ex, ey)); x = ex; y = ey; }
-    else { i++; continue; }
-    pk = C;
-    if (!cislo() && typeof tok[i] !== 'string') break;
+    let a = null;
+    if (C === 'M') { if ((a = cisla(2))) { if (cur && cur.body.length > 1) cesty.push(cur); x = ox + a[0]; y = oy + a[1]; sx = x; sy = y; cur = { body: [[x, y]], zav: false }; pk = 'M'; } }
+    else {
+      if (!cur) cur = { body: [[x, y]], zav: false };
+      if (C === 'L' && (a = cisla(2))) { x = ox + a[0]; y = oy + a[1]; cur.body.push([x, y]); pk = C; }
+      else if (C === 'H' && (a = cisla(1))) { x = (rel ? x : 0) + a[0]; cur.body.push([x, y]); pk = C; }
+      else if (C === 'V' && (a = cisla(1))) { y = (rel ? y : 0) + a[0]; cur.body.push([x, y]); pk = C; }
+      else if (C === 'C' && (a = cisla(6))) { const b1 = [ox + a[0], oy + a[1]], b2 = [ox + a[2], oy + a[3]], e = [ox + a[4], oy + a[5]]; cur.body.push(...kubika([x, y], b1, b2, e)); px = b2[0]; py = b2[1]; x = e[0]; y = e[1]; pk = 'C'; }
+      else if (C === 'S' && (a = cisla(4))) { const b1 = pk === 'C' ? [2 * x - px, 2 * y - py] : [x, y], b2 = [ox + a[0], oy + a[1]], e = [ox + a[2], oy + a[3]]; cur.body.push(...kubika([x, y], b1, b2, e)); px = b2[0]; py = b2[1]; x = e[0]; y = e[1]; pk = 'C'; }
+      else if (C === 'Q' && (a = cisla(4))) { const b1 = [ox + a[0], oy + a[1]], e = [ox + a[2], oy + a[3]]; cur.body.push(...kvadrat([x, y], b1, e)); px = b1[0]; py = b1[1]; x = e[0]; y = e[1]; pk = 'Q'; }
+      else if (C === 'T' && (a = cisla(2))) { const b1 = pk === 'Q' ? [2 * x - px, 2 * y - py] : [x, y], e = [ox + a[0], oy + a[1]]; cur.body.push(...kvadrat([x, y], b1, e)); px = b1[0]; py = b1[1]; x = e[0]; y = e[1]; pk = 'Q'; }
+      else if (C === 'A') {
+        const r3 = cisla(3), fa = r3 ? priznak() : null, fs = fa !== null ? priznak() : null, e = fs !== null ? cisla(2) : null;
+        if (e) { a = e; const ex = ox + e[0], ey = oy + e[1]; cur.body.push(...oblouk(x, y, r3[0], r3[1], r3[2], fa, fs, ex, ey)); x = ex; y = ey; pk = C; }
+      }
+    }
+    if (!a && i === zac) i++;                       // nečitelná část: posunout se, nezacyklit
+    else if (!a) break;                              // neúplné parametry: zbytek cesty se zahodí (jako v prohlížeči)
   }
   if (cur && cur.body.length > 1) cesty.push(cur);
   return cesty;
@@ -102,9 +114,32 @@ export function parsujCestu(d) {
 const JEDNOTKY_MM = { mm: 1, cm: 10, in: 25.4, pt: 25.4 / 72, pc: 25.4 / 6, px: 25.4 / 96, '': 25.4 / 96 };
 function delka(v) { const m = /^\s*([\d.]+)\s*([a-z%]*)\s*$/i.exec(v || ''); if (!m || m[2] === '%') return null; return { hodnota: parseFloat(m[1]), jednotka: m[2].toLowerCase() }; }
 
+// Pravidla CSS z <style> – jen jednoduché selektory (značka, .třída, #id a jejich spojení, seznam s čárkami), bez kombinátorů.
+// Exporty z Illustratoru, Inkscapu a CADů tak zadávají výplň a obrys (např. .st0{fill:none;stroke:#000}).
+function pravidlaCss(koren) {
+  const css = []; (function sber(el) { if (el.tag === 'style') css.push(el.text); el.deti.forEach(sber); })(koren);
+  const out = []; let poradi = 0;
+  for (const m of css.join('\n').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const dekl = {}; for (const d of m[2].matchAll(/([a-z-]+)\s*:\s*([^;]+)/gi)) dekl[d[1].toLowerCase()] = d[2].replace(/!important/i, '').trim();
+    for (const sel of m[1].split(',').map((x) => x.trim())) {
+      const sm = /^([a-zA-Z][\w-]*)?(#[\w-]+)?((?:\.[\w-]+)*)$/.exec(sel); if (!sm || !sel) continue;
+      const tridy = sm[3] ? sm[3].slice(1).split('.') : [];
+      out.push({ tag: sm[1] || null, id: sm[2]?.slice(1) || null, tridy, vaha: (sm[2] ? 100 : 0) + tridy.length * 10 + (sm[1] ? 1 : 0), poradi: poradi++, dekl });
+    }
+  }
+  return out.sort((a, b) => a.vaha - b.vaha || a.poradi - b.poradi);
+}
+const cssPrvku = (pravidla, el) => {
+  if (!pravidla.length) return {};
+  const tridy = String(el.attrs.class || '').split(/\s+/).filter(Boolean), o = {};
+  for (const r of pravidla) if ((!r.tag || r.tag === el.tag) && (!r.id || r.id === el.attrs.id) && r.tridy.every((c) => tridy.includes(c))) Object.assign(o, r.dekl);
+  return o;
+};
+
 export function nactiSvg(text) {
   const koren = parsujXml(text);
   if (!koren || koren.tag !== 'svg') throw new Error('Soubor není platné SVG (chybí kořenový prvek svg).');
+  const pravidla = pravidlaCss(koren);
   const vb = (koren.attrs.viewBox || '').split(/[\s,]+/).map(Number);
   const W = delka(koren.attrs.width), Hh = delka(koren.attrs.height);
   const maViewBox = vb.length === 4 && vb.every(Number.isFinite);
@@ -120,7 +155,7 @@ export function nactiSvg(text) {
   const styl = (el, rodic) => {
     const s = { ...rodic };
     const inl = {}; for (const m of String(el.attrs.style || '').matchAll(/([a-z-]+)\s*:\s*([^;]+)/gi)) inl[m[1].toLowerCase()] = m[2].trim();
-    const g = (k) => inl[k] ?? el.attrs[k];
+    const css = cssPrvku(pravidla, el), g = (k) => inl[k] ?? css[k] ?? el.attrs[k];   // inline styl > pravidlo CSS > atribut
     for (const k of ['stroke', 'fill']) { const v = g(k); if (v !== undefined) s[k] = barvaCss(v) ?? s[k]; }
     for (const k of ['stroke-width', 'font-size']) { const v = g(k); if (v !== undefined && !Number.isNaN(parseFloat(v))) s[k] = parseFloat(v); }
     const a = g('text-anchor'); if (a) s['text-anchor'] = a;
@@ -136,7 +171,20 @@ export function nactiSvg(text) {
     const cara = (body, zav) => { const b = body.map(([x, y]) => T(x, y)); if (b.length < 2) return; const vyp = s.fill && s.fill !== 'none' && zav ? s.fill : null; prim.push({ t: vyp ? 'plocha' : 'cara', body: b, zav, barva: s.stroke && s.stroke !== 'none' ? s.stroke : (s.fill && s.fill !== 'none' ? s.fill : '#000000'), vypln: vyp, tloust: s['stroke-width'] }); };
     switch (el.tag) {
       case 'svg': case 'g': case 'a': el.deti.forEach((d) => prochazej(d, M2, s, hloubka + 1)); break;
-      case 'use': { const h = (el.attrs.href || el.attrs['xlink:href'] || '').replace(/^#/, ''), t = ids.get(h); if (t) prochazej(t, nasob(M2, [1, 0, 0, 1, a('x'), a('y')]), s, hloubka + 1); break; }
+      case 'use': {
+        const h = (el.attrs.href || el.attrs['xlink:href'] || '').replace(/^#/, ''), t = ids.get(h); if (!t) break;
+        const Mu = nasob(M2, [1, 0, 0, 1, a('x'), a('y')]);
+        if (t.tag !== 'symbol') { prochazej(t, Mu, s, hloubka + 1); break; }
+        const vb = String(t.attrs.viewBox || '').split(/[\s,]+/).map(Number), w = a('width', NaN), hh = a('height', NaN);
+        let Ms = Mu;
+        if (vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0) {
+          const kx = Number.isFinite(w) ? w / vb[2] : 1, ky = Number.isFinite(hh) ? hh / vb[3] : kx, k = Number.isFinite(w) && Number.isFinite(hh) ? Math.min(kx, ky) : Number.isFinite(w) ? kx : ky;
+          const dx = Number.isFinite(w) ? (w - vb[2] * k) / 2 : 0, dy = Number.isFinite(hh) ? (hh - vb[3] * k) / 2 : 0;
+          Ms = nasob(Mu, [k, 0, 0, k, dx - vb[0] * k, dy - vb[1] * k]);
+        }
+        const st = styl(t, s); if (!st.skryte) t.deti.forEach((d) => prochazej(d, Ms, st, hloubka + 1));
+        break;
+      }
       case 'line': cara([[a('x1'), a('y1')], [a('x2'), a('y2')]], false); break;
       case 'polyline': case 'polygon': { const n = (el.attrs.points || '').split(/[\s,]+/).filter(Boolean).map(Number); const b = []; for (let i = 0; i + 1 < n.length; i += 2) b.push([n[i], n[i + 1]]); cara(b, el.tag === 'polygon'); break; }
       case 'rect': { const x = a('x'), y = a('y'), w = a('width'), h = a('height'); if (w > 0 && h > 0) cara([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], true); break; }

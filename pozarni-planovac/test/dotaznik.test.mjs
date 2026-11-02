@@ -25,19 +25,20 @@ test('převzetí odpovědí do karty, OP a poznámek k ověření', () => {
   pouzijNavrh(n, new Set(n.map((_, i) => i)), cile);
   const k = cile.karta;
   assert.equal(k.objekt.nazev, 'Hala montáže'); assert.equal(k.media.hlavniUzaverPlynu, 'NE'); assert.equal(k.fve.pritomna, true); assert.equal(k.fve.vykonKWp, 460);
-  assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['Technický benzin 200 l, sklad B', 'Aceton 50 l, laboratoř']);
+  // látky klienta přibudou jako nové řádky; předtištěné řádky vzoru (hořlaviny, výbušniny) vyplní zpracovatel
+  assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['', '', 'Technický benzin 200 l, sklad B', 'Aceton 50 l, laboratoř']);
   assert.deepEqual([k.vodniZdroje[0].typ, k.vodniZdroje[0].prutokLs, k.vodniZdroje[0].overenPrutok], ['hydrant', 6.5, true]);
   assert.equal(cile.opText.udaje.osoby, '40 osob, v noci 2 (ostraha)'); assert.equal(cile.opZaklad.ots.dobaZpozorovani, 'EPS s přenosem na PCO, do 3 min');
   assert.ok(p.poznamkyKOvereni.some((x) => x.text === 'Přístavba skladu 2021'));
   assert.deepEqual(navrhZDotazniku(odpovedi, cile), [], 'podruhé nic nového (žádné duplicity)');
 });
 
-test('neprázdné pole karty se nepřepíše bez výběru; „NE“ u látek dá do karty položku NE', () => {
+test('neprázdné pole karty se nepřepíše bez výběru; „NE“ u látek se vepíše do předtištěných řádků', () => {
   const p = M.novyProjekt(), k = p.listy.find((l) => l.typ === 'karta').karta; k.objekt.nazev = 'Původní název';
   const n = navrhZDotazniku({ nazev: 'Nový', latky: 'NE', lahve: 'NE' }, { karta: k, projekt: p });
   const i = n.findIndex((x) => x.cesta === 'objekt.nazev'); assert.equal(n[i].stavajici, 'Původní název');
   pouzijNavrh(n, new Set(n.map((_, j) => j).filter((j) => j !== i)), { karta: k, projekt: p });
-  assert.equal(k.objekt.nazev, 'Původní název'); assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['NE']);
+  assert.equal(k.objekt.nazev, 'Původní název'); assert.deepEqual(k.nebezpeci.map((x) => [x.popis, x.znackaId]), [['NE', 'DZP-003'], ['NE', 'DZP-053']]);
 });
 
 test('vyplnitelné PDF: pole pro všechny otázky, odpovědi s diakritikou se načtou zpět', async () => {
@@ -61,7 +62,7 @@ test('revize: průtok k hydrantu, který už v kartě je; látky místo dřívě
   const navrh = navrhZDotazniku({ hydrant: 'Polní ulice u č.p. 5', hydrantPrutok: 7.5, hydrantOveren: true, latky: 'propan-butan 2 x 33 kg' }, { karta: k, projekt: p });
   pouzijNavrh(navrh, new Set(navrh.map((_, i) => i).filter((i) => !navrh[i].neoznacit && !navrh[i].stavajici)), { karta: k, projekt: p });
   assert.deepEqual(k.vodniZdroje.map((h) => [h.prutokLs, h.overenPrutok]), [[7.5, true]]);
-  assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['propan-butan 2 x 33 kg']);
+  assert.deepEqual(k.nebezpeci.map((x) => x.popis), ['', '', 'propan-butan 2 x 33 kg'], 'dřívější „NE“ bez značky odebráno, předtištěné řádky zůstaly');
   // jen průtok bez polohy → nabídne se k jedinému hydrantu, neoznačeně
   const n2 = navrhZDotazniku({ hydrantPrutok: 9 }, { karta: k, projekt: p });
   assert.equal(n2.length, 1); assert.ok(n2[0].neoznacit && /jediný hydrant/.test(n2[0].popis));

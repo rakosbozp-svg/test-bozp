@@ -466,7 +466,7 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('.ed-scena');
   // značky: vlastní knihovna evakuačního plánu (ne katalog DZP); nahrání souboru a vložení
   await p.click('[data-nastroj=znacka]'); await p.waitForSelector('.znacky-dlg[open]');
-  assert.equal(await p.locator('.znacky-dlg .zd-bunka').count(), 16);
+  assert.equal(await p.locator('.znacky-dlg .zd-bunka').count(), 17);   // vč. opatření pro osoby se zdravotním postižením (ČSN ISO 23601, čl. 7.3)
   assert.ok(!(await p.locator('.znacky-dlg').textContent()).includes('Nadzemní požární hydrant'));
   const png = join(tmp, 'hp.png'); writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
   await p.setInputFiles('[data-slot=EVAK-003] input[type=file]', png);
@@ -483,7 +483,7 @@ test('evakuační plán: založení, formulář § 33, kontrola úplnosti, bez n
   await p.click('[data-nastroj=vyber]'); const sb = await p.locator('.ed-scena').boundingBox(); await p.mouse.click(sb.x + sb.width * 0.85, sb.y + sb.height * 0.3);
   const podl = p.locator('.panel label:has-text("Označení podlaží") input'); await podl.fill('1. NP'); await podl.press('Tab');
   await p.waitForFunction(() => document.querySelector('.ed-svg svg')?.innerHTML.includes('1. NP'));
-  await p.click('[data-p=uplnost]'); assert.ok((await p.locator('#panel-obsah').textContent()).includes('Číslo plánu'));
+  await p.click('[data-p=uplnost]'); assert.match(await p.locator('#panel-obsah').textContent(), /v popisovém poli chybí.*číslo plánu/i);
   const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.click('[data-akce=export-pdf]')]);
   const f = join(tmp, 'evak.pdf'); await dl.saveAs(f); assert.equal(readFileSync(f).subarray(0, 5).toString(), '%PDF-');
   // logo vrací do režimu evakuačních plánů; projekt je jen v jeho seznamu

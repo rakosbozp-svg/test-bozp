@@ -1,7 +1,7 @@
 // Interaktivní editor výkresu (situace, půdorys, schéma). SVG + pointer events (myš, dotyk, pero).
 import * as P from './prvky.js';
 import * as G from './geom.js';
-import { renderListu, esc } from './render.js';
+import { renderListu, svgPrvku, esc } from './render.js';
 import { najdiZnacku, vyberZnacku } from '../znacky.js';
 import { vyberEvakZnacku, katalogEvak } from '../evakznacky.js';
 import { naCislo } from '../formular.js';
@@ -29,6 +29,8 @@ const NAPOVEDA = [
   'Ctrl+Z zpět · Ctrl+Y znovu · Ctrl+C / V kopírovat a vložit · Ctrl+D duplikovat · Ctrl+A vybrat vše · šipky posun (Shift = větší krok)',
   'Kolečko myši přibližuje k ukazateli, střední tlačítko nebo mezerník posouvá plátno, na dotyku dva prsty.',
 ].join('\n');
+// Evakuační plán není DZP: nemá nástroj nástupní plochy pro techniku a čára v něm neznamená hranici požárního úseku.
+const NASTROJE_EVAK = { cara: ['Čára', 'Čára nebo lomená čára (příčka, zábradlí, plot…)'] }, BEZ_V_EVAK = ['plocha'];
 const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', jstezde: 'stit', dvere: 'dvere', kalibrace: 'kalibrace' };
 const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
 const KROKY = [0.1, 0.5, 1, 5, 10];
@@ -36,6 +38,7 @@ const bezCarky = (n, d = 2) => String(Math.round(n * 10 ** d) / 10 ** d).replace
 
 export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, naStav }) {
   const v = list.vykres;
+  P.obnovDvere(v.prvky); P.synchronizujLegendu(v);   // před prvním snímkem historie
   const zn = new Map(katalog.map((z) => [z.id, z]));
   const evak = projekt.typ === 'evakuacni_plan';
   const vyberZ = async () => { if (!evak) return vyberZnacku(); const id = await vyberEvakZnacku(projekt, () => { for (const z of katalogEvak(projekt)) zn.set(z.id, z); naZmenu(); }); return id; };
@@ -52,12 +55,14 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   const volne = (p) => vrstvaViditelna(p.vrstva) && !vrstvaZamcena(p.vrstva);
   const vybrane = () => v.prvky.filter((p) => S.vyber.has(p.id));
 
-  const tl = (k) => { const [id, n, t] = NASTROJE.find((x) => x[0] === k); return `<button type="button" class="nast" data-nastroj="${id}" title="${esc(t)}" aria-label="${esc(n)}">${ikona(IK[id] || id, 18)}<span class="nast__txt">${n}</span></button>`; };
+  const tl = (k) => { const [id, n0, t0] = NASTROJE.find((x) => x[0] === k), [n, t] = (evak && NASTROJE_EVAK[id]) || [n0, t0]; return `<button type="button" class="nast" data-nastroj="${id}" title="${esc(t)}" aria-label="${esc(n)}">${ikona(IK[id] || id, 18)}<span class="nast__txt">${n}</span></button>`; };
   const ak = (a, ik, t) => `<button type="button" class="nast nast--ik" data-akce="${a}" title="${esc(t)}" aria-label="${esc(t)}">${ikona(ik, 18)}</button>`;
+  // tři exporty mají stejnou ikonu – krátký popisek (SVG/PNG/PDF) zůstane vidět i na telefonu (nast__txt se tam skrývá)
+  const ex = (a, t, txt) => `<button type="button" class="nast" data-akce="${a}" title="${esc(t)}" aria-label="${esc(t)}">${ikona('stahnout', 18)}<span class="nast__pripona">${txt}</span></button>`;
   host.innerHTML = `<div class="ed">
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
       <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
-      <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].map(tl).join('')}</div>
+      <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].filter((k) => !(evak && BEZ_V_EVAK.includes(k))).map(tl).join('')}</div>
       <div class="nast-skupina">${['text', 'znacka', ...(v.evakPlan ? ['jstezde'] : []), 'dvere', 'kalibrace'].map(tl).join('')}</div>
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
@@ -70,7 +75,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       </div>
       <div class="nast-skupina">
         <label class="nast" title="Import podkladu: DXF, SVG, PDF, PNG, JPG">${ikona('import', 18)}<span class="nast__txt">Import…</span><input type="file" class="sr-only" data-podklad accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
-        <button type="button" class="nast" data-akce="export-svg" title="Stáhnout list jako SVG">${ikona('stahnout', 18)}<span class="nast__txt">SVG</span></button><button type="button" class="nast" data-akce="export-png" title="Stáhnout list jako PNG (300 dpi)">${ikona('stahnout', 18)}<span class="nast__txt">PNG</span></button><button type="button" class="nast" data-akce="export-pdf" title="Stáhnout tento list jako PDF (vektorově)">${ikona('stahnout', 18)}<span class="nast__txt">PDF</span></button>
+        ${ex('export-svg', 'Stáhnout list jako SVG', 'SVG')}${ex('export-png', 'Stáhnout list jako PNG (300 dpi)', 'PNG')}${ex('export-pdf', 'Stáhnout tento list jako PDF (vektorově)', 'PDF')}
       </div>
     </div>
     <div class="ed-scena" tabindex="0"><div class="ed-svg"></div>
@@ -90,16 +95,23 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   const tolM = (px = 8) => (px * mmNaPx()) / s();
   const svetZ = (e) => papirNaSvet(klientNaPapir(e));
 
-  function celyList() { const l = L(); S.vb = { x: -4, y: -4, w: l.W + 8, h: l.H + 8 }; }
+  // viewBox má vždy poměr stran plochy editoru: jinak SVG (xMidYMid meet) přidá okraje a posun, přiblížení prsty, tolerance
+  // a velikost úchytů (počítané z šířky) by neodpovídaly skutečnému měřítku zobrazení (např. list na výšku v širokém okně).
+  function prizpusobPomer() {
+    const r = wrap.getBoundingClientRect(); if (!S.vb || !(r.width > 0 && r.height > 0)) return;
+    const k = Math.max(S.vb.w / r.width, S.vb.h / r.height), cx = S.vb.x + S.vb.w / 2, cy = S.vb.y + S.vb.h / 2;
+    S.vb = { x: cx - (r.width * k) / 2, y: cy - (r.height * k) / 2, w: r.width * k, h: r.height * k };
+  }
+  function celyList() { const l = L(); S.vb = { x: -4, y: -4, w: l.W + 8, h: l.H + 8 }; prizpusobPomer(); }
   function naObsah() {
     const b = P.bboxVsech(v.prvky, v.meritko.pomer); if (!b) return celyList();
     const a = svetNaPapir([b.x0, b.y0]), z = svetNaPapir([b.x1, b.y1]), w = Math.max(z[0] - a[0], 10) * 1.2, h = Math.max(z[1] - a[1], 10) * 1.2, r = svgEl().getBoundingClientRect();
-    const k = Math.max(w / r.width, h / r.height); S.vb = { x: (a[0] + z[0]) / 2 - (r.width * k) / 2, y: (a[1] + z[1]) / 2 - (r.height * k) / 2, w: r.width * k, h: r.height * k }; vykresli();
+    const k = Math.max(w / r.width, h / r.height); S.vb = { x: (a[0] + z[0]) / 2 - (r.width * k) / 2, y: (a[1] + z[1]) / 2 - (r.height * k) / 2, w: r.width * k, h: r.height * k }; vykresli(true);
   }
   function zoom(faktor, stred) {
     const r = svgEl().getBoundingClientRect(), c = stred || [S.vb.x + S.vb.w / 2, S.vb.y + S.vb.h / 2];
     const nw = Math.min(Math.max(S.vb.w / faktor, 4), 4000), f = S.vb.w / nw, nh = S.vb.h / f;
-    S.vb = { x: c[0] - (c[0] - S.vb.x) / f, y: c[1] - (c[1] - S.vb.y) / f, w: nw, h: nh }; void r; vykresli();
+    S.vb = { x: c[0] - (c[0] - S.vb.x) / f, y: c[1] - (c[1] - S.vb.y) / f, w: nw, h: nh }; void r; vykresli(true);
   }
 
   // ---------- přichytávání ----------
@@ -130,30 +142,75 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   }
 
   // ---------- historie ----------
+  const procistiVyber = () => { const ids = new Set(v.prvky.map((p) => p.id)); S.vyber = new Set([...S.vyber].filter((id) => ids.has(id))); };
   function commit() {
     P.obnovDvere(v.prvky); P.synchronizujLegendu(v);
-    S.vyber = new Set([...S.vyber].filter((id) => v.prvky.some((p) => p.id === id)));
-    if (H.push(P.snimek(v))) naZmenu();
+    procistiVyber();
+    if (H.push(P.snimek(v))) naZmenu();   // snímek obsahuje celý list – i změna orientace, razítka nebo severky se uloží
     vykresli(); naVyber?.();
   }
-  function obnov(text) { if (!text) return; P.obnovZeSnimku(v, text); P.synchronizujLegendu(v); S.vyber = new Set([...S.vyber].filter((id) => v.prvky.some((p) => p.id === id))); naZmenu(); vykresli(); naVyber?.(); }
+  function obnov(text) { if (!text) return; P.obnovZeSnimku(v, text); P.synchronizujLegendu(v); procistiVyber(); naZmenu(); vykresli(); naVyber?.(); }
   const zpet = () => obnov(H.undo()), vpred = () => obnov(H.redo());
+
+  // Zrušené tažení (Esc, druhý prst, změna nástroje): prvky zpět do stavu před tažením – nic neuloženého nezůstane jen na obrazovce.
+  function vratTah() {
+    const t = S.tah; if (!t?.orig) return;
+    const puvodni = new Map(t.orig.map((p) => [p.id, p]));
+    for (const p of v.prvky) { const o = puvodni.get(p.id); if (o) { for (const k of Object.keys(p)) if (!(k in o)) delete p[k]; Object.assign(p, structuredClone(o)); } }
+    P.obnovDvere(v.prvky); vykresli();
+  }
+  // Druhý prst = přiblížení: první dotyk nemá nic přidat (bod stěny, značku, dveře…) – vrátí se stav před ním.
+  function zrusPrvniDotyk() {
+    const pr = S.predDotykem; S.predDotykem = null;
+    vratTah(); S.tah = null; S.snapIndikator = null;
+    if (!pr) return;
+    S.kresleni = pr.kresleni; S.kalibrace = pr.kalibrace; S.vyber = pr.vyber;
+    const zpetSnimek = H.zahodPosledni(pr.snimek);
+    if (zpetSnimek) { P.obnovZeSnimku(v, zpetSnimek); P.synchronizujLegendu(v); procistiVyber(); naZmenu(); }
+    naVyber?.();
+  }
 
   // ---------- vykreslení ----------
   const symbolHref = (id) => zn.get(id)?.png || '';
-  const mkO = (extra = {}) => ({ objektNazev: projekt.listy.find((l) => l.karta)?.karta.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
-  let planovano = false;
-  function vykresli() { if (planovano) return; planovano = true; requestAnimationFrame(() => { planovano = false; vykresliTed(); }); }
+  const karta = () => projekt.listy.find((l) => l.karta)?.karta || null;
+  const mkO = (extra = {}) => ({ objektNazev: karta()?.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, typListu: list.typ, karta: karta(), znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
+  // Celý list se vykresluje jen po změně modelu. Posun, přiblížení, náhled kreslení a přichytávání mění jen viewBox
+  // a překryv (jenPrekryv); při tažení se překreslí jen tažené prvky a dveře – velké výkresy (tisíce prvků) se nezadrhávají.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  let planovano = false, celou = true, prekryvG = null, uzly = null;
+  const zmenene = new Set();
+  function vykresli(jenPrekryv = false) { if (!jenPrekryv) celou = true; if (planovano) return; planovano = true; requestAnimationFrame(() => { planovano = false; vykresliTed(); }); }
+  function prekresliPrvky(ids) { for (const id of ids) zmenene.add(id); vykresli(true); }
+  function aktualizujPrvky() {
+    if (!zmenene.size) return true;
+    if (zmenene.size > 300) return false;
+    if (!uzly) uzly = new Map([...svgEl().querySelectorAll('#svet [data-id]')].map((n) => [n.dataset.id, n]));
+    for (const p of v.prvky) if (p.druh === 'dvere') zmenene.add(p.id);     // dveře sledují stěny
+    const podleId = new Map(v.prvky.map((p) => [p.id, p])), o = mkO();
+    for (const id of zmenene) {
+      const p = podleId.get(id), uzel = uzly.get(id); if (!p || !uzel) continue;   // skrytá vrstva
+      const tmp = document.createElementNS(SVG_NS, 'g'); tmp.innerHTML = svgPrvku(v, p, o);
+      const novy = tmp.firstElementChild; if (!novy) return false;
+      uzel.replaceWith(novy); uzly.set(id, novy);
+    }
+    zmenene.clear(); return true;
+  }
   function vykresliTed() {
     if (!wrap.isConnected) return;
-    if (!S.vb) { wrap.innerHTML = renderListu(v, mkO()); celyList(); }
-    wrap.innerHTML = renderListu(v, mkO());
-    const el = svgEl(); el.removeAttribute('width'); el.removeAttribute('height'); el.setAttribute('viewBox', `${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}`);
-    el.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;background:var(--bg-300)';
-    const ov = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ov.setAttribute('pointer-events', 'none'); ov.innerHTML = overlay(); el.appendChild(ov);
+    if (!S.vb) celyList();
+    prizpusobPomer();
+    if (celou || !svgEl() || !prekryvG || !aktualizujPrvky()) {
+      celou = false; zmenene.clear(); uzly = null;
+      wrap.innerHTML = renderListu(v, mkO());
+      const el = svgEl(); el.removeAttribute('width'); el.removeAttribute('height');
+      el.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;background:var(--bg-300)';
+      prekryvG = document.createElementNS(SVG_NS, 'g'); prekryvG.setAttribute('pointer-events', 'none'); el.appendChild(prekryvG);
+    }
+    svgEl().setAttribute('viewBox', `${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}`);
+    prekryvG.innerHTML = overlay();
     host.querySelectorAll('[data-nastroj]').forEach((b) => b.classList.toggle('akt', b.dataset.nastroj === S.nastroj));
     host.querySelector('[data-akce=zpet]').disabled = !H.lzeZpet; host.querySelector('[data-akce=vpred]').disabled = !H.lzeVpred;
-    stav('zoom', `zoom ${Math.round((L().W / S.vb.w) * 100)} %`);
+    { const r = wrap.getBoundingClientRect(), l = L(), fit = Math.max((l.W + 8) / (r.width || 1), (l.H + 8) / (r.height || 1)); stav('zoom', `zoom ${Math.round((fit / (S.vb.w / (r.width || 1))) * 100)} %`); }   // 100 % = celý list
     stav('meritko', `1 : ${v.meritko.pomer}${P.meritkoOvereno(v) ? '' : ' – MĚŘÍTKO NEOVĚŘENO (kalibrujte podklad)'}`, P.meritkoOvereno(v) ? '' : 'varuj');
     const celkem = P.celkovaDelkaTras(v.prvky); stav('trasy', celkem > 0 ? `trasy celkem ${P.formatDelky(celkem)}` : '');
     stav('vyber', S.vyber.size ? `vybráno: ${S.vyber.size}` : '');
@@ -211,12 +268,14 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (S.tah?.typ === 'tvar') { const a = svetNaPapir(S.tah.od), b = svetNaPapir(S.tah.do); o.push(`<rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(b[0] - a[0])}" height="${Math.abs(b[1] - a[1])}" fill="none" stroke="#d62b1f" stroke-width="${sw}" stroke-dasharray="${4 * mp}"/>`); }
     if (S.tah?.typ === 'volna' && S.tah.body.length > 1) o.push(`<polyline points="${S.tah.body.map((q) => svetNaPapir(q).join(',')).join(' ')}" fill="none" stroke="#d62b1f" stroke-width="${sw}"/>`);
     if (S.snapIndikator) { const [x, y] = svetNaPapir(S.snapIndikator); o.push(`<circle cx="${x}" cy="${y}" r="${r * 1.3}" fill="none" stroke="#f57c00" stroke-width="${sw}"/>`); }
-    if (S.kalibrace?.a && v.pozadi) { const [x, y] = svetNaPapir(S.kalibrace.aSvet); o.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#f57c00"/>`); }
+    if (S.kalibrace?.aSvet) { const [x, y] = svetNaPapir(S.kalibrace.aSvet); o.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#f57c00"/>`); }
     return o.join('');
   }
 
   // ---------- zásahy ----------
-  function zasahNaBodu(w) { const tol = tolM(8); for (let i = v.prvky.length - 1; i >= 0; i--) { const p = v.prvky[i]; if (volne(p) && P.zasah(p, w, tol, v.meritko.pomer, v.prvky)) return p; } return null; }
+  // Výběr klepnutím bere nejvyšší prvek v pořadí vykreslení (vrstvy), ne podle pořadí v poli – plocha ve spodní vrstvě
+  // nakreslená později nesmí „zakrýt“ značku, která je na obrazovce nad ní.
+  function zasahNaBodu(w) { const tol = tolM(8), poradi = P.poradiVykresleni(v); for (let i = poradi.length - 1; i >= 0; i--) { const p = poradi[i]; if (volne(p) && P.zasah(p, w, tol, v.meritko.pomer, v.prvky)) return p; } return null; }
   function uchytNaBodu(e) {
     const mp = mmNaPx(), pt = e.pointerType === 'touch' ? 16 : 9, pap = klientNaPapir(e);
     const blizko = (h) => { const q = svetNaPapir(h.w); return Math.hypot(q[0] - pap[0], q[1] - pap[1]) <= pt * mp; };
@@ -233,11 +292,11 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     let body = k.body.filter((q, i) => i === 0 || G.dist(q, k.body[i - 1]) > 1e-6);
     S.kresleni = null;
     const min = k.nastroj === 'plocha' ? 3 : 2;
-    if (body.length < min) { vykresli(); return; }
+    if (body.length < min) { vykresli(true); return; }
     const druh = k.nastroj;
     pridej(P.novyPrvek(druh, { body, vrstva: vrstvaPro(druh), ...(druh === 'trasa' ? {} : {}) }));
   }
-  const zrusKresleni = () => { S.kresleni = null; S.tah = null; vykresli(); };
+  const zrusKresleni = () => { vratTah(); S.kresleni = null; S.tah = null; S.snapIndikator = null; vykresli(true); naVyber?.(); };
 
   // ---------- ukazatel ----------
   let pinch = null;
@@ -246,7 +305,9 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (Date.now() < (S.ignorDo || 0)) return;   // zbytek dvojkliku, kterým se právě dokončila stěna
     wrap.setPointerCapture?.(e.pointerId);
     S.ukazatele.set(e.pointerId, [e.clientX, e.clientY]);
-    if (S.ukazatele.size === 2) { const [a, b] = [...S.ukazatele.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), vb: { ...S.vb }, c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; S.tah = null; return; }
+    if (S.ukazatele.size === 1) S.predDotykem = { kresleni: S.kresleni && { ...S.kresleni, body: S.kresleni.body.map((q) => [...q]) }, kalibrace: S.kalibrace, vyber: new Set(S.vyber), snimek: H.s[H.i] };
+    if (S.ukazatele.size === 2) { const [a, b] = [...S.ukazatele.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), vb: { ...S.vb }, c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; zrusPrvniDotyk(); vykresli(); return; }
+    if (S.ukazatele.size > 2) return;
     if (e.button === 1 || e.button === 2 || S.mezernik || S.nastroj === 'posun') { S.tah = { typ: 'pan', start: [e.clientX, e.clientY], vb: { ...S.vb } }; return; }
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     const w0 = svetZ(e), t = S.nastroj;
@@ -257,9 +318,9 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       if (p) {
         if (e.shiftKey) { S.vyber.has(p.id) ? S.vyber.delete(p.id) : S.vyber.add(p.id); }
         else if (!S.vyber.has(p.id)) S.vyber = new Set([p.id]);
-        naVyber?.(); vykresli();
+        naVyber?.(); vykresli(true);
         if (S.vyber.has(p.id)) S.tah = { typ: 'presun', orig: vybrane().map((q) => structuredClone(q)), od: w0, moved: false };
-      } else { if (!e.shiftKey) { S.vyber = new Set(); naVyber?.(); } S.tah = { typ: 'oblast', od: w0, do: w0, shift: e.shiftKey, zaklad: new Set(S.vyber) }; vykresli(); }
+      } else { if (!e.shiftKey) { S.vyber = new Set(); naVyber?.(); } S.tah = { typ: 'oblast', od: w0, do: w0, shift: e.shiftKey, zaklad: new Set(S.vyber) }; vykresli(true); }
       return;
     }
     if (['stena', 'cara', 'trasa', 'plocha'].includes(t)) {
@@ -267,7 +328,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       const prev = k.body[k.body.length - 1] || null;
       const b = snap(w0, { od: prev, ortho: S.ortho || e.shiftKey });
       if (t === 'stena' && k.body.length >= 3 && G.dist(b, k.body[0]) <= tolM(10)) { k.body.push([...k.body[0]]); S.ignorDo = Date.now() + 450; dokonciKresleni(); return; }
-      k.body.push(b); vykresli(); return;
+      k.body.push(b); vykresli(true); return;
     }
     if (t === 'obdelnik' || t === 'elipsa') { const b = snap(w0); S.tah = { typ: 'tvar', nastroj: t, od: b, do: b }; return; }
     if (t === 'volna') { S.tah = { typ: 'volna', body: [w0] }; return; }
@@ -286,11 +347,11 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     }
     if (t === 'kalibrace') {
       const vektorNeoverene = !v.pozadi && v.meritkoZdroj && !v.meritkoZdroj.overeno;
-      if (!v.pozadi && !vektorNeoverene) { vykresli(); return; }
+      if (!v.pozadi && !vektorNeoverene) { vykresli(true); return; }
       if (!S.kalibrace) S.kalibrace = { a: null };
       if (vektorNeoverene) {
-        if (!S.kalibrace.a) { S.kalibrace = { a: w0, aSvet: w0 }; vykresli(); return; }
-        const A = S.kalibrace.a; S.kalibrace = null; vykresli();
+        if (!S.kalibrace.a) { S.kalibrace = { a: w0, aSvet: w0 }; vykresli(true); return; }
+        const A = S.kalibrace.a; S.kalibrace = null; vykresli(true);
         zeptejSe('Skutečná vzdálenost mezi oběma body', '', { popisek: 'Vzdálenost v metrech (např. 12,5). Přeškáluje se celý obsah listu.' }).then((zad) => {
           const m = zad === null ? NaN : naCislo(zad);
           if (!(m > 0)) return;
@@ -299,8 +360,8 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
         return;
       }
       const pz = v.pozadi, px = [(w0[0] - pz.x) / pz.mNaPx, (w0[1] - pz.y) / pz.mNaPx];
-      if (!S.kalibrace.a) { S.kalibrace = { a: px, aSvet: w0 }; vykresli(); return; }
-      const a = S.kalibrace.a, aSvet = S.kalibrace.aSvet; S.kalibrace = null; vykresli();
+      if (!S.kalibrace.a) { S.kalibrace = { a: px, aSvet: w0 }; vykresli(true); return; }
+      const a = S.kalibrace.a, aSvet = S.kalibrace.aSvet; S.kalibrace = null; vykresli(true);
       zeptejSe('Skutečná vzdálenost mezi oběma body', '', { popisek: 'Vzdálenost v metrech (např. 12,5)' }).then((zad) => {
         const m = zad === null ? NaN : naCislo(zad);
         if (!(m > 0)) return;
@@ -315,38 +376,38 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       const [a, b] = [...S.ukazatele.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
       const k = pinch.vb.w / (svgEl().getBoundingClientRect().width || 1), f = d / pinch.d, nw = Math.min(Math.max(pinch.vb.w / f, 4), 4000), nk = nw / (svgEl().getBoundingClientRect().width || 1);
       const r = svgEl().getBoundingClientRect(), px0 = pinch.vb.x + (pinch.c[0] - r.left) * k, py0 = pinch.vb.y + (pinch.c[1] - r.top) * k;
-      S.vb = { w: nw, h: pinch.vb.h * (nw / pinch.vb.w), x: px0 - (c[0] - r.left) * nk, y: py0 - (c[1] - r.top) * nk }; vykresli(); return;
+      S.vb = { w: nw, h: pinch.vb.h * (nw / pinch.vb.w), x: px0 - (c[0] - r.left) * nk, y: py0 - (c[1] - r.top) * nk }; vykresli(true); return;
     }
     if (!svgEl()) return;
     const w = svetZ(e); S.kurzor = w; stav('kurzor', `x ${bezCarky(w[0])} m, y ${bezCarky(w[1])} m`);
     const t = S.tah;
-    if (t?.typ === 'pan') { const r = svgEl().getBoundingClientRect(), k = t.vb.w / r.width; S.vb = { ...t.vb, x: t.vb.x - (e.clientX - t.start[0]) * k, y: t.vb.y - (e.clientY - t.start[1]) * k }; vykresli(); return; }
-    if (S.kresleni) { const prev = S.kresleni.body[S.kresleni.body.length - 1] || null; S.kresleni.kurzor = snap(w, { od: prev, ortho: S.ortho || e.shiftKey }); vykresli(); return; }
-    if (!t) { if (['stena', 'cara', 'trasa', 'plocha', 'znacka', 'text', 'obdelnik', 'elipsa'].includes(S.nastroj)) { snap(w); vykresli(); } return; }
-    if (t.typ === 'oblast') { t.do = w; vykresli(); return; }
-    if (t.typ === 'tvar') { t.do = snap(w); vykresli(); return; }
-    if (t.typ === 'volna') { t.body.push(w); vykresli(); return; }
+    if (t?.typ === 'pan') { const r = svgEl().getBoundingClientRect(), k = t.vb.w / r.width; S.vb = { ...t.vb, x: t.vb.x - (e.clientX - t.start[0]) * k, y: t.vb.y - (e.clientY - t.start[1]) * k }; vykresli(true); return; }
+    if (S.kresleni) { const prev = S.kresleni.body[S.kresleni.body.length - 1] || null; S.kresleni.kurzor = snap(w, { od: prev, ortho: S.ortho || e.shiftKey }); vykresli(true); return; }
+    if (!t) { if (['stena', 'cara', 'trasa', 'plocha', 'znacka', 'text', 'obdelnik', 'elipsa'].includes(S.nastroj)) { snap(w); vykresli(true); } return; }
+    if (t.typ === 'oblast') { t.do = w; vykresli(true); return; }
+    if (t.typ === 'tvar') { t.do = snap(w); vykresli(true); return; }
+    if (t.typ === 'volna') { t.body.push(w); vykresli(true); return; }
     if (t.typ === 'presun') {
       const sel = vybrane(); t.moved = true;
-      if (sel.length === 1 && sel[0].druh === 'dvere') { const d = sel[0]; Object.assign(d, structuredClone(t.orig[0])); P.posunDvere(d, v.prvky, w, tolM(14)); vykresli(); return; }
+      if (sel.length === 1 && sel[0].druh === 'dvere') { const d = sel[0]; Object.assign(d, structuredClone(t.orig[0])); P.posunDvere(d, v.prvky, w, tolM(14)); prekresliPrvky([d.id]); return; }
       let dx = w[0] - t.od[0], dy = w[1] - t.od[1];
       const ref = t.orig.find((p) => p.body) || t.orig[0]; const rp = ref.body ? ref.body[0] : [ref.cx ?? ref.x ?? 0, ref.cy ?? ref.y ?? 0];
       const sn = snap([rp[0] + dx, rp[1] + dy], { ignor: new Set(S.vyber), od: S.ortho || e.shiftKey ? rp : null, ortho: S.ortho || e.shiftKey });
       if (S.snapIndikator || S.snapMriz) { dx = sn[0] - rp[0]; dy = sn[1] - rp[1]; }
       sel.forEach((p, i) => { Object.assign(p, structuredClone(t.orig[i])); P.posunPrvek(p, dx, dy); });
-      P.obnovDvere(v.prvky); vykresli(); return;
+      P.obnovDvere(v.prvky); prekresliPrvky(S.vyber); return;
     }
     if (t.typ === 'vrchol' || t.typ === 'stred') {
       const p = vybrane()[0]; t.moved = true;
       const b = snap(w, { ignor: new Set([p.id]) });
       if (t.typ === 'stred' && !t.vlozeno) { p.body.splice(t.u.i + 1, 0, [...b]); t.vlozeno = true; t.idx = t.u.i + 1; }
-      const i = t.typ === 'stred' ? t.idx : t.u.i; p.body[i] = b; P.obnovDvere(v.prvky); vykresli(); return;
+      const i = t.typ === 'stred' ? t.idx : t.u.i; p.body[i] = b; P.obnovDvere(v.prvky); prekresliPrvky([p.id]); return;
     }
     if (t.typ === 'otoceni') {
       t.moved = true; const b = t.bb, c = [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2];
       let a = Math.atan2(w[1] - c[1], w[0] - c[0]) - Math.atan2(t.od[1] - c[1], t.od[0] - c[0]);
       if (e.shiftKey) a = Math.round(G.deg(a) / 15) * (Math.PI / 12);
-      vybrane().forEach((p, i) => { Object.assign(p, structuredClone(t.orig[i])); P.otocPrvek(p, c, a); }); P.obnovDvere(v.prvky); vykresli(); return;
+      vybrane().forEach((p, i) => { Object.assign(p, structuredClone(t.orig[i])); P.otocPrvek(p, c, a); }); P.obnovDvere(v.prvky); prekresliPrvky(S.vyber); return;
     }
     if (t.typ === 'meritko') {
       t.moved = true; const b = t.bb, { ix, iy } = t.u;
@@ -355,7 +416,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       let sx = hx === null ? 1 : (w[0] - ax) / (hx - ax || 1), sy = hy === null ? 1 : (w[1] - ay) / (hy - ay || 1);
       if (e.shiftKey && hx !== null && hy !== null) { const k = Math.max(Math.abs(sx), Math.abs(sy)); sx = Math.sign(sx) * k; sy = Math.sign(sy) * k; }
       sx = Math.max(Math.abs(sx), 0.02); sy = Math.max(Math.abs(sy), 0.02);
-      vybrane().forEach((p, i) => { Object.assign(p, structuredClone(t.orig[i])); P.meritkujPrvek(p, [ax, ay], sx, sy); }); P.obnovDvere(v.prvky); vykresli(); return;
+      vybrane().forEach((p, i) => { Object.assign(p, structuredClone(t.orig[i])); P.meritkujPrvek(p, [ax, ay], sx, sy); }); P.obnovDvere(v.prvky); prekresliPrvky(S.vyber); return;
     }
   }
 
@@ -364,24 +425,24 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (pinch) { if (S.ukazatele.size < 2) pinch = null; return; }
     const t = S.tah; S.tah = null; S.snapIndikator = null;
     if (!t) return;
-    if (t.typ === 'pan') { vykresli(); return; }
+    if (t.typ === 'pan') { vykresli(true); return; }
     if (t.typ === 'oblast') {
       const a = t.od, b = t.do, r = { x0: Math.min(a[0], b[0]), y0: Math.min(a[1], b[1]), x1: Math.max(a[0], b[0]), y1: Math.max(a[1], b[1]) };
       if (r.x1 - r.x0 > tolM(3) || r.y1 - r.y0 > tolM(3)) { const nova = v.prvky.filter((p) => volne(p) && P.prekryvaObdelnik(p, r, v.meritko.pomer, v.prvky)).map((p) => p.id); S.vyber = new Set([...(t.shift ? t.zaklad : []), ...nova]); }
-      naVyber?.(); vykresli(); return;
+      naVyber?.(); vykresli(true); return;
     }
     if (t.typ === 'tvar') {
       const a = t.od, b = t.do, w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
-      if (w > tolM(3) && h > tolM(3)) { const c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; pridej(t.nastroj === 'obdelnik' ? P.novyPrvek('obdelnik', { cx: c[0], cy: c[1], w, h, uhel: 0, vrstva: vrstvaPro('obdelnik') }) : P.novyPrvek('elipsa', { cx: c[0], cy: c[1], rx: w / 2, ry: h / 2, uhel: 0, vrstva: vrstvaPro('elipsa') })); } else vykresli();
+      if (w > tolM(3) && h > tolM(3)) { const c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; pridej(t.nastroj === 'obdelnik' ? P.novyPrvek('obdelnik', { cx: c[0], cy: c[1], w, h, uhel: 0, vrstva: vrstvaPro('obdelnik') }) : P.novyPrvek('elipsa', { cx: c[0], cy: c[1], rx: w / 2, ry: h / 2, uhel: 0, vrstva: vrstvaPro('elipsa') })); } else vykresli(true);
       return;
     }
-    if (t.typ === 'volna') { const body = G.zjednodus(t.body, tolM(1.5)); if (body.length >= 2) pridej(P.novyPrvek('volna', { body, vrstva: vrstvaPro('volna') })); else vykresli(); return; }
+    if (t.typ === 'volna') { const body = G.zjednodus(t.body, tolM(1.5)); if (body.length >= 2) pridej(P.novyPrvek('volna', { body, vrstva: vrstvaPro('volna') })); else vykresli(true); return; }
     if (['presun', 'vrchol', 'stred', 'otoceni', 'meritko'].includes(t.typ)) {
       if (t.typ === 'presun' && t.moved) {
         const sel = vybrane();
         if (sel.length === 1 && sel[0].druh === 'dvere' && !sel[0].stenaId) P.pripojDvere(sel[0], v.prvky, [sel[0].x, sel[0].y], tolM(14));
       }
-      if (t.moved) commit(); else vykresli();
+      if (t.moved) commit(); else vykresli(true);
     }
   }
 
@@ -405,16 +466,16 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (!host.contains(document.activeElement) && document.activeElement !== document.body) return;
     const ctrl = e.ctrlKey || e.metaKey, kl = e.key.toLowerCase();
     if (e.key === ' ') { S.mezernik = true; e.preventDefault(); return; }
-    if (e.key === 'Escape') { if (S.kresleni || S.tah) zrusKresleni(); else if (S.nastroj !== 'vyber') nastavNastroj('vyber'); else { S.vyber = new Set(); naVyber?.(); vykresli(); } return; }
+    if (e.key === 'Escape') { if (S.kresleni || S.tah) zrusKresleni(); else if (S.nastroj !== 'vyber') nastavNastroj('vyber'); else { S.vyber = new Set(); naVyber?.(); vykresli(true); } return; }
     if (e.key === 'Enter') { dokonciKresleni(); return; }
     if (ctrl && kl === 'z' && !e.shiftKey) { e.preventDefault(); zpet(); return; }
     if (ctrl && (kl === 'y' || (kl === 'z' && e.shiftKey))) { e.preventDefault(); vpred(); return; }
-    if (ctrl && kl === 'a') { e.preventDefault(); S.vyber = new Set(v.prvky.filter(volne).map((p) => p.id)); naVyber?.(); vykresli(); return; }
+    if (ctrl && kl === 'a') { e.preventDefault(); S.vyber = new Set(v.prvky.filter(volne).map((p) => p.id)); naVyber?.(); vykresli(true); return; }
     if (ctrl && kl === 'c') { S.schranka = vybrane().map((p) => structuredClone(p)); S.vkladani = 0; return; }
     if (ctrl && kl === 'v') { e.preventDefault(); vloz(); return; }
     if (ctrl && kl === 'd') { e.preventDefault(); S.schranka = vybrane().map((p) => structuredClone(p)); S.vkladani = 0; vloz(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (S.kresleni) { S.kresleni.body.pop(); if (!S.kresleni.body.length) S.kresleni = null; vykresli(); e.preventDefault(); return; }
+      if (S.kresleni) { S.kresleni.body.pop(); if (!S.kresleni.body.length) S.kresleni = null; vykresli(true); e.preventDefault(); return; }
       smazVyber(); e.preventDefault(); return;
     }
     if (e.key.startsWith('Arrow') && S.vyber.size) { e.preventDefault(); const k = e.shiftKey ? 1 : 0.1, d = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, -k], ArrowDown: [0, k] }[e.key]; vybrane().forEach((p) => P.posunPrvek(p, d[0], d[1])); commit(); return; }
@@ -434,7 +495,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   }
   async function nastavNastroj(n) {
     if (n === 'znacka') { const id = await vyberZ(); if (!id) return; S.zvolenaZnacka = id; }
-    S.nastroj = n; S.kresleni = null; S.tah = null; S.kalibrace = null; S.snapIndikator = null; vykresli();
+    vratTah(); S.nastroj = n; S.kresleni = null; S.tah = null; S.kalibrace = null; S.snapIndikator = null; vykresli(true);
   }
 
   // ---------- podklad (PNG / JPG) ----------
@@ -473,7 +534,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   host.querySelector('.ed-nastroje').addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.nastroj) return nastavNastroj(b.dataset.nastroj);
-    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
+    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(true); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
   });
   host.querySelector('.ed-nastroje').addEventListener('change', (e) => {
     if (e.target.dataset.volba) S[e.target.dataset.volba] = e.target.checked;
@@ -485,20 +546,20 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   wrap.addEventListener('dblclick', (e) => { S.dblPozice = svetZ(e); dvojklik(); });
   wrap.addEventListener('wheel', kolecko, { passive: false }); wrap.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('keydown', klavesa); document.addEventListener('keyup', klavesaNahoru);
-  const ro = new ResizeObserver(() => vykresli()); ro.observe(wrap);
+  const ro = new ResizeObserver(() => vykresli(true)); ro.observe(wrap);
 
-  P.obnovDvere(v.prvky); P.synchronizujLegendu(v);
   celyList(); vykresliTed();
 
   // ---------- rozhraní pro panely ----------
   return {
     v, projekt, list, S, H, katalog: zn,
-    vyber: vybrane, nastavVyber(ids) { S.vyber = new Set(ids); naVyber?.(); vykresli(); },
+    vyber: vybrane, nastavVyber(ids) { S.vyber = new Set(ids); naVyber?.(); vykresli(true); },
     uloz: naZmenu, commit, vykresli, zpet, vpred, smazVyber, vloz, naObsah, nastavNastroj, exportSvg, exportPng, importPodkladu,
     prvkyKopie: () => { S.schranka = vybrane().map((p) => structuredClone(p)); S.vkladani = 0; vloz(); },
     nastavAktVrstvu(id) { S.aktVrstva = id; },
     stavNastroj: () => S.nastroj,
     zmenaZnacky: async (p) => { const id = await vyberZ(); if (id) { p.znackaId = id; commit(); } },
+    prevedDruh: (p, druh) => P.prevedPrvek(p, druh),   // čára ↔ stěna; panel pak volá commit()
     zrusit() { document.removeEventListener('keydown', klavesa); document.removeEventListener('keyup', klavesaNahoru); ro.disconnect(); },
   };
 }

@@ -1,86 +1,72 @@
-// Formulář operativní karty podle vzoru HZS SCK (list A4). Pole jsou řízena daty; každý vstup má data-cesta,
+// Formulář operativní karty podle vzoru HZS SČK (list A4). Pole jsou řízena daty (js/kartaPole.js); každý vstup má data-cesta,
 // stejnou jako cesta v nálezech kontroly úplnosti, aby šlo z nálezu skočit na pole.
 import { najdiZnacku, vyberZnacku } from './znacky.js';
 import { textVzdalenosti, ctiGps } from './geo.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export const SEKCE = [
-  { id: 'hlavicka', nazev: 'Objekt a provoz', barva: 'zluta', pole: [
-    ['stupenPoplachu', 'Stupeň poplachu', 'text', 'S'], ['uzemniOdbor', 'Stanice / územní odbor HZS', 'text', 'S'],
-    ['objekt.nazev', 'Objekt', 'text'], ['objekt.provozovatel', 'Provozovatel', 'text'], ['objekt.ic', 'IČ', 'text', 'S'],
-    ['objekt.adresa', 'Adresa', 'text'],
-    ['objekt.gps.sirka', 'GPS – šířka (N)', 'cislo', 'S'], ['objekt.gps.delka', 'GPS – délka (E)', 'cislo', 'S'],
-    ['objekt.provoz.pracovniDoba', 'Pracovní doba', 'text'], ['objekt.provoz.kontaktJmeno', 'Kontakt – jméno a funkce', 'text'],
-    ['objekt.provoz.kontaktTelefon', 'Kontakt – telefon', 'text', 'S'], ['objekt.obsazeniOsobami', 'Obsazení osobami', 'text'],
-    ['objekt.prijezdZ', 'Příjezd z', 'text'], ['objekt.omezeni', 'Omezení (průjezdná výška, nosnost mostu…)', 'text'],
-  ] },
-  { id: 'charakter', nazev: 'Charakter objektu', barva: 'seda', pole: [
-    ['charakter.ucelStavby', 'Účel stavby', 'text'], ['charakter.podlazi', 'Podlaží', 'text', 'S'], ['charakter.pudorysM', 'Půdorys (m)', 'text', 'S'],
-    ['charakter.konstrukce', 'Konstrukce objektu (hořlavá/nehořlavá)', 'text'], ['charakter.unikoveCesty', 'Únikové cesty (počet)', 'text', 'S'],
-    ['charakter.celkovaVyskaM', 'Celková výška (m)', 'text', 'S'], ['charakter.steny', 'Stěny', 'text'], ['charakter.priccky', 'Příčky', 'text'],
-    ['charakter.vytahy', 'Výtahy', 'text', 'S'], ['charakter.zastavenaPlochaM2', 'Zastavěná plocha (m²)', 'text', 'S'],
-    ['charakter.stropy', 'Stropy', 'text'], ['charakter.strecha', 'Střecha', 'text'], ['charakter.typUnikoveCesty', 'Typ únikové cesty', 'text', 'S'],
-    ['charakter.pozarniUseky', 'Požární úseky', 'text'],
-  ] },
-  { id: 'media', nazev: 'Uzávěry médií a vypínače', barva: 'zelena', pole: [
-    ['media.hlavniUzaverVody', 'Hlavní uzávěr vody', 'text'], ['media.vedlejsiUzaverVody', 'Vedlejší uzávěr vody', 'text'],
-    ['media.hlavniUzaverPlynu', 'Hlavní uzávěr plynu', 'text'], ['media.vedlejsiUzaverPlynu', 'Vedlejší uzávěr plynu', 'text'],
-    ['media.hlavniUzaverTopeni', 'Hlavní uzávěr topení', 'text'], ['media.vedlejsiUzaverTopeni', 'Vedlejší uzávěr topení', 'text'],
-    ['media.hlavniVypinacEl', 'Hlavní vypínač el. proudu', 'text'], ['media.vedlejsiVypinacEl', 'Vedlejší vypínač el. proudu', 'text'],
-  ] },
-  { id: 'pbz', nazev: 'Požárně bezpečnostní zařízení (PBZ)', barva: 'zelena', napoveda: 'Vzor HZS: nehodící se škrtněte – zde vepište „NE“, nebo umístění (např. „Vstupní chodba“).', pole: [
-    ['pbz.eps', 'EPS – ústředna', 'text'], ['pbz.zdhpp', 'ZDHPP (detekce hořlavých plynů a par)', 'text'], ['pbz.apz', 'APZ (protivýbuchové zařízení)', 'text'],
-    ['pbz.zdp', 'ZDP (dálkový přenos)', 'text'], ['pbz.shz', 'SHZ (stabilní hasicí zařízení)', 'text'], ['pbz.pshz', 'PSHZ (polostabilní)', 'text'],
-    ['pbz.zokt', 'ZOKT (odvod kouře a tepla)', 'text'], ['pbz.pk', 'PK (požární klapky)', 'text'],
-    ['pbz.vytahEvakuacni', 'Výtah evakuační', 'text'], ['pbz.vytahPozarni', 'Výtah požární', 'text'],
-  ] },
-  { id: 'doporuceni', nazev: 'Doporučení pro velitele zásahu', barva: 'zluta', napoveda: 'Pouze podstatné informace; uveďte, co se stane při vypnutí energií (např. CENTRAL STOP / TOTAL STOP). Vhodné konzultovat s HZS.', pole: [
-    ['doporuceni', 'Doporučení', 'area'],
-    ['znalostObjektu.jmeno', 'Znalost o objektu má – jméno', 'text'], ['znalostObjektu.mobil', 'Znalost o objektu má – mobil', 'text', 'S'],
-  ] },
-  { id: 'podpisy', nazev: 'Zpracoval a schválil', barva: 'seda', pole: [
-    ['zpracoval.jmeno', 'Zpracoval – jméno a příjmení', 'text'], ['zpracoval.cisloOsvedceni', 'Číslo osvědčení', 'text', 'S'], ['zpracoval.datum', 'Datum zpracování', 'datum', 'S'],
-    ['schvalil.jmeno', 'Schválil – jméno a příjmení', 'text'], ['schvalil.funkce', 'Funkce', 'text'], ['schvalil.datum', 'Datum schválení', 'datum', 'S'],
-  ] },
-];
+export { SEKCE } from './kartaPole.js';
+import { SEKCE, PBZ, PBZ_UMISTENI, BEZ_NE, stavPbz, upresneniPbz } from './kartaPole.js';
 
 export const dostan = (o, cesta) => cesta.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 export function nastav(o, cesta, v) {
   const k = cesta.split('.'); const last = k.pop();
   k.reduce((a, x) => a[x], o)[last] = v;
 }
+// Číslo z textu: desetinná čárka i tečka, mezery mezi tisíci („1 250,5“); cokoli jiného je NaN (pole se označí červeně).
 export const naCislo = (t) => {
-  const s = String(t).trim().replace(',', '.');
+  let s = String(t ?? '').trim();
   if (s === '') return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
+  if (/^[-+]?\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?$/.test(s)) s = s.replace(/[ \u00a0\u202f]/g, '');
+  if (!/^[-+]?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(s)) return NaN;
+  return Number(s.replace(',', '.'));
 };
 export const zCisla = (n) => (n === null || n === undefined ? '' : String(n).replace('.', ','));
 
 const pole = (list, [cesta, label, typ, sirka]) => {
   const dc = `listy[${list.id}].karta.${cesta}`;
   const v = dostan(list.karta, cesta);
-  const ne = typ !== 'cislo' && typ !== 'datum' ? `<button type="button" class="ne" data-ne="${cesta}" title="Nelze doplnit – vepsat NE" aria-label="Vyplnit NE: ${esc(label)}">NE</button>` : '';
+  const ne = (typ === 'text' || typ === 'area') && !BEZ_NE.has(cesta) ? `<button type="button" class="ne" data-ne="${cesta}" title="Nelze doplnit – vepsat NE" aria-label="Vyplnit NE: ${esc(label)}">NE</button>` : '';
   const vstup = typ === 'area'
     ? `<textarea rows="5" data-cesta="${dc}" data-pole="${cesta}" data-typ="${typ}">${esc(v)}</textarea>`
-    : `<input ${typ === 'datum' ? 'type="date"' : 'type="text"'} ${typ === 'cislo' ? 'inputmode="decimal"' : ''} data-cesta="${dc}" data-pole="${cesta}" data-typ="${typ}" value="${esc(typ === 'cislo' ? zCisla(v) : v)}">`;
+    : typ === 'anone'
+      ? `<select data-cesta="${dc}" data-pole="${cesta}" data-typ="anone"><option value="">— neuvedeno —</option><option value="ano" ${v === true ? 'selected' : ''}>ano</option><option value="ne" ${v === false ? 'selected' : ''}>ne</option></select>`
+      : `<input ${typ === 'datum' ? 'type="date"' : 'type="text"'} ${typ === 'cislo' ? 'inputmode="decimal"' : ''} data-cesta="${dc}" data-pole="${cesta}" data-typ="${typ}" value="${esc(typ === 'cislo' ? zCisla(v) : v)}">`;
   return `<label class="f ${sirka === 'S' ? 'f-s' : ''}"><span>${esc(label)}</span><span class="f-r">${vstup}${ne}</span></label>`;
 };
 
 const TYPY_VODY = [['hydrant', 'Vnější hydrant'], ['nadrz', 'Požární nádrž'], ['jiny', 'Jiný zdroj']];
 
 export function vykresliKartu(list, host) {
-  const k = list.karta;
   const sekce = (s) => `<section class="sek sek-${s.barva}" id="sek-${s.id}"><h3>${esc(s.nazev)}</h3>${s.napoveda ? `<p class="napoveda">${esc(s.napoveda)}</p>` : ''}<div class="mriz">${s.pole.map((p) => pole(list, p)).join('')}</div></section>`;
-  const [hl, ch, me, pb, dop, pod] = SEKCE;
+  const [hl, ch, me, dop, pod] = SEKCE;
   host.innerHTML = [
-    sekce(hl), sekce(ch),
+    mimoVzor(list), sekce(hl), sekce(ch),
     nebezpeci(list), fve(list),
-    sekce(me), sekce(pb), vody(list),
+    sekce(me), pbz(list), vody(list),
     sekce(dop), sekce(pod),
   ].join('');
-  void k;
+}
+
+// PBZ podle vzoru: „* nehodící se smaž“ – u každého zařízení se volí je / není; na kartě se vytisknou jen zařízení, která v objektu jsou.
+function pbz(list) {
+  const p = `listy[${list.id}].karta.pbz`, d = list.karta.pbz;
+  const umisteni = PBZ_UMISTENI.map(([k, z, n]) => `<label class="f"><span>${z} (${n}) – umístění</span><span class="f-r"><input type="text" data-cesta="${p}.${k}" data-pole="pbz.${k}" data-typ="text" value="${esc(d[k])}"><button type="button" class="ne" data-ne="pbz.${k}" title="Nelze doplnit – vepsat NE">NE</button></span></label>`).join('');
+  const zarizeni = PBZ.map(([k, z, n]) => {
+    const st = stavPbz(d[k]);
+    return `<div class="f pbz-radek" data-cesta="${p}.${k}"><span>${z} – ${n}</span><span class="f-r"><select data-pbz="${k}" aria-label="${z}: je v objektu?"><option value="">— neuvedeno —</option><option value="ano" ${st === true ? 'selected' : ''}>je v objektu</option><option value="ne" ${st === false ? 'selected' : ''}>není</option></select>${st === true ? `<input type="text" data-pbz-upresneni="${k}" placeholder="upřesnění (nepovinné), např. ústředna ve vrátnici" aria-label="${z}: upřesnění" value="${esc(upresneniPbz(d[k]))}">` : ''}</span></div>`;
+  }).join('');
+  return `<section class="sek sek-zelena" id="sek-pbz"><h3>Požárně bezpečnostní zařízení (PBZ)</h3><p class="napoveda">Vzor HZS SČK: „* nehodící se smaž“ – u každého zařízení zvolte, zda v objektu je. Na kartě se vytisknou jen zařízení, která v objektu jsou (je-li vše „není“, vytiskne se „NE“). KTPO a OPPO mají ve vzoru vlastní okénko – vepište umístění, nebo „NE“.</p>
+    <div class="mriz">${umisteni}</div><div class="mriz pbz-mriz">${zarizeni}</div>
+    <p><button type="button" class="btn mal" data-akce="pbz-vse-ne" title="Nastaví „není“ u zařízení, která jsou zatím neuvedená">Zbylá zařízení: není</button></p></section>`;
+}
+
+// Údaje ze starší verze karty, které vzor HZS SČK nemá (vedlejší uzávěry apod.): nezahazují se, ale netisknou.
+function mimoVzor(list) {
+  const m = list.karta.mimoVzor || [];
+  if (!m.length) return '';
+  return `<section class="sek sek-seda" id="sek-mimovzor" data-cesta="listy[${list.id}].karta.mimoVzor"><h3>Údaje mimo vzor karty</h3><p class="napoveda">Tyto údaje pocházejí ze starší verze karty. Vzor HZS SČK pro ně nemá okénko, proto se na kartě netisknou. Je-li údaj podstatný, přepište ho do doporučení pro velitele zásahu nebo do grafické části a pak ho odeberte.</p>
+    <ul class="mimo-vzor">${m.map((x, i) => `<li><b>${esc(x.nazev)}:</b> ${esc(x.hodnota)} <button type="button" class="btn mal" data-akce="mimo-vzor-smaz" data-i="${i}">Odebrat</button></li>`).join('')}</ul></section>`;
 }
 
 function znackaHtml(id) {
@@ -97,7 +83,7 @@ function nebezpeci(list) {
       <label class="f f-s"><span>Vhodné hasivo</span><input type="text" data-pol="nebezpeci" data-id="${n.id}" data-klic="hasivo" value="${esc(n.hasivo)}"></label>
       <button type="button" class="btn mal" data-akce="smaz" data-kolekce="nebezpeci" title="Odebrat položku">Odebrat</button>
     </div>`).join('') || '<p class="prazdno">Zatím žádná položka. Bez nebezpečí přidejte položku s textem „NE“.</p>';
-  return `<section class="sek sek-cervena" id="sek-nebezpeci" data-cesta="${p}.nebezpeci"><h3>Nebezpečí</h3><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="nebezpeci">+ Přidat nebezpečí</button></section>`;
+  return `<section class="sek sek-cervena" id="sek-nebezpeci" data-cesta="${p}.nebezpeci"><h3>Nebezpečí</h3><p class="napoveda">Vzor HZS SČK má dva předtištěné řádky – hořlavé látky a výbušniny (předpřipravená okénka se nemažou). Nehodí-li se, vepište „NE“; u chemických látek uveďte vhodná hasiva. Další nebezpečí přidejte tlačítkem.</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="nebezpeci">+ Přidat nebezpečí</button></section>`;
 }
 
 function fve(list) {
@@ -136,29 +122,67 @@ export const novaPolozka = (kolekce) => (kolekce === 'nebezpeci'
   ? { id: uid(), popis: '', hasivo: '', znackaId: null }
   : { id: uid(), typ: 'hydrant', popis: '', prutokLs: null, overenPrutok: false, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null });
 
+// Jedna souřadnice: číslo, případně se světovou stranou („50.1428769N“, „N 50,14“); S a W jsou záporné.
+export function ctiSouradnici(text) {
+  const m = /^\s*([NSEW])?\s*([-+]?\d+(?:[.,]\d+)?)\s*°?\s*([NSEW])?\s*$/i.exec(String(text ?? ''));
+  if (!m || (m[1] && m[3])) return naCislo(text);
+  const v = Number(m[2].replace(',', '.')), sm = (m[1] || m[3] || '').toUpperCase();
+  return sm === 'S' || sm === 'W' ? -Math.abs(v) : v;
+}
+// Text, který vypadá jako rozepsaná dvojice souřadnic (oddělovač, světová strana, stupně) – při psaní se nechá být.
+const rozepsanaDvojice = (t) => /[;°'"′″]|\d\s*[NSEW]\s*\S|\d\s*,\s+|\d\s+\d|,\s*$/i.test(String(t).trim());
+
 // Připojí obsluhu. onZmena(prekreslit) se volá po každé změně modelu.
 export function pripoj(list, host, onZmena) {
   const k = list.karta;
   const obnovVzdalenosti = () => host.querySelectorAll('[data-vzdalenost]').forEach((o) => { const v = k.vodniZdroje.find((x) => x.id === o.dataset.vzdalenost); o.textContent = v ? textVzdalenosti(k.objekt.gps, v.gps) : ''; });
-  // GPS vložené jedním textem do pole šířky („50.14N, 14.09E“, i ve stupních/minutách) → šířka i délka
-  const rozdelGps = (el, g, nastavDelku) => { el.value = zCisla(g.sirka); const d = el.closest('.polozka, .mriz, section')?.querySelector(el.dataset.pole ? '[data-pole="objekt.gps.delka"]' : `[data-id="${el.dataset.id}"][data-klic="gps.delka"]`); if (d) d.value = zCisla(g.delka); nastavDelku(g.delka); el.classList.remove('neplatne'); };
   const polozka = (el) => k[el.dataset.pol].find((x) => x.id === el.dataset.id);
+  // GPS vložené jedním textem do pole šířky („50.14N, 14.09E“, i ve stupních/minutách) → šířka i délka. Rozdělí se při vložení
+  // najednou (schránka, automatické vyplnění) nebo po opuštění pole – při psaní po znacích by se rozdělilo uprostřed čísla.
+  function gpsSirka(el, e, g0, zapis) {
+    const t = el.value, najednou = t.length - (el._predchozi ?? '').length > 1; el._predchozi = t;
+    const g = ctiGps(t);
+    if (g && (najednou || e.type === 'change')) {
+      el.value = zCisla(g.sirka); el._predchozi = el.value; delete el.dataset.ceka; el.classList.remove('neplatne');
+      const d = el.closest('.polozka, .mriz, section')?.querySelector(el.dataset.pole ? '[data-pole="objekt.gps.delka"]' : `[data-id="${el.dataset.id}"][data-klic="gps.delka"]`);
+      if (d) { d.value = zCisla(g.delka); d.classList.remove('neplatne'); }
+      zapis(g); return true;
+    }
+    if (e.type === 'input' && rozepsanaDvojice(t)) { el.dataset.ceka = '1'; el.classList.remove('neplatne'); return true; }
+    delete el.dataset.ceka;
+    const v = ctiSouradnici(t); el.classList.toggle('neplatne', Number.isNaN(v) || (v !== null && Math.abs(v) > 90));
+    if (!Number.isNaN(v) && !(v !== null && Math.abs(v) > 90)) zapis({ sirka: v, delka: g0.delka }, true);
+    return true;
+  }
   host.oninput = host.onchange = (e) => {
     const el = e.target;
     // U textových polí stačí 'input'; 'change' při opuštění pole by zbytečně překreslil panel dřív než proběhne klik.
-    if (e.type === 'change' && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox'))) return;
-    if (el.dataset.pole) {
+    // Výjimka: pole šířky GPS s rozepsanou dvojicí souřadnic se zpracuje až po opuštění.
+    if (e.type === 'change' && !el.dataset.ceka && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox'))) return;
+    if (el.dataset.pole === 'objekt.gps.sirka') {
+      gpsSirka(el, e, k.objekt.gps, (g, jenSirka) => { k.objekt.gps.sirka = g.sirka; if (!jenSirka) k.objekt.gps.delka = g.delka; obnovVzdalenosti(); onZmena(false); });
+    } else if (el.dataset.pole) {
       let v = el.value;
-      const g = el.dataset.pole === 'objekt.gps.sirka' && /[\s,;°NSEW]/i.test(v.trim()) ? ctiGps(v) : null;
-      if (g) { rozdelGps(el, g, (d) => { k.objekt.gps.delka = d; }); k.objekt.gps.sirka = g.sirka; obnovVzdalenosti(); onZmena(false); return; }
-      if (el.dataset.typ === 'cislo') { v = naCislo(v); el.classList.toggle('neplatne', Number.isNaN(v)); if (Number.isNaN(v)) return; }
+      if (el.dataset.typ === 'anone') v = v === '' ? null : v === 'ano';
+      else if (el.dataset.typ === 'cislo') {
+        v = el.dataset.pole.startsWith('objekt.gps') ? ctiSouradnici(v) : naCislo(v);
+        const mimo = Number.isFinite(v) && el.dataset.pole === 'objekt.gps.delka' && Math.abs(v) > 180;
+        el.classList.toggle('neplatne', Number.isNaN(v) || mimo); if (Number.isNaN(v) || mimo) return;
+      }
       nastav(k, el.dataset.pole, v); if (el.dataset.pole.startsWith('objekt.gps')) obnovVzdalenosti(); onZmena(false);
     } else if (el.dataset.pol) {
       const it = polozka(el); if (!it) return;
+      if (el.dataset.klic === 'gps.sirka') {
+        it.gps ||= { sirka: null, delka: null };
+        gpsSirka(el, e, it.gps, (g, jenSirka) => { it.gps.sirka = g.sirka; if (!jenSirka) it.gps.delka = g.delka; obnovVzdalenosti(); onZmena(false); });
+        return;
+      }
       let v = el.type === 'checkbox' ? el.checked : el.value;
-      const g = el.dataset.klic === 'gps.sirka' && /[\s,;°NSEW]/i.test(String(v).trim()) ? ctiGps(v) : null;
-      if (g) { it.gps ||= { sirka: null, delka: null }; rozdelGps(el, g, (d) => { it.gps.delka = d; }); it.gps.sirka = g.sirka; obnovVzdalenosti(); onZmena(false); return; }
-      if (el.dataset.typ === 'cislo') { v = naCislo(v); el.classList.toggle('neplatne', Number.isNaN(v)); if (Number.isNaN(v)) return; }
+      if (el.dataset.typ === 'cislo') {
+        v = el.dataset.klic === 'gps.delka' ? ctiSouradnici(v) : naCislo(v);
+        const spatne = Number.isNaN(v) || (Number.isFinite(v) && (el.dataset.klic === 'gps.delka' ? Math.abs(v) > 180 : v < 0));
+        el.classList.toggle('neplatne', spatne); if (spatne) return;
+      }
       const kl = el.dataset.klic.split('.'); const last = kl.pop();
       kl.reduce((a, x) => (a[x] ||= {}), it)[last] = v;
       if (el.dataset.klic.startsWith('gps.')) obnovVzdalenosti();
@@ -166,7 +190,18 @@ export function pripoj(list, host, onZmena) {
     } else if (el.dataset.fve) {
       const kl = el.dataset.fve;
       if (el.tagName === 'SELECT') { k.fve[kl] = el.value === '' ? null : el.value === 'ano'; onZmena(kl === 'pritomna'); }
-      else { k.fve[kl] = ['pocetPanelu', 'vykonKWp'].includes(kl) ? (Number.isNaN(naCislo(el.value)) ? k.fve[kl] : naCislo(el.value)) : el.value; onZmena(false); }
+      else if (['pocetPanelu', 'vykonKWp'].includes(kl)) {                 // celé nezáporné číslo panelů, nezáporný výkon; jinak červeně a model beze změny
+        const n = naCislo(el.value), spatne = Number.isNaN(n) || (n !== null && (n < 0 || (kl === 'pocetPanelu' && !Number.isInteger(n))));
+        el.classList.toggle('neplatne', spatne); if (spatne) return;
+        k.fve[kl] = n; onZmena(false);
+      } else { k.fve[kl] = el.value; onZmena(false); }
+    } else if (el.dataset.pbz) {
+      const kl = el.dataset.pbz;
+      k.pbz[kl] = el.value === '' ? '' : el.value === 'ne' ? 'NE' : (upresneniPbz(k.pbz[kl]) || 'ANO');
+      onZmena(e.type === 'change');                                        // u „je v objektu“ se ukáže pole pro upřesnění
+    } else if (el.dataset.pbzUpresneni) {
+      const kl = el.dataset.pbzUpresneni, t = el.value.trim();
+      k.pbz[kl] = !t || ['NE', 'ANO'].includes(t.toUpperCase()) ? 'ANO' : t; onZmena(false);
     }
   };
   host.onclick = async (e) => {
@@ -183,6 +218,11 @@ export function pripoj(list, host, onZmena) {
     } else if (b.dataset.akce === 'znacka') {
       const id = await vyberZnacku(); if (!id) return;
       const it = k[b.dataset.kolekce].find((x) => x.id === b.closest('.polozka').dataset.id); it.znackaId = id; onZmena(true);
+    } else if (b.dataset.akce === 'pbz-vse-ne') {
+      for (const [kl] of PBZ) if (stavPbz(k.pbz[kl]) === null) k.pbz[kl] = 'NE';
+      onZmena(true);
+    } else if (b.dataset.akce === 'mimo-vzor-smaz') {
+      k.mimoVzor.splice(Number(b.dataset.i), 1); onZmena(true);
     }
   };
 }

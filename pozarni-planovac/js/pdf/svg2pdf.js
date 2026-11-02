@@ -2,6 +2,7 @@
 // Zdroj pravdy je jeden: stejné SVG, které vidí uživatel v editoru a v exportu SVG/PNG, se vykreslí do PDF jako vektory
 // (čáry, plochy, texty s vloženým písmem, obrázky). Souřadnice SVG jsou v mm, osa y dolů; PDF má pt a osu y nahoru.
 import { parsujXml, parsujCestu, parsujTransform, barvaCss } from '../kresleni/import/svg.js';
+import { bezpecnyText } from './pismo.js';
 
 const MM = 72 / 25.4;
 const nasob = (A, B) => [A[0] * B[0] + A[2] * B[1], A[1] * B[0] + A[3] * B[1], A[0] * B[2] + A[2] * B[3], A[1] * B[2] + A[3] * B[3], A[0] * B[4] + A[2] * B[5] + A[4], A[1] * B[4] + A[3] * B[5] + A[5]];
@@ -83,7 +84,7 @@ export async function vykresliSvgDoPdf(svgText, ctx) {
     const barva = st.fill && st.fill !== 'none' ? st.fill : '#000000', velikost = (st['font-size'] ?? 12) * meritko(M);
     const halo = st['paint-order'] === 'stroke' && st.stroke && st.stroke !== 'none';
     for (const r of radky) {
-      const t = r.text; if (!t) continue;
+      const t = bezpecnyText(r.text, font); if (!t) continue;                    // znaky, které písmo nemá (→, ₂), se nahradí
       let [x, y] = bod(M, r.x, r.y);
       const ang = Math.atan2(M[1], M[0]), sirka = font.widthOfTextAtSize(t, velikost);
       const posun = st['text-anchor'] === 'middle' ? sirka / 2 : st['text-anchor'] === 'end' ? sirka : 0;

@@ -2,7 +2,7 @@
 // Pole se jmenují podle id otázky (js/dotaznik.js). Písmo Roboto je vložené celé, aby šla psát česká diakritika.
 // Pozn.: zda konkrétní prohlížeč PDF zobrazí při psaní vložené písmo, nelze z aplikace zaručit – načtení hodnot zpět ověřují testy.
 import { nactiPdfLib, nactiFonty } from './export.js';
-import { OTAZKY, SEKCE, textOdpovedi } from '../dotaznik.js';
+import { OTAZKY, SEKCE, textOdpovedi, cisloZOdpovedi } from '../dotaznik.js';
 
 const MM = 72 / 25.4, W = 210, H = 297, OK = 15;
 const ZNAKY = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('') + 'áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽäľĺôŕÄĽĹÔŔöüÖÜß–—„“‚‘…°±×÷€§²³µ·';
@@ -48,22 +48,26 @@ export async function dotaznikDoPdf(dotaznik, { objekt = '', zpracovatel = '' } 
   return doc.save();
 }
 
-// Přečte hodnoty z vyplněného PDF. Vrací { odpovedi, nalezeno, neznamych } – pole, která formulář nemá, se ignorují.
+// Přečte hodnoty z vyplněného PDF. Vrací { odpovedi, nalezeno, puvodni (text číselných odpovědí s jednotkou apod.), nectene (číselné
+// odpovědi, ze kterých nejde jednoznačně přečíst číslo) } – pole, která formulář nemá, se ignorují.
 export async function dotaznikZPdf(bajty) {
   const L = await nactiPdfLib();
   let doc;
   try { doc = await L.PDFDocument.load(bajty, { ignoreEncryption: true }); } catch (e) { throw new Error(`Soubor není čitelné PDF (${e.message}).`); }
   const pole = new Map(doc.getForm().getFields().map((x) => [x.getName(), x]));
   if (!pole.size) throw new Error('PDF neobsahuje formulářová pole – není to vyplnitelný dotazník z Požárního plánovače (vytištěný a naskenovaný dotazník přepište ručně).');
-  const odpovedi = {}; let nalezeno = 0;
+  const odpovedi = {}, puvodni = {}, nectene = []; let nalezeno = 0;
   for (const q of OTAZKY) {
     const x = pole.get(q.id); if (!x) continue; nalezeno++;
     let v = x.constructor.name.includes('Dropdown') || typeof x.getSelected === 'function' ? (x.getSelected?.()[0] ?? '') : (x.getText?.() ?? '');
     v = String(v ?? '').trim(); if (!v) continue;
     if (q.typ === 'ano_ne') { const t = v.toLowerCase(); odpovedi[q.id] = t === 'ano' ? true : t === 'ne' ? false : null; if (odpovedi[q.id] === null) delete odpovedi[q.id]; }
-    else if (q.typ === 'cislo') { const n = Number(v.replace(',', '.').replace(/\s/g, '')); if (Number.isFinite(n)) odpovedi[q.id] = n; }
+    else if (q.typ === 'cislo') {                                          // číslo i s jednotkou („49,5 kWp“); nejednoznačné se nahlásí
+      const n = cisloZOdpovedi(v);
+      if (n === null) nectene.push(`${q.text}: „${v}“`); else { odpovedi[q.id] = n; if (!/^[-+]?[\d\s\u00a0.,]+$/.test(v)) puvodni[q.id] = v; }
+    }
     else odpovedi[q.id] = v;
   }
   if (!nalezeno) throw new Error('PDF má formulářová pole, ale žádné neodpovídá dotazníku Požárního plánovače.');
-  return { odpovedi, nalezeno };
+  return { odpovedi, nalezeno, puvodni, nectene };
 }
