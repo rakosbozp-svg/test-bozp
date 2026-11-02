@@ -67,3 +67,61 @@ test('revize: průtok k hydrantu, který už v kartě je; látky místo dřívě
   const n2 = navrhZDotazniku({ hydrantPrutok: 9 }, { karta: k, projekt: p });
   assert.equal(n2.length, 1); assert.ok(n2[0].neoznacit && /jediný hydrant/.test(n2[0].popis));
 });
+
+test('dotazník se ptá jen na to, co v kartě chybí; na údaje jen pro operativní plán jen v projektu s plánem', async () => {
+  const { otazkyProjektu, otazkyKDotazu } = await import('../js/dotaznik.js');
+  const p = M.novyProjekt({ typ: 'operativni_karta' }), k = p.listy.find((l) => l.typ === 'karta').karta;
+  const ptat = () => otazkyKDotazu(p).map((q) => q.id), stav = (id) => otazkyProjektu(p).find((q) => q.id === id);
+  assert.ok(['nazev', 'vypinac', 'fve', 'latky', 'eps', 'pco', 'hydrant', 'hydrantPrutok', 'pbzJine', 'zmeny', 'shromazdiste'].every((id) => ptat().includes(id)), 'prázdná karta: ptá se na její údaje');
+  assert.deepEqual(otazkyProjektu(p).filter((q) => q.stav === 'netyka').map((q) => q.id), ['zjisteni', 'ohlasovna', 'jednotka'], 'karta bez plánu: SaP se neptá');
+  k.objekt.nazev = 'Hala'; k.media.totalStop = 'NE'; k.pbz.eps = 'NE'; k.fve.pritomna = false;
+  for (const x of k.nebezpeci) x.popis = 'NE';
+  for (const id of ['nazev', 'totalStop', 'eps', 'pco', 'fve', 'fveKwp', 'fvePanely', 'fveBaterie', 'fveVypinac', 'latky', 'lahve']) assert.ok(!ptat().includes(id), `vyplněno nebo netýká se: ${id}`);
+  assert.equal(stav('nazev').hodnota, 'Hala'); assert.equal(stav('eps').hodnota, 'není'); assert.equal(stav('latky').hodnota, 'hořlaviny: NE; výbušniny: NE');
+  assert.equal(stav('pco').stav, 'netyka', 'bez EPS se na PCO neptá');
+  assert.ok(ptat().includes('zmeny') && ptat().includes('centralStop'));
+  // další PBZ: jen zařízení, která karta neuvádí; výtahy jen když okénko VÝTAHY není „NE“
+  Object.assign(k.pbz, { zdhpp: 'NE', apz: 'NE', shz: 'NE', pshz: 'NE', zokt: 'ANO', pk: '', adsp: '' }); k.charakter.vytahy = 'NE';
+  assert.equal(stav('pbzJine').text, 'Jsou v objektu tato požárně bezpečnostní zařízení: požární klapky (PK), autonomní hlásiče kouře (ADSP)? U každého uveďte ano / ne, u „ano“ i kde se ovládá. Není-li žádné, napište „NE“.');
+  const n = navrhZDotazniku({ pbzJine: 'NE' }, { karta: k, projekt: p });
+  assert.deepEqual(n.filter((x) => x.cil === 'karta').map((x) => [x.cesta, x.hodnota]), [['pbz.pk', 'NE'], ['pbz.adsp', 'NE']], '„NE“ = vyjmenovaná zařízení nejsou');
+  pouzijNavrh(n, new Set(n.map((_, i) => i)), { karta: k, projekt: p });
+  assert.ok(!ptat().includes('pbzJine'), 'všechna PBZ uvedena → neptá se');
+  // místo soustředění evakuovaných zakreslené ve výkresu → neptá se
+  p.listy.find((l) => l.typ === 'situace').vykres.prvky.push({ id: 'z1', druh: 'znacka', znackaId: 'DZP-042', x: 0, y: 0 });
+  assert.equal(stav('shromazdiste').stav, 'vyplneno');
+  // operativní plán bez karty: na údaje karty se ptá jako dřív, SaP jen dokud v plánu chybí
+  const o = M.novyProjekt({ typ: 'operativni_plan' });
+  assert.equal(otazkyKDotazu(o).length, OTAZKY.length);
+  o.listy.find((l) => l.typ === 'op_zaklad').opZaklad.ots.jednotkaPodniku = 'NE';
+  assert.equal(otazkyProjektu(o).find((q) => q.id === 'jednotka').stav, 'vyplneno');
+});
+
+test('hydrant z karty: na polohu se neptá, na průtok jmenovitě; odpověď se zapíše k tomuto hydrantu', async () => {
+  const { otazkyProjektu } = await import('../js/dotaznik.js');
+  const p = M.novyProjekt({ typ: 'operativni_karta' }), k = p.listy.find((l) => l.typ === 'karta').karta;
+  k.vodniZdroje.push({ id: 'h1', typ: 'hydrant', popis: 'Podzemní hydrant v ulici Tyršova, cca 138 m (dle PBŘ) – průtok neuveden', prutokLs: null, overenPrutok: false, objemM3: null, gps: { sirka: null, delka: null }, znackaId: 'DZP-004' });
+  const q = Object.fromEntries(otazkyProjektu(p).map((x) => [x.id, x]));
+  assert.equal(q.hydrant.stav, 'vyplneno');
+  assert.equal(q.hydrantPrutok.stav, 'ptat'); assert.equal(q.hydrantPrutok.text, 'Vnější hydrant „Podzemní hydrant v ulici Tyršova, cca 138 m“ – průtok podle poslední zkoušky (l/s)');
+  const n = navrhZDotazniku({ hydrantPrutok: 8.2, hydrantOveren: true }, { karta: k, projekt: p });
+  assert.deepEqual(n.map((x) => [x.polozka?.pole, x.hodnota, !!x.neoznacit]), [['prutokLs', 8.2, false], ['overenPrutok', true, false]]);
+  pouzijNavrh(n, new Set(n.map((_, i) => i)), { karta: k, projekt: p });
+  assert.ok(['hydrant', 'hydrantPrutok', 'hydrantOveren'].every((id) => otazkyProjektu(p).find((x) => x.id === id).stav === 'vyplneno'), 'ověřený průtok → neptá se');
+  // vodní zdroj „NE“ → na hydrant ani jiné zdroje se neptá
+  const r = M.novyProjekt({ typ: 'operativni_karta' }), kr = r.listy.find((l) => l.typ === 'karta').karta;
+  kr.vodniZdroje.push({ id: 'v1', typ: 'jiny', popis: 'NE', prutokLs: null, overenPrutok: false, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null });
+  assert.ok(otazkyProjektu(r).filter((x) => ['hydrant', 'hydrantPrutok', 'hydrantOveren', 'vodaJina'].includes(x.id)).every((x) => x.stav === 'vyplneno'));
+});
+
+test('PDF a text dotazníku obsahují jen otázky, na které se ptá', async () => {
+  const { otazkyKDotazu, dotaznikJakoText } = await import('../js/dotaznik.js');
+  const p = M.novyProjekt({ typ: 'operativni_karta' }), k = p.listy.find((l) => l.typ === 'karta').karta;
+  k.objekt.nazev = 'Hala'; k.objekt.adresa = 'Polní 5, Kladno';
+  const otazky = otazkyKDotazu(p), b = await dotaznikDoPdf(p.dotaznik, { objekt: 'Hala', otazky });
+  const L = await nactiPdfLib(), f = (await L.PDFDocument.load(b)).getForm(), jmena = f.getFields().map((x) => x.getName());
+  assert.equal(jmena.length, otazky.length); assert.ok(!jmena.includes('nazev') && !jmena.includes('adresa') && jmena.includes('provozovatel'));
+  const t = dotaznikJakoText(p.dotaznik, 'Hala', otazky);
+  assert.ok(!t.includes('Adresa objektu') && t.includes('Provozovatel') && !t.includes('ORGANIZACE POŽÁRNÍ OCHRANY'), 'prázdný oddíl (SaP bez plánu) se nevypíše');
+  assert.ok(t.includes('E. POŽÁRNĚ BEZPEČNOSTNÍ ZAŘÍZENÍ A VODA\n') && t.includes('F. ZÁSAH A PŘÍJEZD\n'), 'písmena oddílů popořadě');
+});

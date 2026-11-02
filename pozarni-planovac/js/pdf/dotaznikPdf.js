@@ -2,12 +2,13 @@
 // Pole se jmenují podle id otázky (js/dotaznik.js). Písmo Roboto je vložené celé, aby šla psát česká diakritika.
 // Pozn.: zda konkrétní prohlížeč PDF zobrazí při psaní vložené písmo, nelze z aplikace zaručit – načtení hodnot zpět ověřují testy.
 import { nactiPdfLib, nactiFonty } from './export.js';
-import { OTAZKY, SEKCE, textOdpovedi, cisloZOdpovedi } from '../dotaznik.js';
+import { OTAZKY, oddily, textOdpovedi, cisloZOdpovedi } from '../dotaznik.js';
 
 const MM = 72 / 25.4, W = 210, H = 297, OK = 15;
 const ZNAKY = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('') + 'áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽäľĺôŕÄĽĹÔŔöüÖÜß–—„“‚‘…°±×÷€§²³µ·';
 
-export async function dotaznikDoPdf(dotaznik, { objekt = '', zpracovatel = '' } = {}) {
+// otazky: otázky, na které se dotazník ptá (otazkyKDotazu – jen co v kartě chybí, s textem podle karty); výchozí všechny.
+export async function dotaznikDoPdf(dotaznik, { objekt = '', zpracovatel = '', otazky = OTAZKY } = {}) {
   const L = await nactiPdfLib(), doc = await L.PDFDocument.create(); doc.registerFontkit(L.fontkit);
   const f = await nactiFonty(), reg = await doc.embedFont(f.regular, { subset: true }), bold = await doc.embedFont(f.bold, { subset: true });
   reg.encodeText(ZNAKY);   // do podmnožiny písma vložit celou českou a slovenskou abecedu, aby šla psát do polí
@@ -21,13 +22,13 @@ export async function dotaznikDoPdf(dotaznik, { objekt = '', zpracovatel = '' } 
   nova();
   text('Dotazník pro zpracování dokumentace zdolávání požárů', 16, bold); y += 2;
   if (objekt) text(`Objekt: ${objekt}`, 11, bold);
-  text('Prosíme o vyplnění údajů, které nejsou v projektové dokumentaci (PBŘ) nebo se od ní mohly změnit. Co nelze doplnit nebo se objektu netýká, vyplňte „NE“. Vyplněný soubor uložte a vraťte zpracovateli.', 9.5, reg, seda);
+  text('Prosíme o vyplnění údajů, které zpracovateli dokumentace zatím chybějí. Co nelze doplnit nebo se objektu netýká, vyplňte „NE“. Vyplněný soubor uložte a vraťte zpracovateli.', 9.5, reg, seda);
   if (zpracovatel) text(`Zpracovatel: ${zpracovatel}`, 9.5, reg, seda);
   y += 3;
-  for (const s of SEKCE) {
+  for (const [s, qs] of oddily(otazky)) {
     if (y + 38 > H - OK) nova();
     y += 2; text(s, 12, bold); y += 1;
-    for (const q of OTAZKY.filter((x) => x.sekce === s)) {
+    for (const q of qs) {
       const vyska = q.typ === 'area' ? 18 : 7.5;
       const radky = zalom(q.text, reg, 9.5, W - 2 * OK).length;
       if (y + radky * 4.3 + vyska + 4 > H - OK) nova();
