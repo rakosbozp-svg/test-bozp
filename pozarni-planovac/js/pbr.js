@@ -203,7 +203,9 @@ export function rozborPbr(stranky, volby = {}) {
     else if (ano) pridej(k, n, 'ano – dle PBŘ navrženo (umístění doplňte)', vetaKolem(u, ano.index), i + ano.index, [{ cil: 'karta', cesta, hodnota: 'ANO', popis: `${n} – dle PBŘ navrženo: je v objektu (umístění doplňte jako upřesnění)` }], { neoznacit: true });
   }
   const aut = najdi(/autonomní detekc\p{L}* a signalizac\p{L}* požár/iu);
-  if (aut) pridej('autonomni', 'Autonomní detekce a signalizace požáru', aut.veta, aut.veta, aut.i, [{ poznamka: true }]);
+  // ADSP: věta o autonomní detekci → okénko PBZ karty (je / není podle záporu ve větě) a poznámka s celou větou
+  const autNe = !!aut && /(?<![\p{L}\d])ne(vyžaduj|navrhuj|požad|ní|nutn|vybav)/iu.test(aut.veta);
+  if (aut) pridej('autonomni', 'Autonomní detekce a signalizace požáru', aut.veta, aut.veta, aut.i, [{ cil: 'karta', cesta: 'pbz.adsp', hodnota: autNe ? 'NE' : 'ANO', popis: `ADSP (autonomní detekce a signalizace požáru) – dle PBŘ ${autNe ? 'není' : 'je v objektu'}` }, { poznamka: true }]);
 
   // I. plyn, vytápění, nebezpečné látky, FVE
   const plyn = najdi(/napojen na (?:zemní )?plyn|vytápěn\p{L}* plyn/iu);

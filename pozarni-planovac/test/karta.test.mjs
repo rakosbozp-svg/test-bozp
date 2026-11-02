@@ -164,3 +164,18 @@ test('starší karta z importu PBŘ: „NE (dle PBŘ se nenavrhuje)“ je „nen
   assert.equal(r.media.totalStop, '', 'nová karta se už nepřevádí – smazané okénko se znovu nedoplní');
 });
 
+test('ADSP (autonomní detekce a signalizace požáru) je v seznamu PBZ na konci; z PBŘ se převezme do karty', () => {
+  const p = projektSeVzorem(), k = p.listy[0].karta;
+  assert.equal(k.pbz.adsp, '', 'nová karta má ADSP neuvedenou');
+  k.pbz.adsp = 'prostory pro děti a úniková cesta';
+  assert.deepEqual(sestavKartu(k, p).pbz.map((x) => x.zkratka), ['EPS', 'ZDP', 'ADSP']);
+  assert.match(zkontrolujUplnost(p).find((x) => x.kod === 'PBZ')?.text ?? 'žádné', /žádné/, 'vyplněná karta nehlásí PBZ');
+  const r = rozborPbr([['Prostory určené pro pobyt dětí se povinně vybavují čidly autonomní detekce a signalizace požáru dle přílohy J čl. J3.3.1 ČSN 73 0802.']], { jePbr: true });
+  const q = M.novyProjekt(), n = navrhZPbr(r.nalezy, { karta: q.listy[0].karta, projekt: q }).find((x) => x.cesta === 'pbz.adsp');
+  assert.equal(n.hodnota, 'ANO'); assert.match(n.popis, /^ADSP/);
+  for (const veta of ['Zařízení autonomní detekce a signalizace požáru se nepožaduje.', 'V objektu není nutné instalovat zařízení autonomní detekce a signalizace požáru.']) {
+    const r2 = rozborPbr([[veta]], { jePbr: true });
+    assert.equal(navrhZPbr(r2.nalezy, { karta: q.listy[0].karta, projekt: q }).find((x) => x.cesta === 'pbz.adsp')?.hodnota, 'NE', veta);
+  }
+});
+
