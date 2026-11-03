@@ -2,6 +2,7 @@
 // Čtení je synchronní z paměťové cache načtené při startu (init); zápis jde do úložiště asynchronně.
 // Bez backendu se projekty nesynchronizují s webovou verzí – zálohou je soubor (jeden projekt, nebo všechny najednou).
 import { nactiProjekt, serializuj, FORMAT_ZALOHY } from './model.js';
+import { ulozSoubor } from './stazeni.js';
 
 const DB = 'pplan', OBJ = 'projekty', LS_IDX = 'pp.index.v1', LS_PROJ = 'pp.projekt.', POSL = 'pp.posledni', ZALOHA = 'pp.zaloha';
 let db = null, rezim = 'pamet';             // 'idb' | 'ls' | 'pamet' (nic se neukládá)
@@ -77,17 +78,13 @@ export function smaz(id) {
 export const nastavPosledni = (id) => lsPis(POSL, id);
 export const posledni = () => { const id = lsCti(POSL); return id && cache.has(id) ? id : null; };
 
-function stahniText(text, soubor) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  a.download = soubor;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
+// Uložení souboru přes js/stazeni.js (v artefaktu claude.ai potvrzovací dialog platformy, jinde odkaz ke stažení).
+const stahniText = (text, soubor) => ulozSoubor(new Blob([text], { type: 'application/json' }), soubor);
 
+// Vrací Promise<{ok, kod?}> (viz js/stazeni.js).
 export function stahni(p) {
   const jmeno = p.nazev.replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '') || 'projekt';
-  stahniText(serializuj(p), `${jmeno}.pplan.json`);
+  return stahniText(serializuj(p), `${jmeno}.pplan.json`);
 }
 
 // Záloha VŠECH projektů v prohlížeči (DZP i evakuační plány) do jednoho souboru; obnova přes „Importovat projekt“.
@@ -95,10 +92,11 @@ export function zalohaJakoText(kdy = new Date()) {
   const projekty = [...cache.values()].sort((a, b) => txt(a.nazev).localeCompare(txt(b.nazev), 'cs')).map((r) => JSON.parse(r.text));
   return JSON.stringify({ format: FORMAT_ZALOHY, verze: 1, vytvoreno: kdy.toISOString(), pocet: projekty.length, projekty }, null, 1);
 }
-export function stahniZalohu() {
+// Vrací Promise<{ok, kod?, pocet}>; datum poslední zálohy se zapíše, jen když se soubor opravdu uložil.
+export async function stahniZalohu() {
   const kdy = new Date();
-  stahniText(zalohaJakoText(kdy), `Pozarni_planovac_zaloha_${kdy.toISOString().slice(0, 10)}.pplan-zaloha.json`);
-  lsPis(ZALOHA, kdy.toISOString());
-  return cache.size;
+  const r = await stahniText(zalohaJakoText(kdy), `Pozarni_planovac_zaloha_${kdy.toISOString().slice(0, 10)}.pplan-zaloha.json`);
+  if (r.ok) lsPis(ZALOHA, kdy.toISOString());
+  return { ...r, pocet: cache.size };
 }
 export const posledniZaloha = () => lsCti(ZALOHA);

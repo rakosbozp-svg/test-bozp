@@ -23,7 +23,7 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
 - Taktické volby ve výpočtu SaP (varianta požáru, hlavní směr, forma šíření, fronta hašení) a schválení DZP s HZS.
 - Evakuační plány: barvy podle ISO 3864-4 jsou přibližné (normu nemáme); z ČSN ISO 23601 nebyly čitelné str. 5–6 (čl. 5 od bodu e), podrobnosti čl. 7.4 a text přílohy A – kontrola odkazuje jen na články, které jsou ve výtahu; „písmo min. 2 mm“ bere aplikace přísněji jako výšku velkých písmen. Ze 17 evakuačních značek je 5 dodaných, 7 náhrad ze značek DZP a 5 bez obrázku (přenosný hasicí přístroj, výtah, schodiště, elektrické zařízení, opatření pro osoby se zdravotním postižením) – dodejte oficiální ISO 7010 (nahrají se v projektu evakuačního plánu).
 - Vyplnitelné PDF dotazníku je ověřené testy, ne ve všech prohlížečích PDF.
-- V Artifacts nefungují stažení (export PDF, záloha) – pro práci používejte soubor HTML.
+- V artefaktu na claude.ai se soubory (export PDF, SVG, PNG, záloha a projekt) ukládají přes potvrzovací dialog platformy (schopnost `downloads`, v aplikaci Claude nabídka sdílení / Uložit do Souborů). Artefakt musí být zveřejněný s `capabilities: { downloads: true }`.
 
 ## Podklady (`podklady/`)
 - `VZOR_OPERATIVNI_KARTA.docx` – vzor operativní karty HZS Středočeského kraje
@@ -129,7 +129,7 @@ Projekty jsou jen v úložišti prohlížeče – vymazání dat prohlížeče n
 - **Zálohovat všechny projekty** stáhne jeden soubor `Pozarni_planovac_zaloha_RRRR-MM-DD.pplan-zaloha.json` se všemi projekty (DZP i evakuační plány, včetně importovaných podkladů).
 - **Importovat projekt** pozná soubor zálohy a nabídne obnovu: jen chybějící projekty (výchozí), nebo vše s tím, že existující se přidají jako kopie „(ze zálohy)“. Nic se nepřepíše; vadný projekt v záloze se přeskočí a vypíše.
 - **Připomínka** na úvodní stránce: když se od poslední zálohy projekty změnily a záloha je starší než 7 dní (nebo ještě nebyla), ukáže se upozornění s tlačítkem Zálohovat teď. Datum poslední zálohy si pamatuje prohlížeč.
-- V Artifacts stahování nefunguje (omezení platformy) – zálohujte z verze otevřené ze souboru.
+- V artefaktu na claude.ai se záloha uloží přes potvrzovací dialog platformy (`js/stazeni.js`, schopnost `downloads`); datum poslední zálohy se zapíše, jen když se soubor opravdu uložil. **Přenos projektů mezi dvěma kopiemi plánovače** (každý artefakt má vlastní úložiště v prohlížeči): v jedné *Zálohovat všechny projekty*, ve druhé *Importovat projekt* → vybrat soubor zálohy → obnovit chybějící.
 
 ## Dotazník pro klienta (DZP)
 V levém panelu projektu DZP (karta i operativní plán) je položka **Dotazník pro klienta** (`js/dotaznik.js`, 40 otázek v 7 oddílech): provoz a kontakty, změny proti projektu, hlavní vypínač a uzávěry, prostory pod napětím po vypnutí, FVE, nebezpečné látky a tlakové lahve, EPS a PCO, další PBZ, hydrant s ověřeným průtokem, jiné zdroje vody, organizace PO (zjištění a ohlášení požáru, jednotka podniku), příjezd a místa nebezpečná pro hasiče.

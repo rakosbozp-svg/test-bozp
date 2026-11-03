@@ -26,8 +26,8 @@ test.before(async () => {
 test.after(async () => { await browser?.close(); srv?.kill(); });
 
 // Simulace schopnosti „sample“ podle typů platformy (window.claude.use('sample'), limits, onText, tools[].execute, signal).
-function simulaceClaude({ obrazky = true } = {}) {
-  const log = window.__ai = { volani: [], vysledky: [], scenare: [] };
+function simulaceClaude({ obrazky = true, stahovani = false } = {}) {
+  const log = window.__ai = { volani: [], vysledky: [], scenare: [], ulozeno: [], odmitnout: false };
   const cekej = (ms, signal) => new Promise((ok, ko) => {
     const t = setTimeout(ok, ms);
     signal?.addEventListener('abort', () => { clearTimeout(t); ko({ code: 'cancelled', message: 'aborted' }); });
@@ -54,13 +54,15 @@ function simulaceClaude({ obrazky = true } = {}) {
     return { text, truncated: false, modelTierApplied: sc.tier || opts.modelTier || 'default' };
   };
   sample.limits = async () => ({ maxPromptBytes: 262144, tools: { maxCount: 16 }, ...(obrazky ? { images: { maxCount: 5, maxInputBytes: 20e6, mediaTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] } } : {}), modelTiers: ['default', 'complex', 'quick'] });
-  window.claude = { use: async (n) => (n === 'sample' ? sample : null) };
+  // schopnost „downloads“: save({filename, data}) – zaznamená soubor; s log.odmitnout uživatel uložení odmítne
+  const dl = { save: async ({ filename, data }) => { const text = typeof data === 'string' ? data : await data.text(); log.ulozeno.push({ filename, text, velikost: data.size ?? text.length }); if (log.odmitnout) throw { code: 'declined', message: 'x' }; return { status: 'saved' }; } };
+  window.claude = { use: async (n) => (n === 'sample' ? sample : n === 'downloads' && stahovani ? dl : null) };
 }
 
-async function nova({ claude = true, obrazky = true, evak = false } = {}) {
+async function nova({ claude = true, obrazky = true, evak = false, stahovani = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1500, height: 950 } });
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  if (claude) await ctx.addInitScript(simulaceClaude, { obrazky });
+  if (claude) await ctx.addInitScript(simulaceClaude, { obrazky, stahovani });
   const p = await ctx.newPage();
   p.chyby = []; p.on('pageerror', (e) => p.chyby.push(e.message)); p.on('console', (m) => m.type() === 'error' && p.chyby.push(m.text()));
   await p.goto(evak ? `${URL_}#/evakuace` : URL_);
@@ -420,4 +422,44 @@ test('„Vrátit změny od Claude“ funguje i po novém vytvoření editoru (p�
   await p.click('[data-akce=zpet]'); assert.equal(await p.pocet('stena'), 2, 'vrácení je samo krok, který jde vzít zpět');
   assert.deepEqual(p.chyby, []);
   await p.context().close();
+});
+
+test('stahování v artefaktu přes schopnost downloads; přenos projektů zálohou do jiné kopie plánovače (jiné úložiště)', skip, async () => {
+  const p = await nova({ stahovani: true });   // „kopie AI“: projekt s nakreslenou stěnou
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.click('[data-ai-volba=kontrola]');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }] }], konec: '• Ok.' }]);
+  await p.zadej('Kresli.'); await p.hotovo();
+  // export listu do PDF a projektu do .pplan.json jde přes save(), ne přes odkaz
+  await p.click('[data-akce=export-pdf]');
+  await p.waitForFunction(() => window.__ai.ulozeno.some((u) => u.filename.endsWith('.pdf')), null, { timeout: 30000 });
+  await p.click('#a-stahnout');
+  await p.waitForFunction(() => window.__ai.ulozeno.some((u) => u.filename === 'AI_test.pplan.json'));
+  // odmítnuté uložení zálohy: hláška a datum poslední zálohy se nezapíše
+  await p.click('#logo'); await p.waitForSelector('.dash');
+  await p.evaluate(() => { window.__ai.odmitnout = true; });
+  await p.click('#d-zaloha');
+  await p.waitForFunction(() => document.querySelector('#hlaska')?.textContent.includes('Uložení souboru jste zrušili'));
+  assert.equal(await p.evaluate(() => localStorage.getItem('pp.zaloha')), null);
+  await p.evaluate(() => { window.__ai.odmitnout = false; });
+  await p.click('#d-zaloha');
+  await p.waitForFunction(() => window.__ai.ulozeno.filter((u) => u.filename.endsWith('.pplan-zaloha.json')).length === 2);
+  const zaloha = (await p.ai()).ulozeno.at(-1);
+  assert.match(zaloha.filename, /^Pozarni_planovac_zaloha_\d{4}-\d{2}-\d{2}\.pplan-zaloha\.json$/);
+  assert.match(await p.locator('#hlaska').textContent(), /Záloha je stažená/);
+  // „původní plánovač“: nový kontext = jiné úložiště; import zálohy obnoví projekt i se stěnami
+  const ctx2 = await browser.newContext({ viewport: { width: 1500, height: 950 } });
+  await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const q = await ctx2.newPage(); const chyby2 = []; q.on('pageerror', (e) => chyby2.push(e.message));
+  await q.goto(URL_); await q.waitForSelector('.dash');
+  assert.equal(await q.locator('.projekty li a').count(), 0);
+  await q.setInputFiles('#d-import', { name: zaloha.filename, mimeType: 'application/json', buffer: Buffer.from(zaloha.text) });
+  await q.waitForSelector('.dlg[open] .zaloha-seznam'); await q.click('.dlg [data-vysledek=ok]'); await q.waitForSelector('.dlg', { state: 'detached' });
+  await q.waitForSelector('.projekty li >> text=AI test');
+  await q.click('.projekty li a'); await q.waitForSelector('.editor');
+  await q.click('#listy li:nth-child(3) a'); await q.waitForSelector('#svet', { state: 'attached' });
+  await q.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  assert.equal(await q.locator('#svet [data-druh=stena]').count(), 2, 'přenesený projekt má stěny nakreslené Claude');
+  assert.deepEqual(p.chyby, []); assert.deepEqual(chyby2, []);
+  await ctx2.close(); await p.context().close();
 });

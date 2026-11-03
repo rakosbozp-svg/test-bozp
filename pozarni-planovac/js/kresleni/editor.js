@@ -10,6 +10,7 @@ import { ikona } from '../ikony.js';
 import { vlozPodklad } from './podklad.js';
 import { exportujPdf, stahniBajty, jmenoPdf } from '../pdf/export.js';
 import { importujSoubor, vlozVektor, kalibrujVektor } from './import/index.js';
+import { ulozSoubor, zpravaUlozeni } from '../stazeni.js';
 
 const NASTROJE = [
   ['vyber', 'Výběr', 'Výběr a úprava prvků (V)'], ['posun', 'Plátno', 'Posun plátna (H) – nebo střední tlačítko / mezerník'],
@@ -532,7 +533,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     return mapa;
   }
   async function exportSvg() { const m = await dataUriZnacek(); return renderListu(v, mkO({ symbolHref: (id) => m.get(id) || '' })); }
-  const stahni = (blob, jmeno) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = jmeno; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  const stahni = (blob, jmeno) => ulozSoubor(blob, jmeno).then((r) => { if (!r.ok && r.kod !== 'declined') oznam(zpravaUlozeni(r)); });
   const jmenoSouboru = (pripona) => `${(list.nazev || 'vykres').replace(/[^\p{L}\p{N}_-]+/gu, '_')}.${pripona}`;
   async function exportPng() {
     const svg = await exportSvg(), l = L(), px = Math.round((l.W / 25.4) * 300), py = Math.round((l.H / 25.4) * 300);
@@ -547,7 +548,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     const b = e.target.closest('button'); if (!b) return;
     if (S.zamek && (b.dataset.nastroj || b.dataset.akce === 'zpet' || b.dataset.akce === 'vpred')) return;
     if (b.dataset.nastroj) return nastavNastroj(b.dataset.nastroj);
-    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(true); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
+    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(true); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { const r = await stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); if (!r.ok && r.kod !== 'declined') oznam(zpravaUlozeni(r)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
   });
   host.querySelector('.ed-nastroje').addEventListener('change', (e) => {
     if (e.target.dataset.volba) S[e.target.dataset.volba] = e.target.checked;
