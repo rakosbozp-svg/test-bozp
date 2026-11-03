@@ -115,7 +115,7 @@ function kontrolaKarty(k, p, chyba, upoz) {
 function kontrolaVykresu(list, p, chyba, upoz, ids, mameKatalog, evak = false, karta = null) {
   const v = list.vykres;
   if (v.pozadi && !v.pozadi.kalibrace) upoz('MERITKO', `${p}.vykres.pozadi`, `List „${list.nazev}“: měřítko podkladu není ověřeno – zkalibrujte ho podle známé délky. Délky tras jsou orientační.`);
-  if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: měřítko importovaného výkresu není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
+  if (v.meritkoZdroj && !v.meritkoZdroj.overeno) upoz('MERITKO_IMPORT', `${p}.vykres.meritkoZdroj`, `List „${list.nazev}“: ${v.meritkoZdroj.zdroj === 'claude' ? 'měřítko výkresu' : 'měřítko importovaného výkresu'} není ověřeno (${v.meritkoZdroj.popis}) – zkalibrujte podle známé délky.`);
   if (!evak && v.severka.uhel === null) upoz('SEVERKA', `${p}.vykres.severka`, `List „${list.nazev}“: není určena severka.`);
   if (!evak && !v.legendaZobrazit && v.prvky.some((x) => x.druh === 'znacka')) upoz('LEGENDA', `${p}.vykres.legenda`, `List „${list.nazev}“: legenda je vypnutá – značka, která není v příloze č. 1 metodiky, se musí uvést a popsat v legendě na tomtéž výkresu (Hanuška 1996, kap. 2.3).`);
   if (!evak && !v.sit10m) upoz('SIT10', `${p}.vykres.sit10m`, `List „${list.nazev}“: je vypnutá síť 10 × 10 m (metodika ji vyžaduje pro odhad vzdáleností).`);

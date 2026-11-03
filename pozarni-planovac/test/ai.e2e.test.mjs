@@ -34,7 +34,9 @@ function simulaceClaude({ obrazky = true } = {}) {
   });
   const sample = async (input, opts = {}) => {
     const sc = log.scenare.shift() || { kroky: [], konec: '• Hotovo.' };
-    log.volani.push({ input: JSON.parse(JSON.stringify(input)), obrazky: [].concat(opts.images || []).map((b) => ({ typ: b.type, velikost: b.size })), nastroje: (opts.tools || []).map((t) => ({ name: t.name, schema: t.inputSchema })), modelTier: opts.modelTier, cache: opts.cache });
+    const zaznam = { input: JSON.parse(JSON.stringify(input)), obrazky: [], nastroje: (opts.tools || []).map((t) => ({ name: t.name, schema: t.inputSchema })), modelTier: opts.modelTier, cache: opts.cache };
+    log.volani.push(zaznam);
+    zaznam.obrazky = await Promise.all([].concat(opts.images || []).map(async (b) => { let w = 0, h = 0; try { const bm = await createImageBitmap(b); w = bm.width; h = bm.height; } catch { /* nečitelné */ } return { typ: b.type, velikost: b.size, w, h }; }));
     if (opts.signal?.aborted) throw { code: 'cancelled', message: 'aborted' };
     let text = '';
     const pis = (t) => { text += (text ? '\n\n' : '') + t; opts.onText?.({ text, delta: t }); };
@@ -49,7 +51,7 @@ function simulaceClaude({ obrazky = true } = {}) {
     if (sc.chyba) throw sc.chyba;
     if (opts.signal?.aborted) throw { code: 'cancelled', message: 'aborted' };
     pis(sc.konec || '• Hotovo.');
-    return { text, truncated: false, modelTierApplied: 'default' };
+    return { text, truncated: false, modelTierApplied: sc.tier || opts.modelTier || 'default' };
   };
   sample.limits = async () => ({ maxPromptBytes: 262144, tools: { maxCount: 16 }, ...(obrazky ? { images: { maxCount: 5, maxInputBytes: 20e6, mediaTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] } } : {}), modelTiers: ['default', 'complex', 'quick'] });
   window.claude = { use: async (n) => (n === 'sample' ? sample : null) };
@@ -76,6 +78,8 @@ async function nova({ claude = true, obrazky = true, evak = false } = {}) {
   p.zadej = async (t) => { await p.fill('[data-ai-zadani]', t); await p.click('[data-ai-spust]'); };
   p.hotovo = () => p.waitForFunction(() => document.querySelector('[data-ai-stop]')?.hidden === true && document.querySelector('[data-ai-spust]') && !document.querySelector('[data-ai-spust]').disabled, null, { timeout: 15000 });
   p.log = () => p.locator('[data-ai-log]').innerText();
+  p.klikSvet = async (x, y) => { const [sx, sy] = await p.evaluate(([a, b]) => { const m = document.querySelector('#svet').getScreenCTM(), q = new DOMPoint(a, b).matrixTransform(m); return [q.x, q.y]; }, [x, y]); await p.mouse.click(sx, sy); };
+  p.dlgOk = async (text) => { await p.waitForSelector('.dlg[open]'); if (text !== undefined) await p.fill('.dlg input[name=hodnota]', text); await p.click('.dlg [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' }); };
   return p;
 }
 const skip = { skip: !chromium && 'Playwright není dostupný' };
@@ -154,7 +158,7 @@ test('navazující zadání: obrázek listu se posílá, historie konverzace, p�
   await p.zadej('Přidej popisek Kuchyň.'); await p.hotovo();
   const v2 = (await p.ai()).volani[1];
   assert.deepEqual(v2.obrazky.map((o) => o.typ), ['image/png'], 'neprázdný list: posílá se obrázek listu s mřížkou');
-  assert.match(v2.input.at(-1).content, /1\) aktuální list s purpurovou souřadnicovou mřížkou/);
+  assert.match(v2.input.at(-1).content, /1\) kreslicí plocha aktuálního listu s purpurovou souřadnicovou mřížkou/);
   assert.deepEqual(v2.input.map((t) => t.role), ['user', 'user', 'assistant', 'user'], 'pokyny, předchozí zadání a odpověď, nové zadání');
   assert.match(v2.input[2].content, /Stěny hotové/);
   // přepnutí záložky panelu: konverzace i rozepsané zadání zůstanou
@@ -273,6 +277,147 @@ test('přepnutí listu během kreslení zastaví Claude a rozkreslené uloží d
   await p.waitForTimeout(800);   // odložené uložení (350 ms)
   await p.reload(); await p.waitForSelector('#svet');
   assert.equal(await p.pocet('stena'), 2, 'a jsou uložené');
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+// ---------- opravy po revizi ----------
+test('během zásahu je editor zamčený (Zpět, nástroje, klávesy počkají); potom jeden krok Zpět vrátí celý zásah', skip, async () => {
+  const p = await nova();
+  await p.click('[data-nastroj=stena]'); await p.klikSvet(1, 1); await p.klikSvet(5, 1); await p.keyboard.press('Enter');
+  assert.equal(await p.pocet('stena'), 1);
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.click('[data-ai-volba=kontrola]');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }], cekej: 1500 }], konec: '• Hotovo.' }]);
+  await p.zadej('Kresli.');
+  await p.waitForFunction(() => document.querySelectorAll('#svet [data-druh=stena]').length === 3);
+  assert.equal(await p.locator('.ed-zamek').isVisible(), true);
+  assert.match(await p.locator('.ed-zamek').innerText(), /Claude kreslí do výkresu/);
+  assert.equal(await p.locator('[data-akce=zpet]').isDisabled(), true);
+  assert.equal(await p.locator('[data-ai-nova]').isDisabled(), true, 'Nová konverzace během běhu nejde');
+  await p.locator('[data-nastroj=cara]').dispatchEvent('click');
+  assert.equal(await p.locator('[data-nastroj=vyber].akt').count(), 1, 'nástroj se během zásahu nezmění');
+  await p.locator('.ed-scena').focus(); await p.keyboard.press('Control+z'); await p.keyboard.press('Delete');
+  assert.equal(await p.pocet('stena'), 3, 'Ctrl+Z ani Delete během zásahu nic nezmění');
+  await p.hotovo();
+  assert.equal(await p.locator('.ed-zamek').isVisible(), false);
+  await p.click('[data-akce=zpet]');
+  assert.equal(await p.pocet('stena'), 1, 'jeden krok Zpět vrátí celý zásah, uživatelova stěna zůstane');
+  await p.click('[data-akce=zpet]'); assert.equal(await p.pocet('stena'), 0);
+  await p.click('[data-akce=vpred]'); await p.click('[data-akce=vpred]'); assert.equal(await p.pocet('stena'), 3);
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+test('odchod na přehled projektů během kreslení zastaví Claude a uloží rozkreslené; smazaný projekt se už neobnoví', skip, async () => {
+  const p = await nova();
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }], cekej: 3000 }], konec: 'nedojde' }]);
+  await p.zadej('Kresli.');
+  await p.waitForFunction(() => document.querySelectorAll('#svet [data-druh=stena]').length === 2);
+  await p.click('#logo'); await p.waitForSelector('.dash');
+  await p.click('.projekty li a'); await p.waitForSelector('.editor');
+  await p.click('#listy li:nth-child(3) a'); await p.waitForSelector('#svet', { state: 'attached' });
+  assert.equal(await p.pocet('stena'), 2, 'rozkreslené je uložené');
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  assert.ok((await p.log()).includes('Zastaveno při odchodu z listu'));
+  await p.click('#logo'); await p.waitForSelector('.dash');
+  await p.click('.projekty [data-akce=smaz]'); await p.dlgOk();
+  await p.waitForTimeout(3500);   // déle než by běžel zastavený zásah
+  assert.equal((await p.ai()).volani.length, 1, 'kontrolní kolo se po odchodu nespustilo');
+  await p.reload(); await p.waitForSelector('.dash');
+  assert.equal(await p.locator('.projekty li a').count(), 0, 'smazaný projekt se nevrátil');
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+test('selhání kontrolního kola nesmaže odpověď prvního kola ani historii; použitý model se oznámí', skip, async () => {
+  const p = await nova();
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.selectOption('[data-ai-model]', 'complex');
+  await p.scenare([
+    { kroky: [{ text: 'Kreslím.', nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }] }], konec: '• Nakreslil jsem obvod.\n• Rozměry jsou odhad.', tier: 'default' },
+    { kroky: [], chyba: { code: 'rate_limited', message: 'x' } },
+  ]);
+  await p.zadej('Nakresli obvod.'); await p.hotovo();
+  const log = await p.log();
+  assert.ok(log.includes('Rozměry jsou odhad'), log);
+  assert.ok(log.includes('Kontrolu výsledku se nepodařilo dokončit (Příliš mnoho dotazů'), log);
+  assert.ok(log.includes('Odpověděl model Vyvážený – zvolený model Nejschopnější teď není k dispozici'), log);
+  assert.equal((await p.ai()).volani[0].modelTier, 'complex');
+  await p.scenare([{ kroky: [], konec: '• Ok.' }]);
+  await p.zadej('Další.'); await p.hotovo();
+  const v = (await p.ai()).volani.at(-1);
+  assert.deepEqual(v.input.map((t) => t.role), ['user', 'user', 'assistant', 'user']);
+  assert.match(v.input[2].content, /Rozměry jsou odhad/);
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+test('obrázek pro Claude je jen kreslicí plocha (bez razítka); bez „Poslat i obrázek listu“ se kontrolní kolo nespustí', skip, async () => {
+  const p = await nova();
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS } }] }], konec: '• Ok.' }, { kroky: [], konec: '• V pořádku.' }]);
+  await p.zadej('Kresli.'); await p.hotovo();
+  const [o] = (await p.ai()).volani[1].obrazky;
+  assert.equal(o.w, 1600);
+  assert.ok(Math.abs(o.w / o.h - 283.648 / 172.648) < 0.01, `poměr ${o.w}×${o.h} odpovídá rámu A4 na šířku, ne celému listu (1,414)`);
+  await p.click('[data-ai-volba=prilozitVykres]');
+  assert.equal(await p.locator('[data-ai-volba=kontrola]').isDisabled(), true);
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'uprav', input: { zmeny: [] } }] }], konec: '• Ok.' }]);
+  const pred = (await p.ai()).volani.length;
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: [{ druh: 'text', x: 3, y: 5, text: 'Chodba' }] } }] }], konec: '• Ok.' }]);
+  await p.evaluate(() => { window.__ai.scenare.shift(); });
+  await p.zadej('Přidej popisek.'); await p.hotovo();
+  const ai = await p.ai();
+  assert.equal(ai.volani.length, pred + 1, 'bez obrázku listu žádné kontrolní kolo');
+  assert.deepEqual(ai.volani.at(-1).obrazky, []);
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+test('trvalé odmítnutí platí pro všechny listy; stav panelu je po projektech (kopie projektu nemá cizí konverzaci)', skip, async () => {
+  const p = await nova();
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 1) } }] }], konec: '• Stěna.' }]);
+  await p.click('[data-ai-volba=kontrola]');
+  await p.zadej('Stěna.'); await p.hotovo();
+  // kopie projektu: stejná id listů, ale vlastní (prázdná) konverzace
+  await p.click('#logo'); await p.waitForSelector('.dash');
+  await p.click('.projekty [data-akce=kopie]'); await p.waitForSelector('.projekty li:nth-child(2)');
+  await p.locator('.projekty li a', { hasText: '(kopie)' }).click(); await p.waitForSelector('.editor');
+  await p.click('#listy li:nth-child(3) a'); await p.waitForSelector('#svet', { state: 'attached' });
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  assert.ok((await p.log()).includes('Zatím žádná konverzace'));
+  // odmítnutí na tomto listu vypne Claude i na jiném listu
+  await p.scenare([{ kroky: [], chyba: { code: 'not_granted', message: 'x' } }]);
+  await p.zadej('Cokoli.');
+  await p.waitForFunction(() => document.querySelector('[data-ai-log]').innerText.includes('nebylo povoleno'));
+  await p.click('#listy li:nth-child(2) a'); await p.waitForSelector('#svet', { state: 'attached' });
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  assert.equal(await p.locator('[data-ai-spust]').isDisabled(), true);
+  assert.ok((await p.locator('[data-ai-stav]').innerText()).includes('nebylo povoleno'));
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+});
+
+test('„Vrátit změny od Claude“ funguje i po novém vytvoření editoru (přejmenování listu)', skip, async () => {
+  const p = await nova();
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  await p.click('[data-ai-volba=kontrola]');
+  await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }] }], konec: '• Ok.' }]);
+  await p.zadej('Kresli.'); await p.hotovo();
+  await p.evaluate(() => { document.querySelector('.listy-sprava').open = true; });
+  await p.click('#l-prejm'); await p.dlgOk('Půdorys přejmenovaný');
+  await p.waitForSelector('#svet', { state: 'attached' });
+  await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
+  assert.equal(await p.pocet('stena'), 2);
+  assert.equal(await p.locator('[data-akce=zpet]').isDisabled(), true, 'nový editor nemá historii');
+  assert.equal(await p.locator('[data-ai-vratit]').isDisabled(), false);
+  await p.click('[data-ai-vratit]');
+  assert.equal(await p.pocet('stena'), 0);
+  assert.ok((await p.log()).includes('Obnovíte je tlačítkem Zpět'));
+  await p.click('[data-akce=zpet]'); assert.equal(await p.pocet('stena'), 2, 'vrácení je samo krok, který jde vzít zpět');
   assert.deepEqual(p.chyby, []);
   await p.context().close();
 });

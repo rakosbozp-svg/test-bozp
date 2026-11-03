@@ -60,6 +60,7 @@ window.addEventListener('beforeunload', () => { if (casovac && S.p) { clearTimeo
 
 // ---------- směrování ----------
 function smeruj() {
+  zastavClaude();   // běžící zásah Claude se ukončí a jeho rozkreslené zapíše do listu ještě před odchodem (a uloží se hned níže)
   if (casovac && S.p) { clearTimeout(casovac); casovac = null; M.uklidPrilohy(S.p); U.uloz(S.p); }   // nic se neztratí při rychlém odchodu z editoru
   const [, , id, listId] = location.hash.split('/');
   if (id) {

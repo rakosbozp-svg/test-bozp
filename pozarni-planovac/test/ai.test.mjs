@@ -229,3 +229,134 @@ test('pomocná mřížka pro obrázek listu: celé kroky v metrech s popisky, je
   assert.match(A.mrizkaSvg(k.v), />x 0</);
   assert.doesNotMatch(A.mrizkaSvg(k.v), /NaN/);
 });
+
+// ---------- opravy po revizi ----------
+test('uprav: nová geometrie stěny drží dveře na místě (v metrech), vzdálené dveře se odpojí s upozorněním', () => {
+  const k = kontext();
+  const { id } = A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[0, 0], [10, 0], [10, 8]] }, { druh: 'dvere', x: 5, y: 0 }, { druh: 'dvere', x: 10, y: 4 }] }, k).vysledek;
+  const [s, d1, d2] = id.map((x) => P.najdi(k.v.prvky, x));
+  assert.equal(d2.seg, 1);
+  // prodloužení stěny na začátku a vložení vrcholu: dveře zůstanou na (5,0) a (10,4)
+  const r = A.provedNastroj('uprav', { zmeny: [{ id: s.id, body: [[-5, 0], [7, 0], [10, 0], [10, 8]] }] }, k);
+  assert.equal(r.vysledek.upraveno, 1);
+  close(d1.x, 5); close(d1.y, 0); close(d2.x, 10); close(d2.y, 4);
+  assert.equal(d1.stenaId, s.id); assert.equal(d2.stenaId, s.id); assert.equal(d2.seg, 2);
+  // stěna úplně jinde: dveře zůstanou volně na svém místě
+  const r2 = A.provedNastroj('uprav', { zmeny: [{ id: s.id, body: [[0, 30], [10, 30]] }] }, k);
+  assert.equal(d1.stenaId, null); close(d1.x, 5); close(d1.y, 0);
+  assert.match(r2.vysledek.upozorneni.join('\n'), /po změně stěny nejsou u stěny/);
+});
+
+test('uprav dveří: přesun daleko od stěn je odpojí (ne posun po staré stěně); úhel připojených dveří nejde; otevira_k určí stranu', () => {
+  const k = kontext();
+  const { id } = A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[0, 0], [10, 0]] }, { druh: 'dvere', x: 2, y: 0, otevira_k: [2, -3] }] }, k).vysledek;
+  const d = P.najdi(k.v.prvky, id[1]);
+  assert.equal(d.smer, -1, 'stěna kreslená zleva doprava: křídlo nahoru (y −) = smer −1');
+  A.provedNastroj('uprav', { zmeny: [{ id: d.id, otevira_k: [2, 3] }] }, k);
+  assert.equal(d.smer, 1);
+  assert.match(A.provedNastroj('uprav', { zmeny: [{ id: d.id, uhel: 45 }] }, k).vysledek.chyby[0], /úhel připojených dveří určuje stěna/);
+  const r = A.provedNastroj('uprav', { zmeny: [{ id: d.id, x: 20, y: 15 }] }, k);
+  assert.equal(d.stenaId, null); close(d.x, 20); close(d.y, 15);
+  assert.match(r.vysledek.upozorneni[0], /není do 1 m žádná stěna/);
+});
+
+test('nepoužitelné vlastnosti: uprav je odmítne celé (prvek beze změny), kresli je ohlásí s radou', () => {
+  const k = kontext();
+  const { id } = A.provedNastroj('kresli', { prvky: [{ druh: 'text', x: 1, y: 1, text: 'A', velikost: 5 }, { druh: 'znacka', x: 2, y: 2, znacka: 'DZP-001', vyska: 12 }, { druh: 'stena', body: [[0, 0], [3, 0]], tloustka_mm: 150 }] }, k).vysledek;
+  const r0 = A.provedNastroj('kresli', { prvky: [{ druh: 'text', x: 1, y: 1, text: 'B', velikost: 5, foo: 1 }] }, k).vysledek;
+  assert.match(r0.upozorneni.join('\n'), /„velikost“ u druhu text nejde \(u textu je výška písma „vyska“\)/);
+  assert.match(r0.upozorneni.join('\n'), /neznámé vlastnosti foo/);
+  const [t, z, s] = id.map((x) => P.najdi(k.v.prvky, x));
+  assert.equal(t.vyska, 3); assert.equal(z.velikost, 8); assert.equal(s.tloustkaM, 0.3);
+  const r = A.provedNastroj('uprav', { zmeny: [{ id: t.id, text: 'Nový', w: 5 }, { id: s.id, cx: 3 }, { id: z.id, barva: 'cervena' }] }, k).vysledek;
+  assert.equal(r.upraveno, 0); assert.equal(r.chyby.length, 3);
+  assert.equal(t.text, 'A', 'chybná změna nezmění ani platné části');
+  assert.match(r.chyby[1], /polohu změň přes body nebo posun/);
+});
+
+test('vrstvy: do zamčené vrstvy se nekreslí (výchozí se nahradí odemčenou, zadaná je chyba), skrytá se ohlásí', () => {
+  const k = kontext();
+  k.v.vrstvy.find((l) => l.id === 'zaklad').zamcena = true;
+  k.v.vrstvy.find((l) => l.id === 'popisky').viditelna = false;
+  const r = A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[0, 0], [3, 0]] }, { druh: 'stena', body: [[0, 1], [3, 1]], vrstva: 'zaklad' }, { druh: 'text', x: 1, y: 1, text: 'A' }, { druh: 'text', x: 1, y: 2, text: 'B', vrstva: 'popisky' }] }, k).vysledek;
+  assert.equal(r.pridano, 3);
+  const [s, , t, t2] = r.id.map((x) => x && P.najdi(k.v.prvky, x));
+  assert.notEqual(s.vrstva, 'zaklad'); assert.notEqual(t.vrstva, 'popisky'); assert.equal(t2.vrstva, 'popisky');
+  assert.match(r.chyby[0], /je zamčená/); assert.match(r.upozorneni.join('\n'), /je skrytá/);
+  for (const l of k.v.vrstvy) l.zamcena = true;
+  assert.match(A.provedNastroj('kresli', { prvky: [{ druh: 'text', x: 1, y: 1, text: 'C' }] }, k).vysledek.chyby[0], /všechny vrstvy jsou zamčené nebo skryté/);
+});
+
+test('„Jste zde“ jde přes uprav přesunout a přes smaz odebrat (id jstezde)', () => {
+  const k = kontext('evak_plan');
+  assert.deepEqual(A.provedNastroj('kresli', { prvky: [{ druh: 'jstezde', x: 5, y: 6 }] }, k).vysledek.id, ['jstezde']);
+  assert.match(A.popisStavu(k), /„Jste zde“ \(id jstezde\): x 5, y 6/);
+  assert.equal(A.provedNastroj('uprav', { zmeny: [{ id: 'jstezde', posun: [1, 0], text: 'Recepce' }] }, k).vysledek.upraveno, 1);
+  assert.equal(k.v.evakPlan.jsteZde.x, 6); assert.equal(k.v.evakPlan.jsteZde.text, 'Recepce'); assert.equal(k.v.evakPlan.jsteZde.dx, 22);
+  assert.equal(A.provedNastroj('smaz', { id: ['jstezde'] }, k).vysledek.smazano, 1);
+  assert.equal(k.v.evakPlan.jsteZde, null);
+});
+
+test('nastav_list je atomický: chyba v jednom poli nezmění nic', () => {
+  const k = kontext(), pred = P.snimek(k.v);
+  assert.throws(() => A.provedNastroj('nastav_list', { orientace: 'na_vysku', meritko: 150 }, k), /povolená měřítka/);
+  assert.throws(() => A.provedNastroj('nastav_list', { meritko: 200, severka: 'sever' }, k), /chybí číslo/);
+  assert.equal(P.snimek(k.v), pred);
+  const ke = kontext('evak_plan'), prede = P.snimek(ke.v);
+  assert.throws(() => A.provedNastroj('nastav_list', { orientace: 'na_vysku', severka: 10 }, ke), /severku nemá/);
+  assert.equal(P.snimek(ke.v), prede);
+});
+
+test('výsledek nástroje je pod 32 KB: stejné chyby se sloučí, i dlouhé české texty se počítají v bajtech', () => {
+  const k = kontext();
+  const r = A.provedNastroj('kresli', { prvky: [...Array.from({ length: 300 }, (_, i) => ({ druh: 'stena', body: [[i, 0], [i, 1]] })), ...Array.from({ length: 300 }, (_, i) => ({ druh: 'text', x: 1, y: 1, text: 'x', barva: `fialová${i % 3}` }))] }, k).vysledek;
+  assert.ok(A.bajty(r) < 30000, `${A.bajty(r)} B`);
+  assert.equal(r.pridano, 300);
+  assert.ok(r.chyby.length <= 4, 'sloučené podle textu');
+  assert.match(r.chyby[0], /^prvky\[300, 303, 306, .* a dalších \d+\]\.barva: neznámá barva/);
+  const u = A.provedNastroj('uprav', { zmeny: k.v.prvky.slice(0, 300).map((p) => ({ id: p.id, barva: 'nesmysl' })) }, k).vysledek;
+  assert.ok(A.bajty(u) < 30000);
+  const kt = kontext();
+  A.provedNastroj('kresli', { prvky: Array.from({ length: 300 }, (_, i) => ({ druh: 'text', x: i % 20, y: 1, text: `Přípravna žíravin a hořlavých kapalin č. ${i} – ${'ř'.repeat(150)}` })) }, kt);
+  const s = A.provedNastroj('precti_vykres', {}, kt).vysledek;
+  assert.ok(A.bajty(s) < 32000, `${A.bajty(s)} B`); assert.ok(s.dalsi_od > 0);
+});
+
+test('barvy i s diakritikou, v jiném rodě a anglicky; minimum písma a značek v evakuačním plánu', () => {
+  const k = kontext();
+  const { id } = A.provedNastroj('kresli', { prvky: ['žlutá', 'červený', 'black', 'Modrá', '#abc'].map((b) => ({ druh: 'cara', body: [[0, 0], [1, 1]], barva: b })) }, k).vysledek;
+  assert.deepEqual(id.map((x) => P.najdi(k.v.prvky, x).barva), ['#f2d200', '#d62b1f', '#000000', '#1e5fd0', '#abc']);
+  const ke = kontext('evak_plan');
+  const r = A.provedNastroj('kresli', { prvky: [{ druh: 'text', x: 1, y: 1, text: 'Sklad', vyska: 2.5 }, { druh: 'znacka', x: 2, y: 2, znacka: 'EVAK-002', velikost: 5 }] }, ke).vysledek;
+  const [t, z] = r.id.map((x) => P.najdi(ke.v.prvky, x));
+  assert.equal(t.vyska, 2.9); assert.equal(z.velikost, 7);
+  assert.equal(r.upozorneni.length, 2);
+  assert.match(A.pokyny(ke), /písmo aspoň 2,9 mm/);
+});
+
+test('zóny legendy a přehledového plánu v popisu listu; pojistka rámu nejdřív centruje a měřítko nezvětší', () => {
+  const k = kontext();
+  assert.match(A.popisStavu(k), /nech volno pro legendu značek \(objeví se s první značkou\): x 19\.3 až 27\.5 m, y 12\.2 až 16\.4 m/);
+  A.provedNastroj('kresli', { prvky: [{ druh: 'znacka', x: 5, y: 5, znacka: 'DZP-001' }] }, k);
+  assert.match(A.popisStavu(k), /nech volno pro legendu značek: x/);
+  // uživatel má 1 : 200; budova je mimo rám, ale po vycentrování se vejde – měřítko zůstane
+  const k2 = kontext(); k2.v.meritko.pomer = 200;
+  A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[-14, 0], [-2, 0], [-2, 8], [-14, 8], [-14, 0]] }] }, k2);
+  assert.equal(A.mimoRam(k2.v, k2.v.prvky.map((p) => p.id)), true);
+  assert.deepEqual(A.vejdiSeDoRamu(k2.v), { pomer: 200, zmenaMeritka: false });
+  assert.equal(A.mimoRam(k2.v, k2.v.prvky.map((p) => p.id)), false);
+  // nevejde se ani po vycentrování: menší měřítko
+  const k3 = kontext();
+  A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[0, 0], [80, 0], [80, 40]] }] }, k3);
+  assert.deepEqual(A.vejdiSeDoRamu(k3.v), { pomer: 500, zmenaMeritka: true });
+  const ke = kontext('evak_plan'); ke.v.evakPlan.prehled = 'ano';
+  A.provedNastroj('kresli', { prvky: [{ druh: 'stena', body: [[0, 0], [5, 0]] }] }, ke);
+  assert.match(A.popisStavu(ke), /nech volno pro přehledový plán/);
+});
+
+test('mřížka se škáluje s formátem listu (čitelná i na A0)', () => {
+  const v4 = novyList('pudorys').vykres, v0 = novyList('evak_plan').vykres; v0.format = 'A0';
+  const vel = (svg) => Number(/font-size="([\d.]+)"/.exec(svg)[1]);
+  assert.ok(Math.abs(vel(A.mrizkaSvg(v4)) - 2.6) < 0.2, `A4: ${vel(A.mrizkaSvg(v4))}`);
+  assert.ok(vel(A.mrizkaSvg(v0)) > 7, `A0: ${vel(A.mrizkaSvg(v0))}`);
+});

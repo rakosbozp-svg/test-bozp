@@ -315,3 +315,10 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .ai-priloha img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: var(--bg-300); }
 .ai-priloha span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-tlacitka, .ai-radek { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ai-zprava.ai-akce-chyba { padding: 2px 10px; font-size: 12px; color: var(--warn); font-weight: 600; }
+.ai-panel label:has(> input:disabled) { opacity: .5; cursor: not-allowed; }
+.ai-panel .btn:disabled { cursor: not-allowed; }
+/* Editor zamčený během zásahu Claude: jen prohlížení (posun, přiblížení, export) */
+.ed-zamek { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 24px); padding: 6px 12px; border-radius: var(--radius-md); background: var(--inverse); color: var(--on-inverse); font: 600 13px/1.4 var(--font-sans); text-align: center; box-shadow: var(--shadow-md); pointer-events: none; }
+.ed--zamceno .ed-nastroje [data-nastroj], .ed--zamceno .ed-nastroje label:has(> [data-podklad]) { opacity: .4; pointer-events: none; }
+.ed--zamceno .ed-scena { cursor: grab; }
