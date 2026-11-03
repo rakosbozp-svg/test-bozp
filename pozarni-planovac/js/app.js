@@ -27,6 +27,7 @@ import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
 import { vlozPodklad } from './kresleni/podklad.js';
 import { importujSoubor, vlozVektor } from './kresleni/import/index.js';
+import { vykresliPanelClaude, zastavClaude } from './ai/asistent.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const app = $('#app'), topAkce = $('#top-akce'), hlaska = $('#hlaska');
@@ -354,11 +355,11 @@ const OP_LISTY = {   // typ listu → [klíč dat, schéma, nadpis náhledu, poz
   op_zaklad: ['opZaklad', SCHEMA_ZAKLAD, 'OPERATIVNÍ PLÁN – základní text', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), kap. 2.1 a příloha č. 3.', '<p class="napoveda">Základní text je koncept a podklad pro vyjímatelné přílohy; zpracovává se v jednom vyhotovení a ukládá se odděleně od příloh (Hanuška 1996, kap. 2.1).</p>'],
   op_text: ['opText', SCHEMA_TEXT, 'OPERATIVNÍ PLÁN – vyjímatelná příloha, textová část', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), kap. 2.2 a příloha č. 3.', '<p class="napoveda">Co nejstručněji, heslovitě – jen údaje, které nejde zakreslit do grafické části (Hanuška 1996, kap. 2.2).</p>'],
 };
-const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', uplnost: 'Úplnost', metodika: 'Metodika', projekt: 'Projekt' };
-const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
+const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', claude: 'Claude', uplnost: 'Úplnost', metodika: 'Metodika', projekt: 'Projekt' };
+const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'claude', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
 
 function editor() {
-  S.ed?.zrusit(); S.ed = null;
+  zastavClaude(); S.ed?.zrusit(); S.ed = null;   // rozkreslené od Claude se při zastavení uloží do listu, kde začalo
   { const r = rezimProjektu(S.p.typ); nastavLogo(r); try { localStorage.setItem('pp-rezim', r); } catch { /* bez úložiště */ } }
   const p = S.p, list = S.listId === 'dotaznik' ? { id: 'dotaznik', typ: 'dotaznik', nazev: 'Dotazník pro klienta', virtualni: true } : p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
@@ -485,6 +486,7 @@ function panel(jenUplnost = false) {
   if (skok) { const sh = souhrnUplnosti(nalezy); skok.hidden = false; skok.textContent = `Kontrola úplnosti: ${sh.chyby} ${sh.chyby === 1 ? 'chyba' : sh.chyby >= 2 && sh.chyby <= 4 ? 'chyby' : 'chyb'}, ${sh.upozorneni} upozornění – zobrazit ↓`; skok.classList.toggle('ma-chyby', sh.chyby > 0); }
   host.onclick = host.onchange = host.oninput = null;
   if ((S.panel === 'vlastnosti' || S.panel === 'vrstvy') && S.ed) { vykresliPanelVykresu(S.panel, host, S.ed); return; }
+  if (S.panel === 'claude' && S.ed) { if (!jenUplnost || !host.querySelector('.ai-panel')) vykresliPanelClaude(host, S.ed); return; }   // rozepsaná konverzace se nepřekresluje
   if (S.panel === 'uplnost') {
     označ(panelUplnosti(S.p, katalog, host, nalezy));
     host.onclick = (e) => { const b = e.target.closest('[data-cesta]'); if (b) skoc(b.dataset.cesta); };
