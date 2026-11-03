@@ -9,7 +9,7 @@
 import * as P from '../kresleni/prvky.js';
 import { esc } from '../kresleni/render.js';
 import * as A from './nastroje.js';
-import { vytvorWebSample, odhadCeny, prictiSpotrebu } from './web.js';
+import { vytvorWebSample, odhadCeny, prictiSpotrebu, jeSpotreba } from './web.js';
 
 // ---------- přístup k Claude ----------
 // Webová verze = stránka sestavená pro web (window.__WEB__) a zároveň NE artefakt claude.ai (ten má window.claude).
@@ -176,7 +176,7 @@ function textSpotreby(beh) {
   return `Spotřeba Claude: vstup ${cislo(vstup)} tokenů (z mezipaměti ${cislo(u.cache_read_input_tokens)}), výstup ${cislo(u.output_tokens)} – odhadem ${cena}.`;
 }
 function zapisSpotrebu(beh, usage, tier) {
-  if (!usage) return;
+  if (!jeSpotreba(usage)) return;   // např. špatné heslo – nic se neplatilo, žádný řádek o spotřebě
   prictiSpotrebu(beh.spotreba ||= {}, usage);
   beh.cena = (beh.cena || 0) + odhadCeny(usage, tier);
 }

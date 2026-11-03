@@ -1,6 +1,7 @@
 // Falešné API Anthropic pro testy webové verze: SKUTEČNÉ SDK @anthropic-ai/sdk (v api/claude.js) dostane podstrčený
 // fetch, který místo sítě odpovídá streamem SSE podle připravených scénářů a zaznamenává dotazy. Nic nejde do sítě.
-// Scénář: { text, nastroje: [{ id, name, input }], premysleni: 'podpis', stop, cekej (ms před koncem), chyba: { status, typ, zprava } }
+// Scénář: { text, nastroje: [{ id, name, input }], premysleni: 'podpis', stop, usage, cekej (ms před koncem),
+//   chyba: { status, typ, zprava } (HTTP chyba), chybaStreamu: { typ, zprava } (chyba uprostřed streamu) }
 import Anthropic from '@anthropic-ai/sdk';
 import { vytvorObsluhu } from '../api/claude.js';
 
@@ -55,6 +56,8 @@ export function falesneApi() {
               signal?.addEventListener('abort', () => { clearTimeout(t); ko(new DOMException('Zrušeno', 'AbortError')); });
             });
           }
+          // chyba uprostřed streamu (SSE „error“, HTTP stav už byl 200) – např. přetížení
+          if (sc.chybaStreamu) { pis({ type: 'error', error: { type: sc.chybaStreamu.typ, message: sc.chybaStreamu.zprava || 'chyba' } }); ctl.close(); return; }
           for (let k = konec; k < ev.length; k++) pis(ev[k]);
           ctl.close();
         } catch (e) { ctl.error(e); }

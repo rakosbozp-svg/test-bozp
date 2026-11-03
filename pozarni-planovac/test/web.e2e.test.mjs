@@ -182,6 +182,7 @@ test('web: špatné heslo se zapomene a zadání se vrátí do pole; Zastavit zr
   await p.fill('[data-ai-zadani]', 'Nakresli sklad.'); await p.click('[data-ai-spust]'); await p.hotovo();
   assert.equal(api.dotazy.length, 0, 'se špatným heslem nic nejde do Anthropic');
   assert.match(await p.log(), /Heslo ke Claude nesouhlasí/);
+  assert.ok(!(await p.log()).includes('Spotřeba'), 'nic se neplatilo → žádný řádek o spotřebě');
   assert.equal(await p.evaluate(() => localStorage.getItem('pp.claude.heslo')), null);
   assert.equal(await p.locator('[data-ai-heslo]').isVisible(), true);
   assert.equal(await p.inputValue('[data-ai-zadani]'), 'Nakresli sklad.', 'zadání je zpět v poli');

@@ -207,3 +207,53 @@ test('klient: stav funkce (GET) – chybí na webu (404), není nastavená, nebo
   const vercel504 = vytvorWebSample({ fetch: async () => new Response('An error occurred', { status: 504 }) });
   await assert.rejects(vercel504('a', {}), (e) => e.code === 'timeout');
 });
+
+// ---------- nálezy revize ----------
+test('funkce: klíč nikdy neodejde do prohlížeče – klíč přes dva řádky = „konfigurace“ bez klíče; jiné chyby jen obecným textem', async () => {
+  const api = falesneApi();
+  for (const klic of ['sk-ant-TAJNE\nDRUHA', 'sk-ant-TAJNE DRUHA', 'sk-ant-TAJNÉ']) {
+    const o = obsluhaSFalesnymApi(api, { ANTHROPIC_API_KEY: klic, PLANOVAC_HESLO: HESLO });
+    const r = await dotaz(o, { messages: [{ role: 'user', content: 'a' }] });
+    const t = await r.text();
+    assert.equal(r.status, 503); assert.equal(JSON.parse(t).kod, 'konfigurace'); assert.match(JSON.parse(t).zprava, /jeden řádek/);
+    assert.ok(!t.includes('TAJN'), t);
+  }
+  assert.equal(api.dotazy.length, 0);
+  // bez pojistky by SDK vyhodilo chybu hlavičky i s klíčem – do prohlížeče jde jen obecný text
+  const ch = popisChyby(new TypeError('Headers.append: "Bearer sk-ant-TAJNE\nX" is an invalid header value.'));
+  assert.deepEqual(ch, { status: 500, kod: 'upstream_error', zprava: 'Neočekávaná chyba serverové funkce.' });
+  const api2 = new Anthropic.APIError(400, { error: { type: 'invalid_request_error', message: 'bad key sk-ant-api03-ABC_def-123 here' } }, 'x', new Headers());
+  assert.equal(popisChyby(api2).zprava, 'bad key sk-ant-… here');
+});
+
+test('funkce: chyba uprostřed streamu (přetížení) má správný kód a spotřebu rozpracované odpovědi; po limitu odpovědi se dotaz zruší', async () => {
+  const { api, obsluha } = sestava();
+  api.scenare.push({ text: 'Kreslím', chybaStreamu: { typ: 'overloaded_error', zprava: 'Overloaded' }, usage: { input_tokens: 1234 } });
+  const l = await radky(await dotaz(obsluha, { messages: [{ role: 'user', content: 'a' }] }));
+  const ch = l.at(-1);
+  assert.equal(ch.t, 'chyba'); assert.equal(ch.kod, 'overloaded'); assert.equal(ch.zprava, 'Overloaded');
+  assert.equal(ch.usage.input_tokens, 1234, 'rozpracovaná odpověď se počítá do spotřeby');
+  assert.equal(l.filter((x) => x.t === 'text').map((x) => x.d).join(''), 'Kreslím');
+  for (const [typ, kod] of [['api_error', 'upstream_error'], ['rate_limit_error', 'rate_limited'], ['neznamy_typ', 'upstream_error']]) {
+    const s = sestava(); s.api.scenare.push({ chybaStreamu: { typ } });
+    assert.equal((await radky(await dotaz(s.obsluha, { messages: [{ role: 'user', content: 'a' }] }))).at(-1).kod, kod, typ);
+  }
+  // limit odpovědi (na Vercelu 285 s, tady 300 ms)
+  const api3 = falesneApi();
+  const o3 = vytvorObsluhu({ prostredi: { ANTHROPIC_API_KEY: 'sk-ant-test', PLANOVAC_HESLO: HESLO }, vytvorKlienta: (k) => new Anthropic({ apiKey: k, fetch: api3.fetch, maxRetries: 0 }), pauzaPriChybe: 0, limitMs: 300 });
+  api3.scenare.push({ text: 'Dlouho…', cekej: 10_000 });
+  const t0 = Date.now();
+  const l3 = await radky(await dotaz(o3, { messages: [{ role: 'user', content: 'a' }] }));
+  assert.ok(Date.now() - t0 < 3000);
+  assert.equal(l3.at(-1).kod, 'timeout'); assert.equal(l3.at(-1).status, 504);
+  assert.equal(api3.dotazy[0].zruseno, true, 'dotaz u Anthropic je po limitu zrušený');
+});
+
+test('klient: odmítnutí zahodí text; přerušené kolo nechá rozepsaný text i spotřebu; bez spotřeby (špatné heslo) žádná spotřeba', async () => {
+  let s = sestava(); s.api.scenare.push({ text: 'Tohle nenakreslím, protože…', stop: 'refusal', usage: { input_tokens: 50, output_tokens: 20 } });
+  await assert.rejects(s.sample('Nakresli', {}), (e) => e.code === 'refused' && e.text === undefined && e.usage.output_tokens === 20);
+  s = sestava(); s.api.scenare.push({ text: 'Kreslím stěny', chybaStreamu: { typ: 'overloaded_error', zprava: 'Overloaded' }, usage: { input_tokens: 777 } });
+  await assert.rejects(s.sample('Nakresli', {}), (e) => e.code === 'overloaded' && e.text === 'Kreslím stěny' && e.usage.input_tokens === 777 && e.detail === 'Overloaded');
+  s = sestava({ heslo: 'spatne' });
+  await assert.rejects(s.sample('a', {}), (e) => e.code === 'heslo' && e.usage === undefined && e.text === undefined);
+});

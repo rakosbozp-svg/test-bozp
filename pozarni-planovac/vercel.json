@@ -5,7 +5,8 @@
  "framework": null,
  "functions": {
   "api/claude.js": {
-   "maxDuration": 300
+   "maxDuration": 300,
+   "supportsCancellation": true
   }
  },
  "headers": [
