@@ -27,6 +27,8 @@ import { ikona } from './ikony.js';
 import { vykresliPanelVykresu } from './kresleni/panel-vykres.js';
 import { vlozPodklad } from './kresleni/podklad.js';
 import { importujSoubor, vlozVektor } from './kresleni/import/index.js';
+import { vykresliPanelClaude, zastavClaude } from './ai/asistent.js';
+import { zpravaUlozeni } from './stazeni.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const app = $('#app'), topAkce = $('#top-akce'), hlaska = $('#hlaska');
@@ -59,6 +61,7 @@ window.addEventListener('beforeunload', () => { if (casovac && S.p) { clearTimeo
 
 // ---------- směrování ----------
 function smeruj() {
+  zastavClaude();   // běžící zásah Claude se ukončí a jeho rozkreslené zapíše do listu ještě před odchodem (a uloží se hned níže)
   if (casovac && S.p) { clearTimeout(casovac); casovac = null; M.uklidPrilohy(S.p); U.uloz(S.p); }   // nic se neztratí při rychlém odchodu z editoru
   const [, , id, listId] = location.hash.split('/');
   if (id) {
@@ -112,10 +115,11 @@ function pripominkaZalohy(vse) {
   const kdy = posl ? `Poslední záloha všech projektů: ${new Date(posl).toLocaleDateString('cs-CZ')} (před ${Math.floor((Date.now() - Date.parse(posl)) / DEN)} dny). Od té doby změněno projektů: ${zmenene}.` : `Projekty (${vse.length}) ještě nebyly zálohovány.`;
   return `<div class="rk-alert rk-alert--warn" role="status" id="d-pripominka"><span class="rk-alert__icon">${ikona('pozor', 18)}</span><div class="rk-alert__text"><span class="rk-alert__title">Zálohujte projekty</span><span class="rk-alert__body">${esc(kdy)} Projekty jsou jen v tomto prohlížeči – vymazání dat prohlížeče nebo přeinstalace je smaže.</span></div><button type="button" class="rk-btn rk-btn--secondary rk-btn--sm rk-alert__action" id="d-zalohovat-ted">Zálohovat teď</button></div>`;
 }
-function zalohovatVse() {
+async function zalohovatVse() {
   const n = U.seznam().length;
   if (!n) { oznam('V tomto prohlížeči zatím nejsou žádné projekty.', { titul: 'Záloha' }); return; }
-  U.stahniZalohu(); ohlas(`Záloha je stažená (${projektu(n)}). Uložte soubor mimo prohlížeč (disk, cloud).`);
+  const r = await U.stahniZalohu();
+  ohlas(r.ok ? `Záloha je stažená (${projektu(n)}). Uložte soubor mimo prohlížeč (disk, cloud).` : zpravaUlozeni(r));
   if (!S.p) dashboard();
 }
 async function obnovZalohu(z) {
@@ -223,7 +227,7 @@ function dashboard() {
     const b = e.target.closest('button'); if (!b) return;
     const id = b.dataset.id, p = U.nacti(id);
     if (b.dataset.akce === 'smaz' && await potvrd(`Smazat projekt „${p.nazev}“?`, { ano: 'Smazat', nebezpecne: true, popis: 'Projekt se odstraní z tohoto prohlížeče a nejde vrátit. Nejdřív si ho případně stáhněte.' })) { U.smaz(id); dashboard(); }
-    if (b.dataset.akce === 'stahnout') U.stahni(p);
+    if (b.dataset.akce === 'stahnout') U.stahni(p).then((r) => { if (!r.ok) ohlas(zpravaUlozeni(r)); });
     if (b.dataset.akce === 'kopie') { p.id = `proj_${Math.random().toString(36).slice(2, 10)}`; p.nazev += ' (kopie)'; U.uloz(p); dashboard(); }
   };
 }
@@ -248,7 +252,7 @@ async function exportPdfDialog() {
   try {
     ohlas('Vytvářím PDF…', true);
     const varovani = [], bajty = await exportujPdf(p, { listy: ids, katalog: katMapa, varovani });
-    stahniBajty(bajty, jmenoPdf(p.nazev)); ohlas(`PDF je hotové (${Math.round(bajty.length / 1024)} kB).`);
+    const r = await stahniBajty(bajty, jmenoPdf(p.nazev)); ohlas(r.ok ? `PDF je hotové (${Math.round(bajty.length / 1024)} kB).` : zpravaUlozeni(r));
     if (varovani.length) await oznam(varovani.join('\n'), { titul: 'PDF je hotové – upozornění' });
   } catch (err) { ohlas(''); await oznam(`PDF se nepodařilo vytvořit: ${err.message}`); }
 }
@@ -354,11 +358,11 @@ const OP_LISTY = {   // typ listu → [klíč dat, schéma, nadpis náhledu, poz
   op_zaklad: ['opZaklad', SCHEMA_ZAKLAD, 'OPERATIVNÍ PLÁN – základní text', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), kap. 2.1 a příloha č. 3.', '<p class="napoveda">Základní text je koncept a podklad pro vyjímatelné přílohy; zpracovává se v jednom vyhotovení a ukládá se odděleně od příloh (Hanuška 1996, kap. 2.1).</p>'],
   op_text: ['opText', SCHEMA_TEXT, 'OPERATIVNÍ PLÁN – vyjímatelná příloha, textová část', 'Podle Metodického návodu k vypracování DZP (Hanuška 1996), kap. 2.2 a příloha č. 3.', '<p class="napoveda">Co nejstručněji, heslovitě – jen údaje, které nejde zakreslit do grafické části (Hanuška 1996, kap. 2.2).</p>'],
 };
-const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', uplnost: 'Úplnost', metodika: 'Metodika', projekt: 'Projekt' };
-const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
+const PANELY = { vlastnosti: 'Vlastnosti', vrstvy: 'Vrstvy', claude: 'Claude', uplnost: 'Úplnost', metodika: 'Metodika', projekt: 'Projekt' };
+const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti', 'vrstvy', 'claude', 'uplnost', 'metodika', 'projekt'] : ['uplnost', 'metodika', 'projekt']);
 
 function editor() {
-  S.ed?.zrusit(); S.ed = null;
+  zastavClaude(); S.ed?.zrusit(); S.ed = null;   // rozkreslené od Claude se při zastavení uloží do listu, kde začalo
   { const r = rezimProjektu(S.p.typ); nastavLogo(r); try { localStorage.setItem('pp-rezim', r); } catch { /* bez úložiště */ } }
   const p = S.p, list = S.listId === 'dotaznik' ? { id: 'dotaznik', typ: 'dotaznik', nazev: 'Dotazník pro klienta', virtualni: true } : p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
@@ -366,7 +370,7 @@ function editor() {
     ${list?.typ === 'karta' ? `<button class="btn" id="a-tisk" title="Vytiskne náhled karty; v dialogu zvolte Uložit jako PDF" aria-label="Tisk / PDF">${ikona('tisk', 16)}<span class="btn__txt">Tisk / PDF</span></button>` : ''}
     <button class="btn" id="a-pdf" title="Vytvoří PDF z karet, výkresů a textů projektu" aria-label="Export PDF">${ikona('soubor', 16)}<span class="btn__txt">Export PDF</span></button>
     <button class="btn" id="a-stahnout" title="Záloha projektu jako soubor .pplan.json (Stáhnout → Editovatelný projekt)" aria-label="Stáhnout → Editovatelný projekt">${ikona('stahnout', 16)}<span class="btn__txt">Stáhnout → Editovatelný projekt</span></button>`;
-  $('#a-stahnout').onclick = () => U.stahni(p);
+  $('#a-stahnout').onclick = () => U.stahni(p).then((r) => { if (!r.ok) ohlas(zpravaUlozeni(r)); });
   $('#a-pdf').onclick = () => exportPdfDialog();
   if ($('#a-tisk')) $('#a-tisk').onclick = async () => { S.zalozka = 'nahled'; obsah(list); zalozky(list); await pismoKarty; prizpusobNahled($('#obsah')); window.print(); };
 
@@ -423,7 +427,7 @@ function obsah(list) {
     kresli();
     pripojDotaznik(S.p, host, {
       onZmena: () => uloz(),
-      stahniPdf: async () => { try { ohlas('Vytvářím PDF dotazníku…', true); const b = await dotaznikDoPdf(S.p.dotaznik, { objekt: objekt(), otazky: otazkyKDotazu(S.p) }); stahniBajty(b, jmenoPdf(`Dotaznik_DZP_${objekt()}`)); ohlas('Dotazník je stažený – pošlete ho klientovi k vyplnění.'); } catch (err) { ohlas(''); oznam(`PDF dotazníku se nepodařilo vytvořit: ${err.message}`); } },
+      stahniPdf: async () => { try { ohlas('Vytvářím PDF dotazníku…', true); const b = await dotaznikDoPdf(S.p.dotaznik, { objekt: objekt(), otazky: otazkyKDotazu(S.p) }); const r = await stahniBajty(b, jmenoPdf(`Dotaznik_DZP_${objekt()}`)); ohlas(r.ok ? 'Dotazník je stažený – pošlete ho klientovi k vyplnění.' : zpravaUlozeni(r)); } catch (err) { ohlas(''); oznam(`PDF dotazníku se nepodařilo vytvořit: ${err.message}`); } },
       nactiPdf: async (soubor) => {
         try {
           const r = await dotaznikZPdf(new Uint8Array(await soubor.arrayBuffer())), n = Object.keys(r.odpovedi).length;
@@ -485,6 +489,7 @@ function panel(jenUplnost = false) {
   if (skok) { const sh = souhrnUplnosti(nalezy); skok.hidden = false; skok.textContent = `Kontrola úplnosti: ${sh.chyby} ${sh.chyby === 1 ? 'chyba' : sh.chyby >= 2 && sh.chyby <= 4 ? 'chyby' : 'chyb'}, ${sh.upozorneni} upozornění – zobrazit ↓`; skok.classList.toggle('ma-chyby', sh.chyby > 0); }
   host.onclick = host.onchange = host.oninput = null;
   if ((S.panel === 'vlastnosti' || S.panel === 'vrstvy') && S.ed) { vykresliPanelVykresu(S.panel, host, S.ed); return; }
+  if (S.panel === 'claude' && S.ed) { if (!jenUplnost || !host.querySelector('.ai-panel')) vykresliPanelClaude(host, S.ed); return; }   // rozepsaná konverzace se nepřekresluje
   if (S.panel === 'uplnost') {
     označ(panelUplnosti(S.p, katalog, host, nalezy));
     host.onclick = (e) => { const b = e.target.closest('[data-cesta]'); if (b) skoc(b.dataset.cesta); };

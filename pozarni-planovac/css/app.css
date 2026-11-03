@@ -297,3 +297,32 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 #d-pripominka { align-items: center; flex-wrap: wrap; }
 .zaloha-seznam { margin: 0; padding-left: 18px; max-height: 30vh; overflow: auto; font-size: 14px; }
 .zaloha-seznam small { color: var(--ink-muted); }
+
+/* ---------- Panel Claude (js/ai/asistent.js) ---------- */
+.ai-panel [hidden] { display: none !important; }
+.ai-log { display: flex; flex-direction: column; gap: var(--space-2); max-height: 46vh; overflow: auto; margin: var(--space-3) 0 var(--space-2); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-000); }
+.ai-log .napoveda { margin: 0; }
+.ai-zprava { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.45; padding: 8px 10px; border-radius: var(--radius-md); }
+.ai-zprava.ai-ty { align-self: flex-end; max-width: 92%; background: var(--accent-soft); color: var(--ink); }
+.ai-zprava.ai-claude { background: var(--bg-100); border: 1px solid var(--line); color: var(--ink); }
+.ai-zprava.ai-akce { padding: 2px 10px; font-size: 12px; color: var(--ok); font-weight: 600; }
+.ai-zprava.ai-info { padding: 2px 10px; font-size: 12px; color: var(--ink-muted); }
+.ai-zprava.ai-chyba { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.ai-bezi { margin: 0 0 var(--space-2); font-size: 13px; font-weight: 600; color: var(--accent-ink); }
+.ai-form { display: flex; flex-direction: column; gap: var(--space-2); }
+.ai-form textarea { min-height: 88px; resize: vertical; }
+.ai-panel .chk { white-space: normal; align-items: flex-start; font-size: 13px; }
+.ai-panel .chk input { margin-top: 2px; }
+.ai-prilohy { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-prilohy:empty { display: none; }
+.ai-priloha { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 2px 2px 2px 4px; border: 1px solid var(--line); border-radius: var(--radius-md); font-size: 12px; }
+.ai-priloha img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: var(--bg-300); }
+.ai-priloha span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-tlacitka, .ai-radek { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ai-zprava.ai-akce-chyba { padding: 2px 10px; font-size: 12px; color: var(--warn); font-weight: 600; }
+.ai-panel label:has(> input:disabled) { opacity: .5; cursor: not-allowed; }
+.ai-panel .btn:disabled { cursor: not-allowed; }
+/* Editor zamčený během zásahu Claude: jen prohlížení (posun, přiblížení, export) */
+.ed-zamek { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 24px); padding: 6px 12px; border-radius: var(--radius-md); background: var(--inverse); color: var(--on-inverse); font: 600 13px/1.4 var(--font-sans); text-align: center; box-shadow: var(--shadow-md); pointer-events: none; }
+.ed--zamceno .ed-nastroje [data-nastroj], .ed--zamceno .ed-nastroje label:has(> [data-podklad]) { opacity: .4; pointer-events: none; }
+.ed--zamceno .ed-scena { cursor: grab; }

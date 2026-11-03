@@ -10,6 +10,7 @@ import { ikona } from '../ikony.js';
 import { vlozPodklad } from './podklad.js';
 import { exportujPdf, stahniBajty, jmenoPdf } from '../pdf/export.js';
 import { importujSoubor, vlozVektor, kalibrujVektor } from './import/index.js';
+import { ulozSoubor, zpravaUlozeni } from '../stazeni.js';
 
 const NASTROJE = [
   ['vyber', 'Výběr', 'Výběr a úprava prvků (V)'], ['posun', 'Plátno', 'Posun plátna (H) – nebo střední tlačítko / mezerník'],
@@ -46,6 +47,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     nastroj: 'vyber', vyber: new Set(), vb: null, snapMriz: false, snapBody: true, ortho: false, krok: 1,
     kresleni: null, tah: null, ukazatele: new Map(), mezernik: false, schranka: [], vkladani: 0,
     aktVrstva: null, zvolenaZnacka: null, kurzor: null, snapIndikator: null, kalibrace: null,
+    zamek: null,   // text, když výkres právě mění Claude (js/ai/asistent.js): jen prohlížení, bez úprav a bez Zpět/Znovu
   };
   const H = new P.Historie(P.snimek(v));
   const L = () => P.rozlozeniListu(v);
@@ -79,6 +81,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       </div>
     </div>
     <div class="ed-scena" tabindex="0"><div class="ed-svg"></div>
+      <div class="ed-zamek" role="status" hidden></div>
       <div class="ed-plovouci" hidden><button type="button" class="btn pri" data-akce="dokoncit">Dokončit</button><button type="button" class="btn" data-akce="zrusit">Zrušit</button></div>
       <div class="ed-napoveda"></div></div>
     <div class="ed-stav"><span data-st="kurzor"></span><span data-st="zoom"></span><span data-st="meritko"></span><span data-st="trasy"></span><span data-st="vyber"></span></div>
@@ -146,11 +149,18 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   function commit() {
     P.obnovDvere(v.prvky); P.synchronizujLegendu(v);
     procistiVyber();
-    if (H.push(P.snimek(v))) naZmenu();   // snímek obsahuje celý list – i změna orientace, razítka nebo severky se uloží
+    // Zamčeno (Claude kreslí): žádný krok historie – změna se uloží s krokem Claude, aby jeho zásah zůstal jedním Zpět.
+    if (!S.zamek && H.push(P.snimek(v))) naZmenu();   // snímek obsahuje celý list – i změna orientace, razítka nebo severky se uloží
     vykresli(); naVyber?.();
   }
   function obnov(text) { if (!text) return; P.obnovZeSnimku(v, text); P.synchronizujLegendu(v); procistiVyber(); naZmenu(); vykresli(); naVyber?.(); }
-  const zpet = () => obnov(H.undo()), vpred = () => obnov(H.redo());
+  const zpet = () => { if (!S.zamek) obnov(H.undo()); }, vpred = () => { if (!S.zamek) obnov(H.redo()); };
+  // Zámek během zásahu Claude: rozpracované gesto se zruší, výběr vyprázdní; zbývá posun, přiblížení a export.
+  function zamkni(text) {
+    vratTah(); S.tah = null; S.kresleni = null; S.kalibrace = null; S.snapIndikator = null; S.nastroj = 'vyber'; S.vyber = new Set();
+    S.zamek = text || 'Claude kreslí do výkresu…'; naVyber?.(); vykresli(true);
+  }
+  function odemkni() { if (!S.zamek) return; S.zamek = null; vykresli(true); }
 
   // Zrušené tažení (Esc, druhý prst, změna nástroje): prvky zpět do stavu před tažením – nic neuloženého nezůstane jen na obrazovce.
   function vratTah() {
@@ -209,7 +219,8 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     svgEl().setAttribute('viewBox', `${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}`);
     prekryvG.innerHTML = overlay();
     host.querySelectorAll('[data-nastroj]').forEach((b) => b.classList.toggle('akt', b.dataset.nastroj === S.nastroj));
-    host.querySelector('[data-akce=zpet]').disabled = !H.lzeZpet; host.querySelector('[data-akce=vpred]').disabled = !H.lzeVpred;
+    host.querySelector('[data-akce=zpet]').disabled = !H.lzeZpet || !!S.zamek; host.querySelector('[data-akce=vpred]').disabled = !H.lzeVpred || !!S.zamek;
+    { const ed = host.querySelector('.ed'), z = host.querySelector('.ed-zamek'); ed.classList.toggle('ed--zamceno', !!S.zamek); z.hidden = !S.zamek; if (z.textContent !== (S.zamek || '')) z.textContent = S.zamek || ''; }
     { const r = wrap.getBoundingClientRect(), l = L(), fit = Math.max((l.W + 8) / (r.width || 1), (l.H + 8) / (r.height || 1)); stav('zoom', `zoom ${Math.round((fit / (S.vb.w / (r.width || 1))) * 100)} %`); }   // 100 % = celý list
     stav('meritko', `1 : ${v.meritko.pomer}${P.meritkoOvereno(v) ? '' : ' – MĚŘÍTKO NEOVĚŘENO (kalibrujte podklad)'}`, P.meritkoOvereno(v) ? '' : 'varuj');
     const celkem = P.celkovaDelkaTras(v.prvky); stav('trasy', celkem > 0 ? `trasy celkem ${P.formatDelky(celkem)}` : '');
@@ -308,7 +319,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (S.ukazatele.size === 1) S.predDotykem = { kresleni: S.kresleni && { ...S.kresleni, body: S.kresleni.body.map((q) => [...q]) }, kalibrace: S.kalibrace, vyber: new Set(S.vyber), snimek: H.s[H.i] };
     if (S.ukazatele.size === 2) { const [a, b] = [...S.ukazatele.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), vb: { ...S.vb }, c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; zrusPrvniDotyk(); vykresli(); return; }
     if (S.ukazatele.size > 2) return;
-    if (e.button === 1 || e.button === 2 || S.mezernik || S.nastroj === 'posun') { S.tah = { typ: 'pan', start: [e.clientX, e.clientY], vb: { ...S.vb } }; return; }
+    if (e.button === 1 || e.button === 2 || S.mezernik || S.nastroj === 'posun' || S.zamek) { S.tah = { typ: 'pan', start: [e.clientX, e.clientY], vb: { ...S.vb } }; return; }   // zamčeno: jen posun plátna
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     const w0 = svetZ(e), t = S.nastroj;
     if (t === 'vyber') {
@@ -447,7 +458,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   }
 
   function dvojklik() {
-    if (Date.now() < (S.ignorDo || 0)) return;
+    if (Date.now() < (S.ignorDo || 0) || S.zamek) return;
     if (S.kresleni) { if (S.kresleni.body.length > 1 && G.dist(S.kresleni.body.at(-1), S.kresleni.body.at(-2)) < 1e-6) S.kresleni.body.pop(); dokonciKresleni(); return; }
     if (S.nastroj !== 'vyber') return;
     const u = S.dblPozice && vybrane().length === 1 ? uchyty().find((h) => h.typ === 'vrchol' && G.dist(h.w, S.dblPozice) <= tolM(10)) : null;
@@ -466,6 +477,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     if (!host.contains(document.activeElement) && document.activeElement !== document.body) return;
     const ctrl = e.ctrlKey || e.metaKey, kl = e.key.toLowerCase();
     if (e.key === ' ') { S.mezernik = true; e.preventDefault(); return; }
+    if (S.zamek) { if (e.key === '+' || e.key === '=') zoom(1.25); else if (e.key === '-') zoom(1 / 1.25); return; }   // zamčeno: jen přiblížení
     if (e.key === 'Escape') { if (S.kresleni || S.tah) zrusKresleni(); else if (S.nastroj !== 'vyber') nastavNastroj('vyber'); else { S.vyber = new Set(); naVyber?.(); vykresli(true); } return; }
     if (e.key === 'Enter') { dokonciKresleni(); return; }
     if (ctrl && kl === 'z' && !e.shiftKey) { e.preventDefault(); zpet(); return; }
@@ -494,7 +506,8 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     v.prvky.push(...k); S.vyber = new Set(k.map((p) => p.id)); commit();
   }
   async function nastavNastroj(n) {
-    if (n === 'znacka') { const id = await vyberZ(); if (!id) return; S.zvolenaZnacka = id; }
+    if (S.zamek) return;
+    if (n === 'znacka') { const id = await vyberZ(); if (!id || S.zamek) return; S.zvolenaZnacka = id; }
     vratTah(); S.nastroj = n; S.kresleni = null; S.tah = null; S.kalibrace = null; S.snapIndikator = null; vykresli(true);
   }
 
@@ -520,7 +533,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     return mapa;
   }
   async function exportSvg() { const m = await dataUriZnacek(); return renderListu(v, mkO({ symbolHref: (id) => m.get(id) || '' })); }
-  const stahni = (blob, jmeno) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = jmeno; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  const stahni = (blob, jmeno) => ulozSoubor(blob, jmeno).then((r) => { if (!r.ok && r.kod !== 'declined') oznam(zpravaUlozeni(r)); });
   const jmenoSouboru = (pripona) => `${(list.nazev || 'vykres').replace(/[^\p{L}\p{N}_-]+/gu, '_')}.${pripona}`;
   async function exportPng() {
     const svg = await exportSvg(), l = L(), px = Math.round((l.W / 25.4) * 300), py = Math.round((l.H / 25.4) * 300);
@@ -533,13 +546,14 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   // ---------- ovládání lišty ----------
   host.querySelector('.ed-nastroje').addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
+    if (S.zamek && (b.dataset.nastroj || b.dataset.akce === 'zpet' || b.dataset.akce === 'vpred')) return;
     if (b.dataset.nastroj) return nastavNastroj(b.dataset.nastroj);
-    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(true); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
+    ({ napoveda: () => oznam(NAPOVEDA, { titul: 'Přichytávání a zkratky' }), zpet, vpred, priblizit: () => zoom(1.25), oddalit: () => zoom(1 / 1.25), cely: () => { celyList(); vykresli(true); }, obsah: naObsah, 'export-svg': async () => stahni(new Blob([await exportSvg()], { type: 'image/svg+xml' }), jmenoSouboru('svg')), 'export-png': exportPng, 'export-pdf': async () => { try { const r = await stahniBajty(await exportujPdf(projekt, { listy: [list.id], katalog: zn }), jmenoPdf(`${projekt.nazev}_${list.nazev}`)); if (!r.ok && r.kod !== 'declined') oznam(zpravaUlozeni(r)); } catch (err) { oznam(`PDF se nepodařilo vytvořit: ${err.message}`); } } })[b.dataset.akce]?.();
   });
   host.querySelector('.ed-nastroje').addEventListener('change', (e) => {
     if (e.target.dataset.volba) S[e.target.dataset.volba] = e.target.checked;
     if (e.target.dataset.krok !== undefined) S.krok = Number(e.target.value);
-    if (e.target.dataset.podklad !== undefined) { importPodkladu(e.target.files[0]); e.target.value = ''; }
+    if (e.target.dataset.podklad !== undefined) { if (!S.zamek) importPodkladu(e.target.files[0]); e.target.value = ''; }
   });
   plovouci.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b?.dataset.akce === 'dokoncit') dokonciKresleni(); if (b?.dataset.akce === 'zrusit') zrusKresleni(); });
   wrap.addEventListener('pointerdown', dolu); wrap.addEventListener('pointermove', pohyb); wrap.addEventListener('pointerup', nahoru); wrap.addEventListener('pointercancel', nahoru);
@@ -555,6 +569,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     v, projekt, list, S, H, katalog: zn,
     vyber: vybrane, nastavVyber(ids) { S.vyber = new Set(ids); naVyber?.(); vykresli(true); },
     uloz: naZmenu, commit, vykresli, zpet, vpred, smazVyber, vloz, naObsah, nastavNastroj, exportSvg, exportPng, importPodkladu,
+    zamkni, odemkni, zamceno: () => !!S.zamek,
     prvkyKopie: () => { S.schranka = vybrane().map((p) => structuredClone(p)); S.vkladani = 0; vloz(); },
     nastavAktVrstvu(id) { S.aktVrstva = id; },
     stavNastroj: () => S.nastroj,

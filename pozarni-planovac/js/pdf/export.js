@@ -7,6 +7,7 @@ import { sapJakoText, nastavKontextSaP, kontextSaP } from '../sap.js';
 import { vykresliSvgDoPdf } from './svg2pdf.js';
 import { renderListu } from '../kresleni/render.js';
 import { rozlozeniListu, pouziteZnacky } from '../kresleni/prvky.js';
+import { ulozSoubor } from '../stazeni.js';
 
 const MM = 72 / 25.4;
 const jeNode = () => typeof process !== 'undefined' && !!process.versions?.node && typeof window === 'undefined';
@@ -90,9 +91,7 @@ export async function exportujPdf(projekt, volby = {}) {
   return pdfDoc.save();
 }
 
-export function stahniBajty(bajty, jmeno, mime = 'application/pdf') {
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bajty], { type: mime })); a.download = jmeno;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-}
+// Vrací Promise<{ok, kod?}> (js/stazeni.js: v artefaktu claude.ai potvrzovací dialog platformy, jinde odkaz ke stažení).
+export const stahniBajty = (bajty, jmeno, mime = 'application/pdf') => ulozSoubor(new Blob([bajty], { type: mime }), jmeno);
 // Název souboru: jen písmena, číslice, _ a -; nejvýš 100 znaků (dlouhý název by překročil limit souborového systému 255 bajtů).
 export const jmenoPdf = (nazev) => `${String(nazev || 'dokumentace').replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 100).replace(/_+$/, '') || 'dokumentace'}.pdf`;
