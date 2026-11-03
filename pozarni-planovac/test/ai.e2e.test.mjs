@@ -1,7 +1,7 @@
 // E2E panelu Claude v Chromiu. Skutečné window.claude (claude.ai) tu není, proto ho test podstrčí: simulovaný `sample`
 // přehrává připravené scénáře – posílá text (onText), volá SKUTEČNÉ nástroje stránky (execute) a vrací odpověď.
 // Ověřuje se celé napojení: kreslení přes nástroje, jeden krok Zpět, obrázky pro Claude, kontrolní kolo, chyby, Zastavit,
-// přizpůsobení rámu, evakuační plán a chování bez Claude (soubor z disku / web).
+// přizpůsobení rámu, evakuační plán a chování bez Claude (soubor z disku). Webovou verzi (/api/claude) testuje web.e2e.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -248,10 +248,11 @@ test('evakuační plán: bez nástupní plochy, se značkami evakuační knihovn
   await p.context().close();
 });
 
-test('bez Claude (soubor z disku, web): panel vysvětlí, kde Claude funguje, a nic se neposílá; bez obrázků se přílohy skryjí', skip, async () => {
+test('bez Claude (soubor z disku): panel vysvětlí, kde Claude funguje, a nic se neposílá; bez obrázků se přílohy skryjí', skip, async () => {
   const p = await nova({ claude: false });
   await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
-  await p.waitForFunction(() => document.querySelector('[data-ai-stav]').textContent.includes('artefakt na claude.ai'));
+  await p.waitForFunction(() => /webové verzi plánovače a v artefaktu na claude\.ai.*soubor otevřený z disku/.test(document.querySelector('[data-ai-stav]').textContent));
+  assert.equal(await p.locator('[data-ai-heslo]').count(), 0, 'mimo web žádné pole pro heslo');
   assert.equal(await p.locator('[data-ai-spust]').isDisabled(), true);
   assert.deepEqual(p.chyby, []);
   await p.context().close();

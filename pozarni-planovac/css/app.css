@@ -43,11 +43,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .f-r { display: flex; gap: var(--space-1); }
 .f-s { max-width: 260px; }
 
-:where(input[type=text], input[type=date], input[type=search], select, textarea) { width: 100%; min-height: 40px; padding: 8px 12px; font: 400 14px/1.4 var(--font-sans); color: var(--ink); background: var(--bg-200); border: 1px solid var(--line-strong); border-radius: var(--radius-md); transition: border-color .18s ease, box-shadow .18s ease; }
+:where(input[type=text], input[type=date], input[type=search], input[type=password], select, textarea) { width: 100%; min-height: 40px; padding: 8px 12px; font: 400 14px/1.4 var(--font-sans); color: var(--ink); background: var(--bg-200); border: 1px solid var(--line-strong); border-radius: var(--radius-md); transition: border-color .18s ease, box-shadow .18s ease; }
 textarea { resize: vertical; }
 input::placeholder, textarea::placeholder { color: var(--ink-subtle); }
 input:hover, select:hover, textarea:hover { border-color: var(--ink-muted); }
-:where(input[type=text], input[type=date], input[type=search], select, textarea):focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--accent-soft); }
+:where(input[type=text], input[type=date], input[type=search], input[type=password], select, textarea):focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--accent-soft); }
 input[type=checkbox], input[type=radio] { width: 18px; height: 18px; accent-color: var(--accent-ink); flex: none; }
 input[type=range] { width: 100%; accent-color: var(--accent-ink); }
 input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--bg-200); }
@@ -326,3 +326,4 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .ed-zamek { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 24px); padding: 6px 12px; border-radius: var(--radius-md); background: var(--inverse); color: var(--on-inverse); font: 600 13px/1.4 var(--font-sans); text-align: center; box-shadow: var(--shadow-md); pointer-events: none; }
 .ed--zamceno .ed-nastroje [data-nastroj], .ed--zamceno .ed-nastroje label:has(> [data-podklad]) { opacity: .4; pointer-events: none; }
 .ed--zamceno .ed-scena { cursor: grab; }
+.ai-heslo .napoveda { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }

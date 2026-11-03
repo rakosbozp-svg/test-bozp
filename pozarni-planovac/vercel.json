@@ -1,8 +1,13 @@
 {
- "installCommand": "echo bez instalace",
+ "installCommand": "npm ci --omit=dev",
  "buildCommand": "node tools/sestav_web.mjs",
  "outputDirectory": "web",
  "framework": null,
+ "functions": {
+  "api/claude.js": {
+   "maxDuration": 300
+  }
+ },
  "headers": [
   {
    "source": "/(.*)",
