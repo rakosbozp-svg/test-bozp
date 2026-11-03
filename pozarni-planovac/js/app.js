@@ -17,7 +17,7 @@ import { otevriPdf } from './kresleni/import/pdf.js';
 import { vykresliSap, pripojSap } from './sapUI.js';
 import { sapJakoText, nastavKontextSaP, kontextSaP } from './sap.js';
 import { vykresliDotaznik, pripojDotaznik } from './dotaznikUI.js';
-import { navrhZDotazniku, dotaznikJakoText, OTAZKY } from './dotaznik.js';
+import { navrhZDotazniku, dotaznikJakoText, OTAZKY, otazkyKDotazu, cileDotazniku } from './dotaznik.js';
 import { dotaznikDoPdf, dotaznikZPdf } from './pdf/dotaznikPdf.js';
 import { zkontrolujUplnost, souhrn as souhrnUplnosti } from './uplnost.js';
 import { vytvorEditor } from './kresleni/editor.js';
@@ -420,12 +420,12 @@ function obsah(list) {
     kresli();
   } else if (list.typ === 'dotaznik') {
     const objekt = () => S.p.listy.find((l) => l.karta)?.karta.objekt.nazev || S.p.listy.find((l) => l.opText)?.opText.objekty[0]?.nazev || S.p.nazev;
-    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('DOTAZNÍK PRO KLIENTA', 'Odpovědi klienta; do karty a plánu je přenesete tlačítkem „Převzít odpovědi do projektu“.', dotaznikJakoText(S.p.dotaznik, objekt()))}</div>`; return; }
+    if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledSchema('DOTAZNÍK PRO KLIENTA', 'Odpovědi klienta; do karty a plánu je přenesete tlačítkem „Převzít odpovědi do projektu“.', dotaznikJakoText(S.p.dotaznik, objekt(), otazkyKDotazu(S.p)))}</div>`; return; }
     const kresli = () => { vykresliDotaznik(S.p, host, TLACITKO_PBR); pripojPbr(host, kresli); };
     kresli();
     pripojDotaznik(S.p, host, {
       onZmena: () => uloz(),
-      stahniPdf: async () => { try { ohlas('Vytvářím PDF dotazníku…', true); const b = await dotaznikDoPdf(S.p.dotaznik, { objekt: objekt() }); stahniBajty(b, jmenoPdf(`Dotaznik_DZP_${objekt()}`)); ohlas('Dotazník je stažený – pošlete ho klientovi k vyplnění.'); } catch (err) { ohlas(''); oznam(`PDF dotazníku se nepodařilo vytvořit: ${err.message}`); } },
+      stahniPdf: async () => { try { ohlas('Vytvářím PDF dotazníku…', true); const b = await dotaznikDoPdf(S.p.dotaznik, { objekt: objekt(), otazky: otazkyKDotazu(S.p) }); stahniBajty(b, jmenoPdf(`Dotaznik_DZP_${objekt()}`)); ohlas('Dotazník je stažený – pošlete ho klientovi k vyplnění.'); } catch (err) { ohlas(''); oznam(`PDF dotazníku se nepodařilo vytvořit: ${err.message}`); } },
       nactiPdf: async (soubor) => {
         try {
           const r = await dotaznikZPdf(new Uint8Array(await soubor.arrayBuffer())), n = Object.keys(r.odpovedi).length;
@@ -438,10 +438,10 @@ function obsah(list) {
         } catch (err) { oznam(`Dotazník se nepodařilo načíst: ${err.message}`); }
       },
       prevzit: async () => {
-        const titul = 'Převzít odpovědi do projektu', cile = { karta: S.p.listy.find((l) => l.typ === 'karta')?.karta, opText: S.p.listy.find((l) => l.typ === 'op_text')?.opText, opZaklad: S.p.listy.find((l) => l.typ === 'op_zaklad')?.opZaklad, projekt: S.p };
+        const titul = 'Převzít odpovědi do projektu', cile = cileDotazniku(S.p);
         const navrh = navrhZDotazniku(S.p.dotaznik.odpovedi, cile), vyb = await potvrdNavrh(navrh, titul);
         if (!vyb) return;
-        const n = pouzijNavrh(navrh, vyb, cile); uloz(true); panel(true); ohlas(`Převzato: ${udaju(n)} z dotazníku.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`);
+        const n = pouzijNavrh(navrh, vyb, cile); uloz(true); kresli(); panel(true); ohlas(`Převzato: ${udaju(n)} z dotazníku.${cile.karta ? '' : ' Projekt nemá operativní kartu – údaje karty se nepřevzaly.'}`);
       },
     });
   } else if (list.typ === 'op_sap') {
