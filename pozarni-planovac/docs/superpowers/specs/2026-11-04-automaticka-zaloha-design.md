@@ -68,17 +68,17 @@ Publikace deklaruje celou sadu (neprázdný objekt nahrazuje uloženou deklaraci
   - `komprese`: `"gzip"` nebo `"zadna"`,
   - `zalohovano`: ISO čas zápisu,
   - `smazano`: ISO čas nebo `null`.
-- Část: `data/users/<uid>/<pid>/casti/<verze>_<i>` (6 segmentů), tvar `{d: "<base64, nejvýš 200 000 znaků>"}`. Serializovaný dokument je tak hluboko pod limitem 256 KiB.
-- `<pid>` se do segmentu převádí bezpečně: povolené jsou jen písmena, číslice a `_ - . ~ : @ +`, ostatní znaky se zakódují jako `+xx` (hex bajtů UTF-8), takže převod jde vrátit. `.`/`..` samotné nevzniknou, protože id má vždy předponu.
+- Část: `data/users/<uid>/<pid>/casti/<verze>_<i>` (6 segmentů), tvar `{d: "<base64, nejvýš 200 000 znaků>", t: "<ISO čas zápisu>"}`. Serializovaný dokument je tak hluboko pod limitem 256 KiB.
+- `<pid>` se do segmentu převádí bezpečně: beze změny zůstanou jen písmena, číslice a `_ - ~ : @`, všechny ostatní bajty UTF-8 (i `.` a `+`) se zakódují jako `+xx` (malá hex). Převod jde vrátit a segment `.`/`..` nikdy nevznikne.
 
 ### Zálohování jednoho projektu
 1. Vezme se `text` záznamu z `js/ulozeni.js` a spočítá se `sha256`. Když hlavička existuje se stejným `sha256`: bez `smazano` se nic nezapisuje, se `smazano` se jen zruší značka (`update({smazano: null})`, třeba po obnově smazaného projektu).
 2. `text` → UTF-8 → gzip (`CompressionStream`; když chybí, `komprese: "zadna"`) → base64 → části po 200 000 znacích.
 3. Vygeneruje se nová `verze` a části se zapíšou postupně (`set`), jedna po druhé.
 4. Až jsou všechny části zapsané, přepíše se hlavička (`set`) s novou `verze`, `casti` a `smazano: null`. Teprve tím se nová verze stane platnou.
-5. Úklid: přečte se kolekce `…/<pid>/casti` a smažou se dokumenty, které nezačínají `<nová verze>_`. Tím zmizí stará verze i zbytky přerušených pokusů.
+5. Úklid: přečte se kolekce `…/<pid>/casti` a smažou se části jiné verze, pokud patří předchozí verzi hlavičky nebo jsou starší než 1 hodina (podle `t`). Čerstvé části jiné verze zůstanou, protože je může právě zapisovat jiná karta nebo počítač. Tím zmizí stará verze i zbytky přerušených pokusů a souběžná záloha se nepoškodí.
 
-Přerušení v kroku 3 nebo 5 nepoškodí poslední platnou zálohu: hlavička dál ukazuje na úplnou starou verzi a sirotci se uklidí příště.
+Přerušení v kroku 3 nebo 5 nepoškodí poslední platnou zálohu: hlavička dál ukazuje na úplnou starou verzi a sirotci se uklidí příště. Před zápisem hlavičky se znovu zkontroluje, jestli projekt mezitím nebyl v prohlížeči smazán. Pokud ano, hlavička dostane `smazano`.
 
 ### Kdy se zálohuje
 - `js/ulozeni.js` dostane malé rozhraní pro sledování změn: `sleduj(fn)` volá `fn({typ: 'ulozeno' | 'smazano', id})` po úspěšném `uloz(p)` a po `smaz(id)`. Pokrývá to editor, import, obnovu i duplikování.
@@ -107,9 +107,9 @@ Přerušení v kroku 3 nebo 5 nepoškodí poslední platnou zálohu: hlavička d
 
 ## Rozdělení do modulů
 - `js/zaloha/kodovani.js` – čisté funkce bez prohlížečových závislostí mimo standard (`CompressionStream`, `crypto.subtle`, `btoa/atob` nebo `Buffer`): `otisk(text)`, `zabal(text)` → `{data, komprese, velikost}`, `rozdel(data, n)`, `rozbal({data, komprese})` → text, `bezpecnySegment(id)` / `zpetSegment(s)`. Běží v Node (testy) i v prohlížeči.
-- `js/zaloha/uloziste.js` – tenká vrstva nad `db` a `user`: `pripoj()` (s časovým limitem) → `{uid}` nebo `null`, `hlavicky()`, `zapisCasti(pid, verze, casti)`, `zapisHlavicku(pid, h)`, `uklid(pid, verze)`, `ctiProjekt(h)`, `oznacSmazany(pid)`, `odstran(pid)`. Převádí chyby na kódy z tabulky.
-- `js/zaloha/autozaloha.js` – fronta, prodleva, dohánění po startu a stav s posluchači: `start(ulozeni)`, `stav()`, `naZmenu(fn)`, `projekty()` (hlavičky pro dialog), `nactiProObnovu(ids)`, `odstranZeZalohy(pid)`.
-- `js/ulozeni.js` – `sleduj(fn)`.
+- `js/zaloha/uloziste.js` – tenká vrstva nad `db` a `user`: `pripoj()` (s časovým limitem) → objekt úložiště nebo `null`, `hlavicky()`, `zapisCasti(pid, verze, casti)`, `zapisHlavicku(pid, h)`, `oznacSmazany(pid, kdy)`, `zrusSmazani(pid)`, `uklid(pid, platna, predchozi)`, `ctiData(pid, h)`, `odstran(pid)` a `kodChyby(e)` pro převod chyb na kódy z tabulky.
+- `js/zaloha/autozaloha.js` – `vytvorAutozalohu({ulozeni, uloziste, prodlevaMs})` řídí frontu, prodlevu, dohánění po startu a stav s posluchači: `start()`, `stav()`, `naZmenu(fn)`, `projekty()` (hlavičky pro dialog), `nactiProObnovu(ids)`, `odstranZeZalohy(pid)`.
+- `js/ulozeni.js` – `sleduj(fn)` a `zaznam(id)` (surový záznam s textem projektu).
 - `js/app.js` – karta, upozornění na obnovu, dialog „Automatická záloha“, úprava `pripominkaZalohy`. Stav se na úvodní stránce aktualizuje bez překreslení celé stránky.
 - `css/app.css` – styl karty a štítků v dialogu (stávající tokeny `rk-*`).
 
