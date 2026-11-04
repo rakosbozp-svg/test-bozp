@@ -23,6 +23,12 @@ body { min-height: 100vh; }
 .stav { font-size: 12px; color: var(--ink-subtle); }
 .stav.chyba { color: var(--danger); font-weight: 600; }
 #d-autozaloha-stav.chyba { color: var(--danger); font-weight: 600; }
+#d-obnova-misto, #d-pripominka-misto { display: contents; }   /* obaly bez vlastního boxu: prázdné nepřidají mezeru v přehledu */
+.zaloha-auto { list-style: none; margin: 0; padding: 0; max-height: 45vh; overflow: auto; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.zaloha-auto li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius-md); }
+.zaloha-auto label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.zaloha-auto small { color: var(--ink-muted); }
+.zaloha-auto .stitek { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--ink); font-size: 12px; font-weight: 600; }
 .rk-card[hidden] { display: none; }   /* .rk-card nastavuje display, atribut hidden by jinak nezabral */
 .hlaska { margin: 0; padding: var(--space-3) var(--space-4); background: var(--warn-soft); color: var(--warn); border-bottom: 1px solid var(--line); font-size: 14px; }
 .hlaska[hidden] { display: none; }
