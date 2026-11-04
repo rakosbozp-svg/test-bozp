@@ -431,7 +431,7 @@ test('„Vrátit změny od Claude“ funguje i po novém vytvoření editoru (p�
 });
 
 test('stahování v artefaktu přes schopnost downloads; přenos projektů zálohou do jiné kopie plánovače (jiné úložiště)', skip, async () => {
-  const p = await nova({ stahovani: true });   // „kopie AI“: projekt s nakreslenou stěnou
+  const p = await nova({ stahovani: true });   // jedna kopie plánovače (artefakt): projekt s nakreslenou stěnou
   await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
   await p.click('[data-ai-volba=kontrola]');
   await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }] }], konec: '• Ok.' }]);
@@ -453,7 +453,7 @@ test('stahování v artefaktu přes schopnost downloads; přenos projektů zálo
   const zaloha = (await p.ai()).ulozeno.at(-1);
   assert.match(zaloha.filename, /^Pozarni_planovac_zaloha_\d{4}-\d{2}-\d{2}\.pplan-zaloha\.json$/);
   assert.match(await p.locator('#hlaska').textContent(), /Záloha je stažená/);
-  // „původní plánovač“: nový kontext = jiné úložiště; import zálohy obnoví projekt i se stěnami
+  // druhá kopie (např. webová verze): nový kontext = jiné úložiště; import zálohy obnoví projekt i se stěnami
   const ctx2 = await browser.newContext({ viewport: { width: 1500, height: 950 } });
   await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const q = await ctx2.newPage(); const chyby2 = []; q.on('pageerror', (e) => chyby2.push(e.message));
