@@ -5,6 +5,8 @@ import { randomBytes } from 'node:crypto';
 import { MAX_CAST, otisk, zabal, rozbal, rozdel, bezpecnySegment, zpetSegment, novaVerze } from '../js/zaloha/kodovani.js';
 import { pripoj, kodChyby } from '../js/zaloha/uloziste.js';
 import { falesneUloziste } from './falesne-uloziste.mjs';
+import { vytvorAutozalohu } from '../js/zaloha/autozaloha.js';
+import * as M from '../js/model.js';
 
 // ---------- kódování ----------
 test('kódování tam a zpět: diakritika, uvozovky, zpětná lomítka, emoji', async () => {
@@ -79,6 +81,8 @@ test('části a hlavička tam a zpět', async () => {
   assert.equal(h[0].pid, 'proj_a');
   assert.equal(h[0].verze, 'v1');
   assert.ok(Date.parse(f.dokumenty['data/users/u1/proj_a/casti/v1_0'].t) > 0, 'část nese čas zápisu');
+  await u.zapisCasti('proj_b', 'v1', ['x'], '2026-01-01T00:00:00.000Z');
+  assert.equal(f.dokumenty['data/users/u1/proj_b/casti/v1_0'].t, '2026-01-01T00:00:00.000Z', 'čas zápisu jde předat (hodiny zálohy)');
 });
 
 test('úklid: smaže předchozí verzi a staré sirotky, nechá čerstvé cizí části', async () => {
@@ -103,4 +107,179 @@ test('odstranění smaže hlavičku i všechny části; označení bez hlavičky
   await assert.rejects(u.ctiData('proj_a', H()), (e) => e.code === 'chybi_cast');
   await u.odstran('proj_a');
   assert.deepEqual(Object.keys(f.dokumenty), []);
+});
+
+// ---------- automatická záloha ----------
+const ZMENENO = '2026-11-04T10:00:00.000Z';
+const textProjektu = (nazev, extra = {}) => M.serializuj(Object.assign(M.novyProjekt({ nazev }), extra));
+const zaznam = (id, text, zmeneno = ZMENENO, nazev = id) => ({ id, nazev, typ: 'operativni_karta', zmeneno, text });
+function falesneUlozeni(zaznamy = []) {
+  const m = new Map(zaznamy.map((r) => [r.id, r])), posl = new Set();
+  return {
+    sleduj: (fn) => { posl.add(fn); return () => posl.delete(fn); },
+    seznam: () => [...m.values()].map(({ id, nazev, typ, zmeneno }) => ({ id, nazev, typ, zmeneno })),
+    zaznam: (id) => m.get(id) ?? null,
+    uloz(r) { m.set(r.id, r); for (const f of posl) f({ typ: 'ulozeno', id: r.id }); },
+    smaz(id) { m.delete(id); for (const f of posl) f({ typ: 'smazano', id }); },
+    m,
+  };
+}
+async function autozaloha(f, ul, { cekani = [], ted, nahoda } = {}) {
+  return vytvorAutozalohu({ ulozeni: ul, uloziste: await pripoj({ claude: f.claude }), prodlevaMs: 10, cekej: async (ms) => { cekani.push(ms); }, ...(ted ? { ted } : {}), ...(nahoda ? { nahoda } : {}) });
+}
+const sety = (f, casti) => f.stav.zapisy.filter(([v, c]) => v === 'set' && c.includes('/casti/') === casti).length;
+const velkyText = (nazev) => textProjektu(nazev, { poznamka: randomBytes(300_000).toString('base64') });
+
+test('změna se po prodlevě zazálohuje a obnova vrátí stejný text', async () => {
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul), text = textProjektu('Hala A');
+  await z.start();
+  ul.uloz(zaznam('proj_a', text));
+  await new Promise((r) => setTimeout(r, 40));   // prodleva 10 ms uplyne sama
+  await z.dokonci();
+  assert.equal(z.projekty().length, 1);
+  assert.equal(z.stav().faze, 'ok');
+  assert.equal(z.stav().pocet, 1);
+  assert.equal(z.stav().ceka, 0);
+  assert.ok(z.stav().posledni);
+  const o = await z.nactiProObnovu(['proj_a']);
+  assert.deepEqual(o.chyby, []);
+  assert.deepEqual(o.projekty, [M.nactiProjekt(text)]);
+});
+
+test('beze změny otisku se nic nezapíše', async () => {
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul), text = textProjektu('Hala A');
+  await z.start();
+  ul.uloz(zaznam('proj_a', text)); await z.dokonci();
+  const pred = f.stav.zapisy.length;
+  ul.uloz(zaznam('proj_a', text)); await z.dokonci();
+  assert.equal(f.stav.zapisy.filter(([v]) => v === 'set').length, f.stav.zapisy.slice(0, pred).filter(([v]) => v === 'set').length);
+});
+
+test('smazání označí hlavičku; obnova smazaného jen zruší značku', async () => {
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul), text = textProjektu('Hala A');
+  await z.start();
+  ul.uloz(zaznam('proj_a', text)); await z.dokonci();
+  ul.smaz('proj_a'); await z.dokonci();
+  assert.match(z.projekty()[0].smazano, /^\d{4}-\d\d-\d\dT/);
+  assert.equal(z.stav().pocet, 0);
+  assert.equal(z.stav().smazanych, 1);
+  const casti = sety(f, true);
+  ul.uloz(zaznam('proj_a', text)); await z.dokonci();
+  assert.equal(z.projekty()[0].smazano, null);
+  assert.equal(sety(f, true), casti, 'žádné nové části');
+});
+
+test('přerušení při zápisu částí nepoškodí zálohu', async () => {
+  let ted = Date.parse('2026-11-04T10:00:00.000Z');
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul, { ted: () => new Date(ted) });
+  const stary = textProjektu('Hala A'), novy = velkyText('Hala A');
+  await z.start();
+  ul.uloz(zaznam('proj_a', stary)); await z.dokonci();
+  const v0 = z.projekty()[0].verze;
+  let n = 0;
+  f.stav.pred = (v, c) => { if (v === 'set' && c.includes('/casti/') && ++n === 2) throw { code: 'invalid_argument', message: 'simulace' }; };
+  ul.uloz(zaznam('proj_a', novy, '2026-11-04T10:05:00.000Z')); await z.dokonci();
+  assert.equal(z.projekty()[0].verze, v0, 'hlavička ukazuje na starou úplnou verzi');
+  assert.deepEqual((await z.nactiProObnovu(['proj_a'])).projekty, [M.nactiProjekt(stary)]);
+  f.stav.pred = null;
+  ul.uloz(zaznam('proj_a', novy, '2026-11-04T10:06:00.000Z')); await z.dokonci();
+  const v2 = z.projekty()[0].verze, casti = Object.keys(f.dokumenty).filter((k) => k.includes('/casti/'));
+  assert.ok(!casti.some((k) => k.includes(`/casti/${v0}_`)), 'stará verze uklizená');
+  assert.ok(casti.some((k) => !k.includes(`/casti/${v2}_`)), 'čerstvý sirotek přerušeného pokusu zatím zůstává');
+  assert.deepEqual((await z.nactiProObnovu(['proj_a'])).projekty, [M.nactiProjekt(novy)]);
+  ted += 2 * 3600000;   // za dvě hodiny další záloha sirotka uklidí
+  ul.uloz(zaznam('proj_a', textProjektu('Hala B'), '2026-11-04T12:06:00.000Z')); await z.dokonci();
+  const v3 = z.projekty()[0].verze;
+  assert.ok(Object.keys(f.dokumenty).filter((k) => k.includes('/casti/')).every((k) => k.includes(`/casti/${v3}_`)));
+});
+
+test('souběh dvou záloh stejného projektu: hlavička vždy na úplné verzi', async () => {
+  const f = falesneUloziste(), text0 = textProjektu('Hala 0'), tA = velkyText('Hala A'), tB = velkyText('Hala B');
+  const ulA = falesneUlozeni(), ulB = falesneUlozeni();
+  const a = await autozaloha(f, ulA), b = await autozaloha(f, ulB);
+  await a.start();
+  ulA.uloz(zaznam('proj_a', text0)); await a.dokonci();
+  await b.start();
+  ulA.uloz(zaznam('proj_a', tA, '2026-11-04T10:01:00.000Z'));
+  ulB.uloz(zaznam('proj_a', tB, '2026-11-04T10:02:00.000Z'));
+  await Promise.all([a.dokonci(), b.dokonci()]);
+  const c = await autozaloha(f, falesneUlozeni());
+  await c.start();
+  const o = await c.nactiProObnovu(['proj_a']);
+  assert.deepEqual(o.chyby, []);
+  assert.equal(o.projekty.length, 1);
+  assert.ok([M.nactiProjekt(tA).nazev, M.nactiProjekt(tB).nazev].includes(o.projekty[0].nazev));
+});
+
+test('smazání během nahrávání: hlavička skončí se smazano', async () => {
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul);
+  await z.start();
+  f.stav.pred = (v, c) => { if (v === 'set' && c.includes('/casti/') && ul.m.has('proj_a')) ul.m.delete('proj_a'); };
+  ul.uloz(zaznam('proj_a', textProjektu('Hala A'))); await z.dokonci();
+  assert.match(z.projekty()[0].smazano, /^\d{4}-\d\d-\d\dT/);
+});
+
+test('dohánění po startu', async () => {
+  const hl = (zmeneno) => ({ format: 1, nazev: 'x', typ: 'operativni_karta', zmeneno, velikost: 1, sha256: 'x', verze: 'v0', casti: 1, komprese: 'zadna', zalohovano: zmeneno, smazano: null });
+  const f = falesneUloziste({ dokumenty: { 'data/users/u1/p1': hl('2026-11-01T00:00:00.000Z'), 'data/users/u1/p2': hl('2026-11-01T00:00:00.000Z') } });
+  const ul = falesneUlozeni([zaznam('p1', textProjektu('P1'), '2026-11-02T00:00:00.000Z'), zaznam('p2', textProjektu('P2'), '2026-11-01T00:00:00.000Z'), zaznam('p3', textProjektu('P3'))]);
+  const z = await autozaloha(f, ul);
+  await z.start(); await z.dokonci();
+  assert.equal(sety(f, false), 2, 'nahrány právě p1 (novější) a p3 (bez hlavičky)');
+  assert.equal(z.projekty().find((h) => h.pid === 'p2').verze, 'v0');
+});
+
+test('chyby úložiště: plné, přetížené, nedostupné, odebrané, chyba projektu', async () => {
+  // plné úložiště: fronta stojí
+  let f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul);
+  await z.start();
+  f.stav.pred = (v) => { if (v === 'set') throw { code: 'quota_exceeded', message: 'x' }; };
+  ul.uloz(zaznam('p1', textProjektu('P1'))); ul.uloz(zaznam('p2', textProjektu('P2'))); await z.dokonci();
+  assert.equal(z.stav().faze, 'chyba');
+  assert.equal(z.stav().chyba.text, 'Úložiště artefaktu je plné. Odstraňte ze zálohy smazané projekty, nebo zálohujte ručně.');
+  assert.ok(z.stav().ceka > 0);
+  // přetížení: pauza 60 s a pokračuje
+  let cekani = [];
+  f = falesneUloziste(); ul = falesneUlozeni(); z = await autozaloha(f, ul, { cekani });
+  await z.start();
+  let n = 0;
+  f.stav.pred = (v) => { if (v === 'set' && n++ === 0) throw { code: 'resource_exhausted', message: 'x' }; };
+  ul.uloz(zaznam('p1', textProjektu('P1'))); await z.dokonci();
+  assert.ok(cekani.includes(60000));
+  assert.equal(z.stav().faze, 'ok');
+  assert.equal(z.projekty().length, 1);
+  // nedostupné dvakrát: jeden nový pokus po 2–5 s, pak chyba
+  cekani = [];
+  f = falesneUloziste(); ul = falesneUlozeni(); z = await autozaloha(f, ul, { cekani, nahoda: () => 0.5 });
+  await z.start();
+  f.stav.pred = (v) => { if (v === 'set') throw { code: 'unavailable', message: 'x' }; };
+  ul.uloz(zaznam('p1', textProjektu('P1'))); await z.dokonci();
+  assert.equal(cekani.length, 1);
+  assert.ok(cekani[0] >= 2000 && cekani[0] <= 5000);
+  assert.equal(z.stav().faze, 'chyba');
+  assert.equal(z.stav().chyba.text, 'Úložiště je dočasně nedostupné.');
+  // odebraný přístup: záloha se vypne
+  f = falesneUloziste(); ul = falesneUlozeni(); z = await autozaloha(f, ul);
+  await z.start();
+  f.stav.pred = () => { throw { code: 'revoked', message: 'x' }; };
+  ul.uloz(zaznam('p1', textProjektu('P1'))); await z.dokonci();
+  assert.equal(z.stav().faze, 'nedostupna');
+  // chyba jednoho projektu: přeskočí ho a pokračuje dalším
+  f = falesneUloziste(); ul = falesneUlozeni(); z = await autozaloha(f, ul);
+  await z.start();
+  f.stav.pred = (v, c) => { if (v === 'set' && c.includes('/pX')) throw { code: 'invalid_argument', message: 'x' }; };
+  ul.uloz(zaznam('pX', textProjektu('X'), ZMENENO, 'X')); ul.uloz(zaznam('pY', textProjektu('Y'), ZMENENO, 'Y')); await z.dokonci();
+  assert.equal(z.stav().chyba.text, 'Záloha projektu „X“ selhala (kód invalid_argument).');
+  assert.deepEqual(z.projekty().map((h) => h.pid), ['pY']);
+});
+
+test('obnova s chybějící částí', async () => {
+  const f = falesneUloziste(), ul = falesneUlozeni(), z = await autozaloha(f, ul);
+  await z.start();
+  ul.uloz(zaznam('p1', textProjektu('P1'), ZMENENO, 'Projekt jedna')); ul.uloz(zaznam('p2', textProjektu('P2'), ZMENENO, 'Projekt dva')); await z.dokonci();
+  delete f.dokumenty[Object.keys(f.dokumenty).find((k) => k.startsWith('data/users/u1/p1/casti/'))];
+  const o = await z.nactiProObnovu(['p1', 'p2']);
+  assert.equal(o.projekty.length, 1);
+  assert.equal(o.chyby.length, 1);
+  assert.match(o.chyby[0], /Projekt jedna/);
 });

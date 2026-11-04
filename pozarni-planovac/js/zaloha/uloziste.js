@@ -41,10 +41,10 @@ function vytvor(db, uid) {
       const s = await koren.get();
       return s.docs.filter((d) => d.exists && d.data()?.format === 1).map((d) => ({ ...d.data(), pid: zpetSegment(d.id) }));
     },
-    // Části se zapisují postupně (jedna po druhé); každá nese čas zápisu kvůli úklidu.
-    async zapisCasti(pid, verze, data) {
+    // Části se zapisují postupně (jedna po druhé); každá nese čas zápisu kvůli úklidu (hodiny zálohy, viz autozaloha.js).
+    async zapisCasti(pid, verze, data, kdy = new Date().toISOString()) {
       const k = casti(pid);
-      for (let i = 0; i < data.length; i++) await k.doc(`${verze}_${i}`).set({ d: data[i], t: new Date().toISOString() });
+      for (let i = 0; i < data.length; i++) await k.doc(`${verze}_${i}`).set({ d: data[i], t: kdy });
     },
     zapisHlavicku: (pid, h) => hlavicka(pid).set(h),
     async oznacSmazany(pid, kdy) {
