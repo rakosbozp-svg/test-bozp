@@ -1,141 +1,139 @@
-# Bot Crossing — Plan (awaiting approval)
+# Bot Crossing — Plán (čeká na schválení)
 
-## 0. Where this was verified (read this first)
+## 0. Kde se to ověřovalo (přečti nejdřív)
 
-This research ran in a **Linux cloud container** with **Claude Code 2.1.318**, not on your Windows or Mac machine.
-That container held exactly **one** transcript, the session that wrote this plan. Every format claim below
-comes from that file plus the strings inside the installed `claude` binary. On your machine:
+Průzkum proběhl v **linuxovém cloudovém kontejneru** s **Claude Code 2.1.318**, ne na tvém Windows/Macu.
+V kontejneru byl přesně **jeden** záznam relace, a to relace, která napsala tento plán. Všechna tvrzení o formátu
+pocházejí z toho souboru a z textů uvnitř nainstalovaného programu `claude`. Na tvém počítači:
 
-- your Claude Code version may be older or newer, so field names can differ → the parser is defensive (unknown record types are skipped, missing fields are allowed);
-- Windows and macOS were **not** inspected directly. Path handling uses `os.homedir()` and `path.join`, which is standard, but please run phase 1 on your machine and tell me if the session list looks wrong.
+- může být starší nebo novější verze Claude Code a názvy polí se mohou lišit → parser je tolerantní (neznámé typy záznamů přeskočí, chybějící pole nevadí);
+- Windows a macOS jsem **přímo neviděl**. Cesty řeším přes `os.homedir()` a `path.join`, což je standard, ale po fázi 1 si to prosím spusť u sebe a řekni mi, jestli seznam relací sedí.
 
-Rating per claim: ✅ verified on disk · 🔎 seen in the binary only (not on disk) · ❓ unverified.
+Hodnocení: ✅ ověřeno na disku · 🔎 viděno jen v programu (ne na disku) · ❓ neověřeno.
 
 ---
 
-## 1. What Claude Code actually stores
+## 1. Co Claude Code skutečně ukládá
 
-### 1.1 Locations
+### 1.1 Umístění
 
-| Path | What it is | Status |
+| Cesta | Co to je | Stav |
 |---|---|---|
-| `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl` | One transcript per session, append-only JSON Lines | ✅ |
-| `<encoded-cwd>` | cwd with every non-alphanumeric char replaced by `-` (`/home/user/test-bozp` → `-home-user-test-bozp`). **Lossy**, so the app reads the real path from the `cwd` field inside records | ✅ (Windows form `C--Users-…` ❓) |
-| `~/.claude/projects/<encoded-cwd>/<sessionId>/subagents/agent-<id>.jsonl` | Subagent (Task) transcripts | 🔎 (not present here) |
-| `~/.claude/sessions/<pid>.json` | Live registry of **running** CLI processes: `pid, sessionId, cwd, status ("busy"/"idle"/"waiting"), updatedAt, version` | ✅ file seen, but undocumented and internal |
-| `CLAUDE_CONFIG_DIR` env var | Overrides `~/.claude`. The app honours it | 🔎 |
+| `~/.claude/projects/<zakódovaná-cesta>/<sessionId>.jsonl` | Jeden soubor na relaci, JSON Lines, jen se připisuje na konec | ✅ |
+| `<zakódovaná-cesta>` | cesta k projektu, kde je každý znak kromě písmen a číslic nahrazen `-` (`/home/user/test-bozp` → `-home-user-test-bozp`). **Nejde spolehlivě převést zpět**, proto aplikace bere skutečnou cestu z pole `cwd` uvnitř záznamů | ✅ (Windows tvar `C--Users-…` ❓) |
+| `…/<sessionId>/subagents/agent-<id>.jsonl` | Záznamy subagentů | 🔎 (tady nebyly) |
+| `~/.claude/sessions/<pid>.json` | Živý seznam **běžících** procesů CLI: `pid, sessionId, cwd, status ("busy"/"idle"/"waiting"), updatedAt, version` | ✅ soubor viděn, ale nedokumentovaný a interní |
+| proměnná `CLAUDE_CONFIG_DIR` | Přepíše `~/.claude`. Aplikace ji respektuje | 🔎 |
 
-### 1.2 Transcript record types (one JSON object per line)
+### 1.2 Typy záznamů (jeden JSON objekt na řádek)
 
-Fields common to conversation records: `type, uuid, parentUuid, timestamp (ISO), sessionId, cwd, version, gitBranch, isSidechain, entrypoint`.
+Společná pole konverzačních záznamů: `type, uuid, parentUuid, timestamp (ISO), sessionId, cwd, version, gitBranch, isSidechain, entrypoint`.
 
-| `type` | Useful fields | Used for |
+| `type` | Užitečná pole | Na co |
 |---|---|---|
-| `user` with `message.content` **string** and `origin.kind:"human"` | the prompt text | session title (first one), "last messages" |
-| `user` with `message.content[]` of `tool_result` | `tool_use_id`, `is_error`, plus top-level `toolUseResult` (object, or a **string** starting `"Error: …"` on failure) | tool success/failure → Blocked |
-| `assistant` | `message.model`, `message.content[]` blocks: `text`, `thinking`, `tool_use{id,name,input}` | model, recent tool calls, last messages |
-| `custom-title` / `ai-title` | `customTitle` / `aiTitle` | preferred title if present 🔎 |
-| `last-prompt` | `lastPrompt` | fallback title |
-| `queue-operation` | `operation:"enqueue"`, `content` | ignored |
-| `attachment` | `attachment.type` (hook_success, environment, …) | ignored |
-| `tools-used`, `atis-latch`, `summary`, `file-history-snapshot`, `pr-link`, `agent-name` | — | ignored |
+| `user` s `message.content` jako **text** a `origin.kind:"human"` | text zadání | název relace (první zadání), „poslední zprávy“ |
+| `user` s `message.content[]` typu `tool_result` | `tool_use_id`, `is_error`, navíc `toolUseResult` (objekt, nebo při chybě **text** začínající `"Error: …"`) | úspěch/selhání nástroje → Zablokováno |
+| `assistant` | `message.model`, bloky `message.content[]`: `text`, `thinking`, `tool_use{id,name,input}` | model, poslední volání nástrojů, poslední zprávy |
+| `custom-title` / `ai-title` | `customTitle` / `aiTitle` | přednostní název, pokud existuje 🔎 |
+| `last-prompt` | `lastPrompt` | záložní název |
+| `queue-operation`, `attachment`, `tools-used`, `atis-latch`, `summary`, `file-history-snapshot`, `pr-link`, `agent-name` | — | ignoruje se |
 
-**What the transcript cannot tell us:**
-- "Waiting for permission" is not written down while the prompt is open. A `tool_use` without a `tool_result` looks the same whether the tool is long-running or waiting for your approval. **Live "Needs you" therefore requires hooks.**
-- Claude Code has **no "archived" concept for local sessions**. Archive is a Bot Crossing feature, stored in Bot Crossing's own file.
+**Co ze souboru relace zjistit nejde:**
+- „Čeká na povolení“ se nezapisuje, dokud je dotaz otevřený. `tool_use` bez `tool_result` vypadá stejně, ať nástroj dlouho běží, nebo čeká na tvé schválení. **Živé „Potřebuje tě“ proto vyžaduje hooky.**
+- Claude Code **nemá pro lokální relace stav „archivováno“**. Archivace bude funkce Bot Crossing, uložená v jeho vlastním souboru.
 
-### 1.3 Hooks (installed version 2.1.318)
+### 1.3 Hooky (nainstalovaná verze 2.1.318)
 
-All 33 events in the binary: `PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, Notification, UserPromptSubmit, UserPromptExpansion, SessionStart, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, PermissionRequest, PermissionDenied, Setup, TeammateIdle, TaskCreated, TaskCompleted, Elicitation, ElicitationResult, ConfigChange, WorktreeCreate, WorktreeRemove, InstructionsLoaded, CwdChanged, FileChanged, DirectoryAdded, MessageDisplay` 🔎
+Všech 33 událostí v programu: `PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, Notification, UserPromptSubmit, UserPromptExpansion, SessionStart, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, PermissionRequest, PermissionDenied, Setup, TeammateIdle, TaskCreated, TaskCompleted, Elicitation, ElicitationResult, ConfigChange, WorktreeCreate, WorktreeRemove, InstructionsLoaded, CwdChanged, FileChanged, DirectoryAdded, MessageDisplay` 🔎
 
-**Native HTTP hooks exist:** `{ "type": "http", "url": "...", "timeout": <sec>, "headers": {...} }` POSTs the hook's input JSON to the URL 🔎.
-That means **no script and no curl**, so the same config works on Windows and macOS. Failures don't block Claude by default (`onFailure: "block"` is opt-in) 🔎. I'll confirm that with the backend switched off in phase 4.
+**Existují nativní HTTP hooky:** `{ "type": "http", "url": "...", "timeout": <s>, "headers": {...} }` pošle vstupní JSON hooku metodou POST na danou adresu 🔎.
+Takže **žádný skript ani curl** a stejná konfigurace funguje na Windows i macOS. Selhání hooku Claude ve výchozím stavu neblokuje (`onFailure: "block"` se musí zapnout výslovně) 🔎. Ve fázi 4 to ověřím s vypnutým backendem.
 
-Payload Claude Code sends (common): `session_id, transcript_path, cwd, permission_mode, hook_event_name`, plus per event:
+Co Claude Code posílá (společné): `session_id, transcript_path, cwd, permission_mode, hook_event_name`, plus podle události:
 
-| Event | Extra fields | Meaning for us |
+| Událost | Pole navíc | Význam pro nás |
 |---|---|---|
-| `UserPromptSubmit` | `prompt` | turn started → Working |
-| `PreToolUse` / `PostToolUse` | `tool_name, tool_input, tool_use_id` (+ `tool_response`) | Working |
-| `PostToolUseFailure` | `tool_name, error, is_interrupt` | Blocked (unless interrupt) |
-| `PermissionRequest` | `tool_name, tool_input` | Needs you |
-| `Notification` | `notification_type` ∈ `permission_prompt, idle_prompt, elicitation_dialog, auth_success, …`, `message` | Needs you (permission/elicitation) |
-| `Stop` | `last_assistant_message` | **turn finished**, not session finished |
-| `StopFailure` | — | turn died on an API error → Blocked |
-| `SessionEnd` | `reason` | the CLI process exited |
-| `SubagentStart` / `SubagentStop` | `agent_id, agent_type` | extra worker on the building |
+| `UserPromptSubmit` | `prompt` | začal tah → Pracuje |
+| `PreToolUse` / `PostToolUse` | `tool_name, tool_input, tool_use_id` (+ `tool_response`) | Pracuje |
+| `PostToolUseFailure` | `tool_name, error, is_interrupt` | Zablokováno (pokud nejde o přerušení) |
+| `PermissionRequest` | `tool_name, tool_input` | Potřebuje tě |
+| `Notification` | `notification_type` ∈ `permission_prompt, idle_prompt, elicitation_dialog, auth_success, …`, `message` | Potřebuje tě (povolení/dotaz) |
+| `Stop` | `last_assistant_message` | **skončil tah**, ne relace |
+| `StopFailure` | — | tah spadl na chybě API → Zablokováno |
+| `SessionEnd` | `reason` | proces CLI skončil |
+| `SubagentStart` / `SubagentStop` | `agent_id, agent_type` | další dělník u budovy |
 
-⚠️ **Differences from your spec:**
-1. **`Stop` fires at the end of every turn**, not when the session ends. The session ends at `SessionEnd`.
-2. HTTP hooks send the **whole** payload (including `tool_input` and `last_assistant_message`). The backend keeps only `session_id, cwd, event, tool_name, notification_type, error flag` plus its own receive timestamp, and drops the rest immediately. Payloads carry no timestamp of their own, so the backend adds one. If you want the trimming to happen *before* the data leaves Claude Code, there's a fallback: a command hook running a ~15-line Node script. It's more moving parts, so I'm not recommending it.
-3. The `http` hook type needs a recent Claude Code. I verified it in 2.1.318 but **don't know the minimum version** ❓. The README will include the command-hook fallback.
+⚠️ **Rozdíly oproti zadání:**
+1. **`Stop` se spouští na konci každého tahu**, ne při konci relace. Relace končí událostí `SessionEnd`.
+2. HTTP hooky posílají **celý** obsah události (včetně `tool_input` a `last_assistant_message`). Backend si nechá jen `session_id, cwd, událost, tool_name, notification_type, příznak chyby` a vlastní čas přijetí, zbytek okamžitě zahodí. Události samy čas neobsahují, proto ho doplní backend. Pokud chceš ořezání ještě *předtím*, než data opustí Claude Code, existuje záloha: command hook s ~15řádkovým Node skriptem. Je to víc dílů, takže ho nedoporučuji.
+3. Typ hooku `http` potřebuje novější Claude Code. Ve verzi 2.1.318 jsem ho ověřil, ale **nevím, od které verze existuje** ❓. README bude obsahovat záložní variantu s command hookem.
 
-Hooks are configured in `~/.claude/settings.json` (user) or `.claude/settings.json` (project):
+Hooky se nastavují v `~/.claude/settings.json` (uživatel) nebo `.claude/settings.json` (projekt):
 ```json
 { "hooks": { "PreToolUse": [ { "matcher": "*", "hooks": [ { "type": "http", "url": "http://127.0.0.1:4545/hook", "timeout": 2 } ] } ] } }
 ```
-I'll ship this as `bot-crossing/hooks/bot-crossing-hooks.json` for you to merge yourself. **I won't touch your settings.** The backend always answers `200 {}`, so a hook response can never allow, deny or alter anything.
+Dodám to jako `bot-crossing/hooks/bot-crossing-hooks.json` a sloučíš si to sám. **Do tvého nastavení nesahám.** Backend vždy odpoví `200 {}`, takže odpověď hooku nikdy nic nepovolí, nezakáže ani nezmění.
 
 ---
 
-## 2. Data sources
+## 2. Zdroje dat
 
-1. **History (startup + polling):** scan `projects/*/*.jsonl` changed in the last 7 days (configurable). Read **read-only**, line by line. A half-written last line is tolerated. Results are cached by `(mtime, size)` and re-read incrementally from the last byte offset every 2 s.
-2. **Live (hooks):** `POST /hook` → in-memory event log per session (last 200 events) → WebSocket push.
-3. **Optional bonus:** `~/.claude/sessions/*.json` to know whether a session's process is still alive. It's undocumented, so a missing or changed file is simply ignored.
+1. **Historie (při startu + průběžně):** projde `projects/*/*.jsonl` změněné za posledních 7 dní (nastavitelné). Čte **jen pro čtení**, řádek po řádku. Rozepsaný poslední řádek nevadí. Výsledky se cachují podle `(mtime, velikost)` a každé 2 s se dočte jen nový konec souboru.
+2. **Živě (hooky):** `POST /hook` → log událostí v paměti pro každou relaci (posledních 200) → odeslání přes WebSocket.
+3. **Volitelný bonus:** `~/.claude/sessions/*.json`, aby bylo vidět, jestli proces relace ještě běží. Je to nedokumentované, takže chybějící nebo změněný soubor se prostě ignoruje.
 
-Merged by `sessionId`. Hook events are fresher and win for status; the transcript provides title, model, messages and tool history.
+Spojuje se podle `sessionId`. Pro stav mají přednost události z hooků (jsou čerstvější), soubor relace dodá název, model, zprávy a historii nástrojů.
 
-**Guarantees:** files are only ever opened for reading. Nothing under `~/.claude` is written, moved or deleted. The server binds to `127.0.0.1` and rejects requests whose `Host` isn't localhost (DNS-rebinding guard). There are no outbound network calls and no telemetry. Archive state lives in `bot-crossing/.data/state.json` (gitignored).
+**Záruky:** soubory se otevírají jen pro čtení. Nic pod `~/.claude` se nezapisuje, nepřesouvá ani nemaže. Server poslouchá jen na `127.0.0.1` a odmítne požadavky, jejichž `Host` není localhost (ochrana proti DNS rebindingu). Žádná odchozí síťová volání ani telemetrie. Stav archivace je v `bot-crossing/.data/state.json` (v .gitignore).
 
 ---
 
-## 3. Status logic (evaluated top-down, first match wins)
+## 3. Logika stavů (vyhodnocuje se shora, platí první shoda)
 
-| Status | Rule | Visual |
+| Stav | Pravidlo | Vzhled |
 |---|---|---|
-| **Shipped** | you clicked Archive in Bot Crossing (allowed when the session isn't Working) | flag |
-| **Needs you** | latest `PermissionRequest` / `Notification(permission_prompt \| elicitation_dialog)` with no later `PreToolUse`/`PostToolUse`/`UserPromptSubmit`/`Stop` | yellow dot, pulse, pinned at the top of the UI |
-| **Blocked** | latest tool outcome is a failure (`PostToolUseFailure` without interrupt, or transcript `is_error:true`), or `StopFailure`, with no successful tool or new prompt after it | red dot, smoke |
-| **Working** | any activity in the last 30 s, **or** an open `PreToolUse` with no matching `Post*` (a long build, for example) | green dot, hammering |
-| **Idle** | everything else ("your move" when the last turn ended with `Stop`) | workers sit |
+| **Hotovo (Shipped)** | klikl jsi v Bot Crossing na Archivovat (jde, když relace zrovna nepracuje) | vlajka |
+| **Potřebuje tě** | poslední `PermissionRequest` / `Notification(permission_prompt \| elicitation_dialog)`, po kterém nepřišlo `PreToolUse`/`PostToolUse`/`UserPromptSubmit`/`Stop` | žlutá tečka, pulzování, připnuto nahoře v UI |
+| **Zablokováno** | poslední výsledek nástroje je selhání (`PostToolUseFailure` bez přerušení, nebo `is_error:true` v souboru), nebo `StopFailure`, a po něm nepřišel úspěšný nástroj ani nové zadání | červená tečka, kouř |
+| **Pracuje** | jakákoli aktivita za posledních 30 s, **nebo** otevřené `PreToolUse` bez odpovídajícího `Post*` (třeba dlouhý build) | zelená tečka, kladiva |
+| **Nečinné** | všechno ostatní („jsi na tahu“, když poslední tah skončil `Stop`) | dělníci sedí |
 
-Without hooks, the transcript alone can yield Working, Blocked, Idle and Shipped. It **cannot** yield Needs you (see 1.2), and the UI will show a "hooks not connected" hint.
+Bez hooků lze ze samotného souboru určit Pracuje, Zablokováno, Nečinné a Hotovo. Stav Potřebuje tě **nelze** (viz 1.2) a UI ukáže upozornění „hooky nejsou připojené“.
 
-Known weak spot: `is_error` is also set for harmless failures (a `grep` with no match, or a permission you denied). That can make Blocked noisy. I'll make it switchable: "Blocked only if the turn ended right after the error".
+Známá slabina: `is_error` se nastavuje i u neškodných selhání (`grep` bez výsledku, povolení, které jsi zamítl). Stav Zablokováno tak může být „hlučný“. Udělám přepínač: „Zablokováno jen tehdy, když tah skončil hned po chybě“.
 
-Top bar: **building** (Working) / **need you** / **blocked** / **shipped** / **crew** (Working sessions × 2 workers + 1 per running subagent).
+Horní lišta: **staví se** (Pracuje) / **potřebuje tě** / **zablokováno** / **hotovo** / **posádka** (pracující relace × 2 dělníci + 1 za každého běžícího subagenta).
 
 ---
 
-## 4. Architecture (one install, one command)
+## 4. Architektura (jedna instalace, jeden příkaz)
 
 ```
 bot-crossing/
   package.json         # npm install && npm run dev
-  server/              # TypeScript run with tsx
-    index.ts           # Express + ws + Vite middleware → ONE process, ONE port (4545)
-    transcripts.ts     # read-only JSONL scanner/parser
-    hooks.ts           # POST /hook receiver
-    status.ts          # status rules (unit-tested)
+  server/              # TypeScript spouštěný přes tsx
+    index.ts           # Express + ws + Vite middleware → JEDEN proces, JEDEN port (4545)
+    transcripts.ts     # čtení a parsování JSONL, jen pro čtení
+    hooks.ts           # příjem POST /hook
+    status.ts          # pravidla stavů (s unit testy)
   src/                 # Vite + React + TS + react-three-fiber + drei
   hooks/bot-crossing-hooks.json
   README.md
 ```
-Dependencies: `express, ws, react, react-dom, three, @react-three/fiber, @react-three/drei` + dev: `vite, @vitejs/plugin-react, typescript, tsx`. No database, no concurrently, no state library.
+Závislosti: `express, ws, react, react-dom, three, @react-three/fiber, @react-three/drei` + vývojové: `vite, @vitejs/plugin-react, typescript, tsx`. Žádná databáze, žádné concurrently, žádná knihovna na správu stavu.
 
-API: `GET /api/sessions`, `GET /api/sessions/:id`, `POST /api/sessions/:id/archive` (and `/unarchive`), `POST /hook`, `WS /ws`.
+API: `GET /api/sessions`, `GET /api/sessions/:id`, `POST /api/sessions/:id/archive` (a `/unarchive`), `POST /hook`, `WS /ws`.
 
-Testing here: I can't see your real sessions, so I'll test against this container's real transcript plus synthetic fixtures in the verified format, and simulate hooks with fake POSTs.
+Testování tady: tvoje skutečné relace nevidím, takže budu testovat na skutečném souboru relace z tohoto kontejneru, na umělých vzorcích ve stejném ověřeném formátu a hooky nasimuluji falešnými POST požadavky.
 
 ---
 
-## 5. Decisions I need from you (my recommendation first)
+## 5. Rozhodnutí, která potřebuji od tebe (moje doporučení první)
 
-1. **"Shipped" trigger.** Recommendation: Archive is a manual button available any time the session isn't Working. `SessionEnd` just marks the building "closed" (lights off) without auto-flagging it.
-2. **Is a finished turn ("your move") Needs you?** Recommendation: **no**, keep it Idle. Otherwise every quiet session turns yellow and real permission prompts drown in the noise.
-3. **The "Open" button.** Recommendation: copy `cd "<project>" && claude --resume <id>` to the clipboard. That's reliable on Windows and macOS. Launching a terminal from a browser isn't.
-4. **Location.** Recommendation: build it in the `bot-crossing/` subfolder of this repo (the repo already has unrelated projects), on branch `claude/festive-franklin-gto0qg`.
-5. **Port.** Default `4545`, overridable with `PORT=`.
+1. **Co spustí stav Hotovo?** Doporučení: ruční tlačítko Archivovat, dostupné, kdykoli relace nepracuje. `SessionEnd` jen označí budovu jako „zavřenou“ (zhasnou světla), vlajku nepřidá automaticky.
+2. **Je dokončený tah („jsi na tahu“) stav Potřebuje tě?** Doporučení: **ne**, nechat Nečinné. Jinak každá tichá relace zežloutne a skutečné žádosti o povolení se v tom ztratí.
+3. **Tlačítko Otevřít.** Doporučení: zkopírovat do schránky `cd "<projekt>" && claude --resume <id>`. To funguje spolehlivě na Windows i macOS. Spustit terminál z prohlížeče spolehlivě nejde.
+4. **Umístění.** Doporučení: složka `bot-crossing/` v tomto repozitáři (jsou v něm i jiné nesouvisející projekty), větev `claude/festive-franklin-gto0qg`.
+5. **Port.** Výchozí `4545`, dá se změnit přes `PORT=`.
 
-Build order as you specified: phases 1→5, stopping after each.
+Pořadí stavby podle tvého zadání: fáze 1→5, po každé zastavím.
