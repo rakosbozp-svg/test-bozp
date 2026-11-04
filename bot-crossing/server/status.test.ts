@@ -30,7 +30,7 @@ test('a long-running tool keeps it working, but not forever', () => {
 test('last tool failed and nothing since = blocked', () => {
   const r = st({ lastActivityAt: ago(60), lastToolStartAt: ago(62), lastFinishedTool: { outcome: 'error', endedAt: ago(60), name: 'Bash', errorText: 'exit 1' } });
   assert.equal(r.status, 'blocked');
-  assert.match(r.reason, /Bash failed: exit 1/);
+  assert.match(r.reason, /Bash selhal: exit 1/);
 });
 
 test('failure followed by another tool call is NOT blocked', () => {

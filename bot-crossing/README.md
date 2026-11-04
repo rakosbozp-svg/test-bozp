@@ -3,12 +3,12 @@
 Útulný lokální dashboard, který zobrazuje tvoje relace Claude Code jako malou kolonii na hexagonální mapě.
 Podrobný plán a ověřený formát dat: [PLAN.md](PLAN.md).
 
-> **Stav: fáze 1 z 5** — backend čte existující relace a vrací je přes REST API s vypočteným stavem.
-> 2D seznam, 3D kolonie, hooky a WebSocket přijdou v dalších fázích.
+> **Stav: fáze 2 z 5** — backend čte existující relace (REST API) a v prohlížeči je 2D seznam se stejnými daty.
+> 3D kolonie, hooky a WebSocket přijdou v dalších fázích.
 
 ## Požadavky
 
-- Node.js 20 nebo novější (Windows, macOS i Linux)
+- Node.js 20.19+ nebo 22.12+ (Windows, macOS i Linux)
 - Claude Code, který už má nějaké relace v `~/.claude/projects/`
 
 ## Spuštění
@@ -19,7 +19,11 @@ npm install
 npm run dev
 ```
 
-Pak otevři v prohlížeči <http://127.0.0.1:4545/api/sessions>.
+Pak otevři v prohlížeči <http://127.0.0.1:4545>. Jeden proces obsluhuje API i stránku, na jednom portu.
+
+- **Otevřít** zkopíruje do schránky příkaz `cd "<projekt>" && claude --resume <id>` (na Windows se `;` místo `&&`). Vlož ho do terminálu.
+- **Archivovat** přesune relaci do stavu Hotovo. Pracující relaci archivovat nejde. **Obnovit** archivaci zruší.
+- Kliknutím na relaci se otevře detail: cesta, model, poslední nástroje, zprávy, časová osa a surová data pro kontrolu.
 
 Rychlá kontrola v terminálu bez serveru:
 

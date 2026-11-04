@@ -193,7 +193,7 @@ export function applyRecord(s: ParsedSession, r: any): void {
     }
     if (msg.stop_reason === 'end_turn' || msg.stop_reason === 'stop_sequence' || msg.stop_reason === 'max_tokens') {
       s.lastTurnEndAt = at;
-      addTimeline(s, { ts: at, kind: 'turn_end', label: 'Turn finished' });
+      addTimeline(s, { ts: at, kind: 'turn_end', label: 'Tah dokončen' });
     }
     return;
   }
@@ -213,11 +213,11 @@ export function applyRecord(s: ParsedSession, r: any): void {
       }
       if (outcome === 'error') {
         s.counts.errors++;
-        addTimeline(s, { ts: at, kind: 'tool_error', label: `${call?.name ?? 'Tool'} failed${errorText ? ': ' + errorText : ''}` });
+        addTimeline(s, { ts: at, kind: 'tool_error', label: `${call?.name ?? 'Nástroj'} selhal${errorText ? ': ' + errorText : ''}` });
       } else if (outcome === 'rejected') {
-        addTimeline(s, { ts: at, kind: 'tool_rejected', label: `${call?.name ?? 'Tool'} denied by you` });
+        addTimeline(s, { ts: at, kind: 'tool_rejected', label: `${call?.name ?? 'Nástroj'} — zamítnuto tebou` });
       } else if (outcome === 'interrupted') {
-        addTimeline(s, { ts: at, kind: 'interrupted', label: 'Interrupted by you' });
+        addTimeline(s, { ts: at, kind: 'interrupted', label: 'Přerušeno tebou' });
       }
     }
     return;
@@ -231,7 +231,7 @@ export function applyRecord(s: ParsedSession, r: any): void {
   if (text.trim().startsWith(INTERRUPT_TURN)) {
     s.lastTurnEndAt = at;
     s.pending.clear();
-    addTimeline(s, { ts: at, kind: 'interrupted', label: 'Interrupted by you' });
+    addTimeline(s, { ts: at, kind: 'interrupted', label: 'Přerušeno tebou' });
     return;
   }
   const title = promptTitle(text);

@@ -2,7 +2,7 @@
 import { SessionService } from './sessions.ts';
 import { config } from './config.ts';
 
-const ICON = { needs_you: '🟡 NEEDS YOU', blocked: '🔴 blocked', working: '🟢 working', idle: '⚪ idle', shipped: '🏁 shipped' } as const;
+const ICON = { needs_you: '🟡 POTŘEBUJE TĚ', blocked: '🔴 zablokováno', working: '🟢 pracuje', idle: '⚪ nečinné', shipped: '🏁 hotovo' } as const;
 
 function ago(sec?: number): string {
   if (sec === undefined) return '?';
@@ -15,10 +15,10 @@ function ago(sec?: number): string {
 const service = new SessionService();
 await service.refresh();
 const list = service.list();
-console.log(`\nReading (read-only): ${config.projectsDir}  —  ${list.length} session(s), last ${config.lookbackDays} day(s)\n`);
+console.log(`\nČtu (jen pro čtení): ${config.projectsDir}  —  ${list.length} relací za posledních ${config.lookbackDays} dní\n`);
 for (const e of service.transcripts.lastErrors) console.log(`! ${e}`);
 for (const s of list) {
-  console.log(`${ICON[s.status].padEnd(13)} ${ago(s.lastActivityAgoSec).padStart(7)} ago  [${s.projectName}]  ${s.title}`);
-  console.log(`${''.padEnd(28)}${s.statusReason} · ${s.model ?? 'model ?'} · ${s.counts.prompts} prompts, ${s.counts.tools} tools, ${s.counts.errors} errors`);
+  console.log(`${ICON[s.status].padEnd(15)} ${ago(s.lastActivityAgoSec).padStart(7)}   [${s.projectName}]  ${s.title}`);
+  console.log(`${''.padEnd(28)}${s.statusReason} · ${s.model ?? 'model ?'} · zadání ${s.counts.prompts}, nástrojů ${s.counts.tools}, chyb ${s.counts.errors}`);
 }
 console.log();

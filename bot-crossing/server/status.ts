@@ -7,41 +7,41 @@ import type { StatusConfig } from './config.ts';
 
 export function computeStatus(sig: StatusSignals, now: number, cfg: StatusConfig): StatusResult {
   // 1. Shipped: you archived it in Bot Crossing.
-  if (sig.archived) return { status: 'shipped', reason: 'Archived by you' };
+  if (sig.archived) return { status: 'shipped', reason: 'Archivováno tebou' };
 
   // 2. Needs you: an open permission/elicitation request (hooks only).
   if (sig.needsYouSince !== undefined) {
-    return { status: 'needs_you', reason: sig.needsYouLabel ?? 'Waiting for your permission or answer' };
+    return { status: 'needs_you', reason: sig.needsYouLabel ?? 'Čeká na tvé povolení nebo odpověď' };
   }
 
   // 3. Blocked: the turn died on an API error, or the last tool failed and nothing moved on since.
   const promptAfter = (t: number) => sig.lastPromptAt !== undefined && sig.lastPromptAt > t;
   if (sig.stopFailureAt !== undefined && !promptAfter(sig.stopFailureAt)) {
-    return { status: 'blocked', reason: 'Turn stopped on an API error' };
+    return { status: 'blocked', reason: 'Tah skončil chybou API' };
   }
   const ft = sig.lastFinishedTool;
   if (ft && ft.outcome === 'error') {
     const movedOn = promptAfter(ft.endedAt) || (sig.lastToolStartAt !== undefined && sig.lastToolStartAt > ft.endedAt);
     const turnEndedAfter = sig.lastTurnEndAt !== undefined && sig.lastTurnEndAt >= ft.endedAt;
     if (!movedOn && (!cfg.blockedStrict || turnEndedAfter)) {
-      return { status: 'blocked', reason: `${ft.name} failed${ft.errorText ? ': ' + ft.errorText : ''}` };
+      return { status: 'blocked', reason: `${ft.name} selhal${ft.errorText ? ': ' + ft.errorText : ''}` };
     }
   }
 
   // 4. Working: recent activity, or a tool call still running.
   if (sig.lastActivityAt !== undefined && now - sig.lastActivityAt < cfg.workingWindowMs) {
-    return { status: 'working', reason: 'Activity in the last ' + Math.round(cfg.workingWindowMs / 1000) + ' s' };
+    return { status: 'working', reason: 'Aktivita za posledních ' + Math.round(cfg.workingWindowMs / 1000) + ' s' };
   }
   if (sig.openToolSince !== undefined && now - sig.openToolSince < cfg.openToolMaxMs) {
-    return { status: 'working', reason: 'A tool call is still running (or waiting for permission)' };
+    return { status: 'working', reason: 'Nástroj pořád běží (nebo čeká na povolení)' };
   }
 
   // 5. Idle.
   const yourMove =
     sig.lastTurnEndAt !== undefined && (sig.lastPromptAt === undefined || sig.lastTurnEndAt >= sig.lastPromptAt);
   return yourMove
-    ? { status: 'idle', idleKind: 'your_move', reason: 'Agent finished its turn — your move' }
-    : { status: 'idle', idleKind: 'quiet', reason: 'No activity for a while' };
+    ? { status: 'idle', idleKind: 'your_move', reason: 'Agent dokončil tah — jsi na tahu' }
+    : { status: 'idle', idleKind: 'quiet', reason: 'Delší dobu žádná aktivita' };
 }
 
 /** Signals derivable from the transcript alone. Hooks (phase 4) will add needsYou/stopFailure. */

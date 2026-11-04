@@ -11,7 +11,7 @@ const iso = (t?: number) => (t === undefined ? undefined : new Date(t).toISOStri
 const TITLE_MAX = 70;
 
 export function titleOf(s: ParsedSession): string {
-  const t = s.customTitle ?? s.aiTitle ?? s.firstPrompt ?? s.lastPrompt ?? '(no prompt yet)';
+  const t = s.customTitle ?? s.aiTitle ?? s.firstPrompt ?? s.lastPrompt ?? '(zatím bez zadání)';
   const one = t.replace(/\s+/g, ' ').trim();
   return one.length > TITLE_MAX ? one.slice(0, TITLE_MAX - 1) + '…' : one;
 }

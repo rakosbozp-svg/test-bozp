@@ -1,7 +1,8 @@
 /**
  * Bot Crossing backend. Listens on 127.0.0.1 only.
- * Phase 1: REST API over existing transcripts. (Hooks, WebSocket and the frontend come in later phases.)
+ * One process serves the REST API and the frontend (Vite in middleware mode), on one port.
  */
+import http from 'node:http';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { config } from './config.ts';
@@ -74,6 +75,8 @@ app.post('/api/sessions/:id/unarchive', sameOriginOnly, (req, res) => {
   res.json(service.summarize(s));
 });
 
+app.use('/api', (_req, res) => res.status(404).json({ error: 'Unknown API route' }));
+
 // --- Start -----------------------------------------------------------------------
 async function main() {
   await service.refresh();
@@ -81,18 +84,31 @@ async function main() {
     service.refresh().catch((e) => console.error('[bot-crossing] refresh failed:', e));
   }, config.pollMs).unref?.();
 
-  const server = app.listen(config.port, config.host, () => {
-    const n = service.transcripts.sessions().length;
-    console.log(`\n  Bot Crossing  →  http://${config.host}:${config.port}`);
-    console.log(`  Reading (read-only): ${config.projectsDir}`);
-    console.log(`  ${n} session(s) from the last ${config.lookbackDays} day(s)`);
-    for (const e of service.transcripts.lastErrors) console.log(`  ! ${e}`);
-    console.log(`  API: /api/sessions  /api/sessions/:id  /api/health\n`);
+  const server = http.createServer(app);
+
+  // Frontend: Vite dev server as middleware (hot reload), sharing our HTTP server and port.
+  const { createServer: createVite } = await import('vite');
+  const vite = await createVite({
+    root: config.appRoot,
+    configFile: `${config.appRoot}/vite.config.ts`,
+    appType: 'spa',
+    server: { middlewareMode: true, ws: { server } },
+    logLevel: 'warn',
   });
+  app.use(vite.middlewares);
+
   server.on('error', (e: any) => {
-    if (e.code === 'EADDRINUSE') console.error(`Port ${config.port} is in use. Start with another: PORT=4546 npm run dev`);
+    if (e.code === 'EADDRINUSE') console.error(`Port ${config.port} je obsazený. Spusť s jiným: PORT=4546 npm run dev`);
     else console.error(e);
     process.exit(1);
+  });
+  server.listen(config.port, config.host, () => {
+    const n = service.transcripts.sessions().length;
+    console.log(`\n  Bot Crossing  →  http://${config.host}:${config.port}`);
+    console.log(`  Čtu (jen pro čtení): ${config.projectsDir}`);
+    console.log(`  ${n} relací za posledních ${config.lookbackDays} dní`);
+    for (const e of service.transcripts.lastErrors) console.log(`  ! ${e}`);
+    console.log('');
   });
 }
 
