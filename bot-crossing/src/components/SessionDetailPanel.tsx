@@ -20,6 +20,11 @@ export function SessionDetailPanel({ d, now, onChanged, onClose }: { d: SessionD
       </div>
       <h2 className="detail__title">{d.title}</h2>
       <p className="detail__reason">{d.statusReason}</p>
+      {d.status === 'needs_you' && (
+        <div className="detail__cta">
+          🙋 Přepni se do terminálu, kde tahle relace běží, a odpověz agentovi.
+        </div>
+      )}
       <SessionActions s={d} onChanged={onChanged} />
 
       <dl className="facts">
@@ -30,6 +35,13 @@ export function SessionDetailPanel({ d, now, onChanged, onClose }: { d: SessionD
         <dt>Aktivita</dt><dd>{ago(d.lastActivityAt, now)}</dd>
         <dt>Proces</dt>
         <dd>{d.process ? `pid ${d.process.pid} · ${d.process.alive ? 'běží' : 'neběží'}${d.process.status ? ` · „${d.process.status}“` : ''}` : 'není v registru (zavřeno, nebo neznámo)'}</dd>
+        <dt>Živě</dt>
+        <dd>
+          {d.live.hooks ? 'hooky ✓' : 'hooky —'}
+          {d.process ? ` · registr: ${d.process.status ?? '?'}` : ''}
+          {d.live.subagents ? ` · subagenti: ${d.live.subagents}` : ''}
+          {d.live.closed ? ' · relace ukončena' : ''}
+        </dd>
         <dt>Claude Code</dt><dd>{d.version ?? '—'}</dd>
         <dt>ID</dt><dd className="mono">{d.id}</dd>
       </dl>

@@ -3,11 +3,13 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { SessionSummary } from '../api.ts';
 import { computeLayout } from './layout.ts';
-import { Terrain, Rocks } from './Terrain.tsx';
+import { Terrain, Rocks, PathLamps } from './Terrain.tsx';
 import { Building } from './Building.tsx';
 import { Hub, ProjectSign } from './Landmarks.tsx';
 import { CameraRig, overviewPose } from './CameraRig.tsx';
-import { PROJECT_ACCENTS, SKY } from './palette.ts';
+import { PROJECT_ACCENTS } from './palette.ts';
+import { DayNight } from './DayNight.tsx';
+import { skyAt } from './sky.ts';
 import { LabelProjector, type Anchor } from './Labels.tsx';
 import { STATUS_LABEL } from '../format.ts';
 
@@ -15,11 +17,14 @@ interface Props {
   sessions: SessionSummary[];
   selectedId: string | null;
   hoveredId: string | null;
+  /** Hour of day (0–24) for lighting. */
+  hour: number;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
 }
 
-export default function ColonyScene({ sessions, selectedId, hoveredId, onSelect, onHover }: Props) {
+export default function ColonyScene({ sessions, selectedId, hoveredId, hour, onSelect, onHover }: Props) {
+  const sky = useMemo(() => skyAt(hour), [hour]);
   // Re-layout only when the set of sessions/projects changes, not on every status poll.
   const layoutKey = sessions.map((s) => `${s.id}|${s.projectPath}|${s.startedAt ?? ''}`).sort().join('\n');
   const layout = useMemo(
@@ -31,7 +36,6 @@ export default function ColonyScene({ sessions, selectedId, hoveredId, onSelect,
   const accentOf = (colorIndex: number) => PROJECT_ACCENTS[colorIndex % PROJECT_ACCENTS.length];
   const focus = layout.buildings.find((b) => b.sessionId === selectedId) ?? null;
   const pose = useMemo(() => overviewPose(layout.contentCenter, layout.contentRadius), [layout]);
-  const shadowSpan = layout.extent * 1.9 + 4;
   const activeProject = selectedId ? byId.get(selectedId)?.projectPath : undefined;
 
   const labelEls = useRef(new Map<string, HTMLElement>()).current;
@@ -55,31 +59,15 @@ export default function ColonyScene({ sessions, selectedId, hoveredId, onSelect,
         camera={{ position: pose.position.toArray(), fov: 38, near: 0.1, far: 500 }}
         onPointerMissed={() => onSelect(null)}
       >
-        <color attach="background" args={[SKY]} />
-        <fog attach="fog" args={[SKY, layout.extent * 2.6 + 10, layout.extent * 6 + 30]} />
-
-        <hemisphereLight args={['#fff3df', '#c98c5e', 1.1]} />
-        <ambientLight intensity={0.25} />
-        <directionalLight
-          position={[layout.extent * 0.8 + 6, layout.extent * 1.3 + 10, layout.extent * 0.6 + 4]}
-          intensity={2.3}
-          color="#ffdcb0"
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-bias={-0.0004}
-          shadow-camera-left={-shadowSpan}
-          shadow-camera-right={shadowSpan}
-          shadow-camera-top={shadowSpan}
-          shadow-camera-bottom={-shadowSpan}
-          shadow-camera-far={layout.extent * 6 + 60}
-        />
+        <DayNight sky={sky} extent={layout.extent} />
 
         <Terrain tiles={layout.tiles} extent={layout.extent} />
         <Rocks tiles={layout.tiles} />
-        <Hub />
+        <Hub night={sky.night} />
+        <PathLamps tiles={layout.tiles} night={sky.night} />
 
         {layout.clusters.map((c) => (
-          <ProjectSign key={c.projectPath} c={c} accent={accentOf(c.colorIndex)} />
+          <ProjectSign key={c.projectPath} c={c} accent={accentOf(c.colorIndex)} night={sky.night} />
         ))}
 
         {layout.buildings.map((b) => {
@@ -95,6 +83,7 @@ export default function ColonyScene({ sessions, selectedId, hoveredId, onSelect,
               hovered={b.sessionId === hoveredId}
               onSelect={onSelect}
               onHover={onHover}
+              night={sky.night}
             />
           );
         })}

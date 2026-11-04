@@ -3,7 +3,15 @@ import { crewCount } from '../format.ts';
 
 export type View = '3d' | 'list';
 
-export function TopBar({ sessions, view, onView, live }: { sessions: SessionSummary[]; view: View; onView: (v: View) => void; live: boolean }) {
+interface Props {
+  sessions: SessionSummary[];
+  view: View;
+  onView: (v: View) => void;
+  live: boolean;
+  notify?: { on: boolean; supported: boolean; set: (on: boolean) => void };
+}
+
+export function TopBar({ sessions, view, onView, live, notify }: Props) {
   const n = (s: SessionSummary['status']) => sessions.filter((x) => x.status === s).length;
   const counters = [
     { key: 'working', icon: '🔨', label: 'staví se', value: n('working') },
@@ -28,6 +36,15 @@ export function TopBar({ sessions, view, onView, live }: { sessions: SessionSumm
           </li>
         ))}
       </ul>
+      {notify?.supported && (
+        <button
+          className={`bell ${notify.on ? 'is-on' : ''}`}
+          onClick={() => notify.set(!notify.on)}
+          title={notify.on ? 'Systémová oznámení zapnutá (klikni pro vypnutí)' : 'Upozornit mě systémovým oznámením, když na mě relace čeká'}
+        >
+          {notify.on ? '🔔' : '🔕'}
+        </button>
+      )}
       <div className="view-toggle" role="group" aria-label="Zobrazení">
         <button className={view === '3d' ? 'is-on' : ''} onClick={() => onView('3d')}>Kolonie</button>
         <button className={view === 'list' ? 'is-on' : ''} onClick={() => onView('list')}>Seznam</button>

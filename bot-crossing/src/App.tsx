@@ -1,10 +1,13 @@
-import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useSessionDetail, useSessions } from './api.ts';
 import { useNow } from './useNow.ts';
 import { TopBar, type View } from './components/TopBar.tsx';
 import { NeedsYouBanner } from './components/NeedsYouBanner.tsx';
 import { SessionList } from './components/SessionList.tsx';
 import { SessionDetailPanel } from './components/SessionDetailPanel.tsx';
+import { TimeControl } from './components/TimeControl.tsx';
+import { hourOf } from './scene/sky.ts';
+import { useAttention } from './useAttention.ts';
 
 // three.js is big: load it after the list is already on screen.
 const ColonyScene = lazy(() => import('./scene/ColonyScene.tsx'));
@@ -51,6 +54,19 @@ export function App() {
   const [view, setViewState] = useState<View>(readView);
   const detail = useSessionDetail(selectedId, version);
   const now = useNow();
+  const [manualHour, setManualHour] = useState<number | null>(null);
+  // Real clock, quantised to the minute so the scene only re-lights once a minute.
+  const clockHour = Math.floor(hourOf(new Date(now)) * 60) / 60;
+  const hour = manualHour ?? clockHour;
+  const attention = useAttention(sessions, setSelectedId);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedId(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const setView = (v: View) => {
     setViewState(v);
@@ -83,7 +99,13 @@ export function App() {
 
   return (
     <div className={`app app--${view}`}>
-      <TopBar sessions={list} view={view} onView={setView} live={live} />
+      <TopBar
+        sessions={list}
+        view={view}
+        onView={setView}
+        live={live}
+        notify={{ on: attention.notify, supported: attention.supported, set: attention.setNotify }}
+      />
       {error && <div className="offline">Backend neodpovídá ({error}). Běží <code>npm run dev</code>?</div>}
       <NeedsYouBanner sessions={list} onSelect={setSelectedId} />
       {view === 'list' ? (
@@ -104,11 +126,18 @@ export function App() {
                   sessions={list}
                   selectedId={selectedId}
                   hoveredId={hoveredId}
+                  hour={hour}
                   onSelect={setSelectedId}
                   onHover={setHoveredId}
                 />
               </Suspense>
             </SceneBoundary>
+            {sessions !== null && list.length === 0 && (
+              <div className="stage-empty">
+                Kolonie je zatím prázdná. Spusť Claude Code v nějakém projektu a za pár sekund tu vyroste první budova.
+              </div>
+            )}
+            <TimeControl hour={hour} manual={manualHour !== null} onChange={setManualHour} />
             {selectedId && (
               <button className="btn btn--overview" onClick={() => setSelectedId(null)}>
                 🗺 Celá kolonie

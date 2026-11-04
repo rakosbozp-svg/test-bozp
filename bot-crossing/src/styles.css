@@ -220,3 +220,25 @@ code, .mono { font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monos
 .closed-tag { color: var(--ink-soft); font-style: italic; }
 .tl--subagent { border-left-color: var(--shipped); }
 .tl--session_start, .tl--session_end { color: var(--ink-soft); font-style: italic; }
+
+/* ---------- day/night control ---------- */
+.time-control {
+  position: absolute; right: 14px; bottom: 14px; display: flex; align-items: center; gap: 10px;
+  background: rgba(255, 252, 245, 0.92); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 8px 6px 14px; box-shadow: var(--shadow); font-size: 0.85rem; backdrop-filter: blur(4px);
+}
+.time-control__label { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 128px; }
+.time-control input[type='range'] { width: 150px; accent-color: var(--clay-600); }
+.time-control__live { color: var(--working); font-weight: 700; font-size: 0.75rem; padding: 0 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+.time-control.is-manual { border-color: var(--clay-600); }
+@media (max-width: 700px) { .time-control input[type='range'] { width: 90px; } .time-control__label { min-width: 0; } }
+
+/* ---------- polish ---------- */
+.bell { border: 1px solid var(--line); background: var(--card); border-radius: 999px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; margin-left: auto; }
+.bell.is-on { border-color: var(--needs); background: #fff3cf; }
+.bell + .view-toggle { margin-left: 8px; }
+.detail__cta { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #ffe9a8; border: 2px solid var(--needs); font-weight: 700; color: #3a2800; }
+.stage-empty {
+  position: absolute; left: 50%; top: 18px; transform: translateX(-50%); max-width: 460px; text-align: center;
+  background: rgba(255, 252, 245, 0.94); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; box-shadow: var(--shadow);
+}

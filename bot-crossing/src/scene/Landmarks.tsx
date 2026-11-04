@@ -8,7 +8,7 @@ import { METAL, PANEL, POD, POD_TRIM } from './palette.ts';
 const Y = 0.3; // flat tile height
 
 /** Bot Crossing HQ at the centre of the map. */
-export function Hub() {
+export function Hub({ night }: { night: number }) {
   const light = useRef<THREE.MeshStandardMaterial>(null);
   useFrame(({ clock }) => {
     if (light.current) light.current.emissiveIntensity = Math.sin(clock.elapsedTime * 2) > 0.6 ? 2 : 0.2;
@@ -30,6 +30,11 @@ export function Hub() {
       <mesh position-y={0.42}>
         <torusGeometry args={[0.72, 0.035, 6, 24]} />
         <meshStandardMaterial color="#a4593a" flatShading />
+      </mesh>
+      {/* window band: glows at night */}
+      <mesh position-y={0.33}>
+        <cylinderGeometry args={[0.86, 0.86, 0.06, 24, 1, true]} />
+        <meshStandardMaterial color="#ffd479" emissive="#ffd479" emissiveIntensity={0.15 + night * 1.6} toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
       {/* mast */}
       <mesh position-y={1.45}>
@@ -79,7 +84,7 @@ export function Hub() {
 }
 
 /** Wooden signpost on each project's plaza. */
-export function ProjectSign({ c, accent }: { c: Cluster; accent: string }) {
+export function ProjectSign({ c, accent, night }: { c: Cluster; accent: string; night: number }) {
   return (
     <group position={[c.x, Y, c.z]}>
       <mesh position-y={0.3} castShadow>
@@ -89,6 +94,11 @@ export function ProjectSign({ c, accent }: { c: Cluster; accent: string }) {
       <mesh position-y={0.55} castShadow>
         <boxGeometry args={[0.5, 0.2, 0.04]} />
         <meshStandardMaterial color={accent} flatShading />
+      </mesh>
+      {/* lantern on top of the post: lights up after dusk */}
+      <mesh position-y={0.69}>
+        <sphereGeometry args={[0.05, 10, 8]} />
+        <meshStandardMaterial color="#ffe0a0" emissive="#ffc861" emissiveIntensity={night * 2.2} toneMapped={night < 0.05} />
       </mesh>
       <mesh position-y={0.012} receiveShadow>
         <cylinderGeometry args={[0.32, 0.36, 0.025, 6]} />

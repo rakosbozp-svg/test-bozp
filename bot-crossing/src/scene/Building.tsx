@@ -15,6 +15,8 @@ interface Props {
   hovered: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
+  /** 0 = day, 1 = night. */
+  night: number;
 }
 
 const DOME = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -33,13 +35,16 @@ function shapeOf(s: SessionSummary) {
   };
 }
 
-export function Building({ b, s, accent, selected, hovered, onSelect, onHover }: Props) {
+export function Building({ b, s, accent, selected, hovered, onSelect, onHover, night }: Props) {
   const shape = useMemo(() => shapeOf(s), [s.id, s.counts.tools >= 40, s.counts.tools >= 200]);
   const body = useRef<THREE.Group>(null);
   const beacon = useRef<THREE.MeshStandardMaterial>(null);
   const status = s.status;
   const closed = s.live?.closed === true;
-  const lit = (status === 'working' || status === 'needs_you') && !closed;
+  const busy = (status === 'working' || status === 'needs_you') && !closed;
+  // At night every open session keeps a cozy lamp on; working ones glow brighter.
+  const glow = closed || status === 'shipped' ? 0 : busy ? 0.9 + night * 0.9 : night * 0.7;
+  const lit = glow > 0.05;
   const crew = useMemo(() => crewFor(s), [s.status, s.live?.subagents, s.live?.closed, s.lastActivityAt]);
   const statusColor = STATUS_COLOR[status];
   const phase = useMemo(() => (hash(s.id) % 1000) / 160, [s.id]);
@@ -109,7 +114,7 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
           {[0.9, -0.9, Math.PI].map((a) => (
             <mesh key={a} position={[Math.sin(a) * podR * 0.98, 0.06 + podH * 0.6, Math.cos(a) * podR * 0.98]} rotation-y={a}>
               <boxGeometry args={[0.11, 0.08, 0.03]} />
-              <meshStandardMaterial color={lit ? WINDOW_LIT : WINDOW_DARK} emissive={lit ? WINDOW_LIT : '#000'} emissiveIntensity={lit ? 0.9 : 0} />
+              <meshStandardMaterial color={lit ? WINDOW_LIT : WINDOW_DARK} emissive={lit ? WINDOW_LIT : '#000'} emissiveIntensity={glow} toneMapped={!lit} />
             </mesh>
           ))}
 
@@ -192,6 +197,13 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
           <Worker key={i} pose="wave" color={accent} seed={phase + i} position={[Math.sin(a) * 0.78, 0.06, Math.cos(a) * 0.78]} rotation={0} />
         ))}
 
+      {/* warm pool of light on the pad at night (fake light: no real lamps, cheap) */}
+      {glow > 0.05 && night > 0.05 && (
+        <mesh rotation-x={-Math.PI / 2} position-y={0.066}>
+          <circleGeometry args={[0.78, 6, Math.PI / 6]} />
+          <meshBasicMaterial color="#ffb257" transparent opacity={night * (busy ? 0.32 : 0.2)} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
+      )}
       {status === 'blocked' && <Smoke y={domeY + podR} seed={phase} />}
       {status === 'needs_you' && <AlertRing />}
 

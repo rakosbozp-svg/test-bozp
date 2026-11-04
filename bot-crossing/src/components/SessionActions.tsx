@@ -5,13 +5,15 @@ export function SessionActions({ s, onChanged }: { s: SessionSummary; onChanged:
   const [msg, setMsg] = useState<string | null>(null);
   const flash = (m: string) => {
     setMsg(m);
-    setTimeout(() => setMsg(null), 2500);
+    setTimeout(() => setMsg(null), 4500);
   };
 
   const open = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await copyText(s.resumeCommand);
-    flash('Příkaz zkopírován — vlož ho do terminálu');
+    // A running session lives in some terminal already; resuming it would start a second copy.
+    const running = s.process?.alive || (!s.live?.closed && (s.status === 'working' || s.status === 'needs_you'));
+    flash(running ? 'Relace pořád běží — přepni se do jejího terminálu. Příkaz (zkopírován) použij, až bude zavřená.' : 'Příkaz zkopírován — vlož ho do terminálu');
   };
   const archive = async (e: React.MouseEvent) => {
     e.stopPropagation();

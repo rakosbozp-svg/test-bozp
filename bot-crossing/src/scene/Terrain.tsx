@@ -77,3 +77,43 @@ export function Rocks({ tiles }: { tiles: Tile[] }) {
     </instancedMesh>
   );
 }
+
+/** Little lamp posts along the paths; bulbs light up after dusk. Two instanced meshes. */
+export function PathLamps({ tiles, night }: { tiles: Tile[]; night: number }) {
+  const posts = useRef<THREE.InstancedMesh>(null);
+  const bulbs = useRef<THREE.InstancedMesh>(null);
+  const spots = useMemo(() => tiles.filter((t) => t.kind === 'path' && t.noise < 0.55), [tiles]);
+  const postGeo = useMemo(() => new THREE.CylinderGeometry(0.018, 0.024, 0.42, 5).translate(0, 0.21, 0), []);
+  const bulbGeo = useMemo(() => new THREE.SphereGeometry(0.05, 8, 6), []);
+
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4();
+    spots.forEach((t, i) => {
+      // stand near a tile corner so lamps don't sit in the middle of the path
+      const a = Math.floor(t.noise * 6) * (Math.PI / 3) + Math.PI / 6;
+      const x = t.x + Math.sin(a) * 0.62;
+      const z = t.z + Math.cos(a) * 0.62;
+      m.makeTranslation(x, t.height, z);
+      posts.current?.setMatrixAt(i, m);
+      m.makeTranslation(x, t.height + 0.46, z);
+      bulbs.current?.setMatrixAt(i, m);
+    });
+    for (const mesh of [posts.current, bulbs.current]) {
+      if (!mesh) continue;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
+  }, [spots]);
+
+  if (spots.length === 0) return null;
+  return (
+    <group>
+      <instancedMesh ref={posts} args={[postGeo, undefined, spots.length]} castShadow>
+        <meshStandardMaterial color="#6d5244" flatShading />
+      </instancedMesh>
+      <instancedMesh ref={bulbs} args={[bulbGeo, undefined, spots.length]}>
+        <meshStandardMaterial color="#fff1cf" emissive="#ffc45e" emissiveIntensity={0.05 + night * 2.6} toneMapped={night < 0.05} />
+      </instancedMesh>
+    </group>
+  );
+}
