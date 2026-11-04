@@ -76,7 +76,7 @@ Publikace deklaruje celou sadu (neprázdný objekt nahrazuje uloženou deklaraci
 2. `text` → UTF-8 → gzip (`CompressionStream`; když chybí, `komprese: "zadna"`) → base64 → části po 200 000 znacích.
 3. Vygeneruje se nová `verze` a části se zapíšou postupně (`set`), jedna po druhé.
 4. Až jsou všechny části zapsané, přepíše se hlavička (`set`) s novou `verze`, `casti` a `smazano: null`. Teprve tím se nová verze stane platnou.
-5. Úklid: přečte se kolekce `…/<pid>/casti` a smažou se části jiné verze, pokud patří předchozí verzi hlavičky nebo jsou starší než 1 hodina (podle `t`). Čerstvé části jiné verze zůstanou, protože je může právě zapisovat jiná karta nebo počítač. Tím zmizí stará verze i zbytky přerušených pokusů a souběžná záloha se nepoškodí.
+5. Úklid: části předchozí verze hlavičky se smažou přímo podle jejich počtu. Části jiných verzí starší než 24 hodin (podle `t`) najde dotaz a také je smaže, takže se nestahují všechny části. Čerstvé části jiné verze zůstanou, protože je může právě zapisovat jiná karta nebo počítač. Dlouhá lhůta snese i velký rozdíl hodin mezi počítači. Tím zmizí stará verze i zbytky přerušených pokusů a souběžná záloha se nepoškodí.
 
 Přerušení v kroku 3 nebo 5 nepoškodí poslední platnou zálohu: hlavička dál ukazuje na úplnou starou verzi a sirotci se uklidí příště. Před zápisem hlavičky se znovu zkontroluje, jestli projekt mezitím nebyl v prohlížeči smazán. Pokud ano, hlavička dostane `smazano`.
 

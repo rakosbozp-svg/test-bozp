@@ -131,6 +131,8 @@ test('automatická záloha: obnova, dialog zálohy, připomínka', { skip: !chro
       const [cesta] = await hlavicka(page), seg = cesta.split('/').pop();
       await page.click('#logo'); await page.waitForSelector('.dash');
       await page.click('.projekty [data-akce=smaz]'); await ok(page);
+      await page.waitForSelector('.dlg', { state: 'detached' }); await page.waitForSelector('.dash');
+      assert.equal(await page.locator('#d-obnova-zalohy').count(), 0, 'hned po smazání se smazaný projekt nenabízí k obnově');
       await page.waitForFunction((c) => window.__falesne.dokumenty[c]?.smazano, cesta, { timeout: 8000 });
       assert.equal(await page.locator('#d-obnova-zalohy').count(), 0, 'smazaný projekt se v nabídce obnovy neukáže');
       await page.click('#d-autozaloha-zobrazit'); await page.waitForSelector('.dlg[open]');

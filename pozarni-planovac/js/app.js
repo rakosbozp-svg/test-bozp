@@ -166,8 +166,9 @@ async function obnovitChybejici() { await obnovZalohu(await zaloha.nactiProObnov
 // Dialog „Automatická záloha“: co je v záloze, obnova vybraných, odstranění projektů smazaných v prohlížeči.
 async function zobrazZalohu() {
   if (!zaloha) return;
-  const titul = 'Automatická záloha', radky = zaloha.projekty(), mistni = new Map(U.seznam().map((x) => [x.id, x]));
-  if (!radky.length) { await oznam('V automatické záloze zatím nic není.', { titul }); return; }
+  const titul = 'Automatická záloha', nacteno = await zaloha.obnov();   // čerstvé hlavičky: jiná karta nebo počítač mohl mezitím zálohovat
+  const radky = zaloha.projekty(), mistni = new Map(U.seznam().map((x) => [x.id, x]));
+  if (!radky.length) { await oznam(nacteno ? 'V automatické záloze zatím nic není.' : 'Zálohu se teď nepodařilo načíst. Zkuste to prosím za chvíli znovu.', { titul }); return; }
   const stitek = (h) => { const m = mistni.get(h.pid); if (!m) return h.smazano ? 'smazán v prohlížeči' : 'není v tomto prohlížeči'; return String(h.zmeneno ?? '') > String(m.zmeneno ?? '') ? 'v záloze novější' : ''; };
   const html = `<p class="dlg__text">Projekty v soukromém úložišti tohoto artefaktu na claude.ai. Vyberte, které obnovit.</p><ul class="zaloha-auto">${radky.map((h) => { const s = stitek(h); return `<li><label><input type="checkbox" name="z:${esc(h.pid)}"${mistni.has(h.pid) ? '' : ' checked'}><span><b>${esc(h.nazev)}</b> <small>${esc(malym(M.TYPY_DOKUMENTU_NAZVY[h.typ] || ''))} · zálohováno ${esc(predChvili(h.zalohovano))}</small>${s ? ` <span class="stitek">${esc(s)}</span>` : ''}</span></label>${s === 'smazán v prohlížeči' ? `<button type="button" class="btn mal nebezp" data-odstranit-zalohu="${esc(h.pid)}">Odstranit ze zálohy</button>` : ''}</li>`; }).join('')}</ul>`;
   const odstraneni = async (e) => {

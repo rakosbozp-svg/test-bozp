@@ -6,7 +6,9 @@ import { bezpecnySegment, zpetSegment } from './kodovani.js';
 /** @typedef {{format: 1, nazev: string, typ: string, zmeneno: string, velikost: number, sha256: string, verze: string,
  *   casti: number, komprese: 'gzip'|'zadna', zalohovano: string, smazano: string|null}} Hlavicka */
 
-export const STARI_SIROTCI_MS = 3600000;   // části jiné verze starší než hodina jsou zbytky přerušených záloh
+// Části jiné verze starší než 24 h jsou zbytky přerušených záloh. Dlouhá lhůta snese i velký rozdíl hodin mezi počítači
+// (úklid jednoho počítače nesmí smazat části, které jiný počítač právě zapisuje).
+export const STARI_SIROTCI_MS = 24 * 3600000;
 
 // Kód chyby úložiště (db.d.ts: invalid_argument, resource_exhausted, quota_exceeded, unavailable, revoked …).
 export const kodChyby = (e) => (typeof e?.code === 'string' && e.code ? e.code : 'unavailable');
@@ -42,9 +44,10 @@ function vytvor(db, uid) {
       return s.docs.filter((d) => d.exists && d.data()?.format === 1).map((d) => ({ ...d.data(), pid: zpetSegment(d.id) }));
     },
     // Části se zapisují postupně (jedna po druhé); každá nese čas zápisu kvůli úklidu (hodiny zálohy, viz autozaloha.js).
-    async zapisCasti(pid, verze, data, kdy = new Date().toISOString()) {
+    // poCasti(i) se zavolá po každé úspěšně zapsané části.
+    async zapisCasti(pid, verze, data, kdy = new Date().toISOString(), poCasti = () => {}) {
       const k = casti(pid);
-      for (let i = 0; i < data.length; i++) await k.doc(`${verze}_${i}`).set({ d: data[i], t: kdy });
+      for (let i = 0; i < data.length; i++) { await k.doc(`${verze}_${i}`).set({ d: data[i], t: kdy }); poCasti(i); }
     },
     zapisHlavicku: (pid, h) => hlavicka(pid).set(h),
     async oznacSmazany(pid, kdy) {
@@ -54,17 +57,15 @@ function vytvor(db, uid) {
       return true;
     },
     zrusSmazani: (pid) => hlavicka(pid).update({ smazano: null }),
-    // Smaže části jiné verze než platné: předchozí verzi hlavičky a sirotky starší než hodina. Čerstvé cizí části nechá –
-    // může je právě zapisovat jiná karta nebo počítač. Vrací počet smazaných.
+    // Úklid po přepnutí hlavičky na verzi platna: předchozí verzi ({verze, casti} z hlavičky před zápisem) smaže přímo podle
+    // počtu částí, sirotky jiných verzí najde dotazem jen na části starší než 24 h (bez stahování všech částí). Čerstvé cizí
+    // části nechá – může je právě zapisovat jiná karta nebo počítač. Vrací počet mazání.
     async uklid(pid, platna, predchozi, tedMs = Date.now()) {
-      const k = casti(pid), s = await k.get();
+      const k = casti(pid);
       let n = 0;
-      for (const d of s.docs) {
-        const v = verzeCasti(d.id);
-        if (v === platna) continue;
-        const t = Date.parse(d.data()?.t ?? '');
-        if (v === predchozi || !(t > tedMs - STARI_SIROTCI_MS)) { await k.doc(d.id).delete(); n++; }
-      }
+      if (predchozi?.verze && predchozi.verze !== platna) for (let i = 0; i < (predchozi.casti || 0); i++) { await k.doc(`${predchozi.verze}_${i}`).delete(); n++; }
+      const stare = await k.where('t', '<', new Date(tedMs - STARI_SIROTCI_MS).toISOString()).get();
+      for (const d of stare.docs) if (verzeCasti(d.id) !== platna) { await k.doc(d.id).delete(); n++; }
       return n;
     },
     // Data verze z hlavičky (spojené části). Chybějící část → {code: 'chybi_cast'}.
