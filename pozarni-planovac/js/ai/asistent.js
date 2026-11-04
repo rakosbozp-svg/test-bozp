@@ -1,32 +1,20 @@
 // Panel „Claude“ v editoru výkresu. Uživatel popíše, co nakreslit (a může přiložit fotku, skicu nebo plánek); Claude kreslí
 // skutečné prvky výkresu nástroji z js/ai/nastroje.js a v kontrolním kole se podívá na obrázek listu a opraví, co nesedí.
-// V artefaktu na claude.ai se volá schopnost „sample“ (window.claude.use('sample')) na účtu toho, kdo stránku prohlíží.
-// Ve WEBOVÉ verzi (Vercel, window.__WEB__) jde Claude přes serverovou funkci /api/claude s API klíčem na serveru
-// (js/ai/web.js, stejné rozhraní); přístup chrání heslo, které si prohlížeč pamatuje. Jinde (soubor z disku) Claude
-// k dispozici není – panel to vysvětlí, zbytek aplikace běží beze změny.
+// Volá se schopnost artefaktu claude.ai „sample“ (window.claude.use('sample')) na účtu toho, kdo stránku prohlíží.
+// Mimo claude.ai (soubor z disku, web) Claude k dispozici není – panel to vysvětlí, zbytek aplikace běží beze změny.
 // Celý zásah Claude je v historii JEDEN krok: editor je během zásahu zamčený (jen prohlížení), nástroje mění model
 // a překreslují, commit (uložení + krok Zpět) je až na konci – i při zastavení nebo odchodu z listu (zastavClaude).
 import * as P from '../kresleni/prvky.js';
 import { esc } from '../kresleni/render.js';
 import * as A from './nastroje.js';
-import { vytvorWebSample, odhadCeny, prictiSpotrebu } from './web.js';
 
 // ---------- přístup k Claude ----------
-// Webová verze = stránka sestavená pro web (window.__WEB__) a zároveň NE artefakt claude.ai (ten má window.claude).
-export const jeWeb = () => !(globalThis.claude && typeof globalThis.claude.use === 'function') && !!globalThis.__WEB__;
-const KLIC_HESLA = 'pp.claude.heslo';
-let hesloPamet = '';   // když prohlížeč nedovolí localStorage, heslo platí do zavření stránky
-export function nactiHeslo() { try { return localStorage.getItem(KLIC_HESLA) || hesloPamet; } catch { return hesloPamet; } }
-export function ulozHeslo(h) {
-  hesloPamet = h || '';
-  try { if (h) localStorage.setItem(KLIC_HESLA, h); else localStorage.removeItem(KLIC_HESLA); } catch { /* jen v paměti */ }
-}
 let slibSample = null;
 export function claudeSample() {
   if (!slibSample) {
     slibSample = (async () => {
       const c = globalThis.claude;
-      if (!c || typeof c.use !== 'function') return jeWeb() ? vytvorWebSample({ heslo: nactiHeslo }) : null;
+      if (!c || typeof c.use !== 'function') return null;
       try { return await c.use('sample'); } catch { return null; }
     })();
   }
@@ -52,27 +40,13 @@ const CHYBY = {
   transform_error: 'Přílohy se nepodařilo připravit k odeslání.',
   queue_overflow: 'Příliš mnoho dotazů najednou.',
   upstream_error: 'Spojení s Claude selhalo. Zkuste to znovu.',
-  // webová verze (serverová funkce /api/claude)
-  heslo: 'Heslo ke Claude nesouhlasí. Zadejte ho znovu nahoře v panelu (nastavuje se na Vercelu v proměnné PLANOVAC_HESLO).',
-  konfigurace: 'Na serveru chybí nastavení pro Claude: na Vercelu doplňte proměnné ANTHROPIC_API_KEY a PLANOVAC_HESLO a web znovu nasaďte (postup je v README plánovače).',
-  endpoint: 'Na tomto webu chybí serverová funkce /api/claude – web je potřeba nasadit z aktuální verze (se složkou api/).',
-  api_key: 'Anthropic odmítl API klíč uložený na serveru (neplatný nebo zrušený). Vytvořte nový na console.anthropic.com a vložte ho na Vercelu do ANTHROPIC_API_KEY.',
-  billing: 'Na účtu Anthropic chybí kredit nebo je problém s platbou – doplňte ho na console.anthropic.com (Billing).',
-  permission: 'API klíč na serveru nemá k Claude přístup (oprávnění organizace nebo pracovního prostoru na console.anthropic.com).',
-  model: 'Zvolený model není pro API klíč na serveru dostupný – zkuste druhý model.',
-  overloaded: 'Claude je teď přetížený. Zkuste to za chvíli.',
-  timeout: 'Odpověď Claude se nevešla do časového limitu serverové funkce. Zkuste menší část výkresu nebo rychlejší model (Sonnet).',
 };
-// Podrobnost ze serveru (text chyby API) se přidá do závorky – pomůže při hledání příčiny.
-const zpravaChyby = (e) => {
-  const z = CHYBY[e?.code] || (e?.code ? CHYBY.upstream_error : `Chyba: ${e?.message || e}`);
-  return e?.detail && e.code !== 'heslo' && e.code !== 'cancelled' ? `${z} (${e.detail})` : z;
-};
+const zpravaChyby = (e) => CHYBY[e?.code] || (e?.code ? CHYBY.upstream_error : `Chyba: ${e?.message || e}`);
 // Kódy, po kterých Claude v tomto zobrazení stránky už nefunguje (platí pro všechny listy, znovu se neptá).
-const TRVALE = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'tools_unavailable', 'konfigurace', 'endpoint', 'api_key'];
+const TRVALE = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'tools_unavailable'];
 const MODELY = { default: 'Vyvážený', complex: 'Nejschopnější', quick: 'Rychlý' };
 let nedostupne = '';   // proč Claude v tomto zobrazení nejde (prázdné = jde)
-const NEDOSTUPNE_MIMO = 'Kreslení s Claude funguje ve webové verzi plánovače a v artefaktu na claude.ai (v prohlížeči nebo v aplikaci Claude). V této kopii (soubor otevřený z disku) Claude k dispozici není – vše ostatní funguje.';
+const NEDOSTUPNE_MIMO = 'Kreslení s Claude funguje, když plánovač otevřete jako artefakt na claude.ai (v prohlížeči nebo v aplikaci Claude). V této kopii (soubor z disku, web) Claude k dispozici není – vše ostatní funguje.';
 const NEDOSTUPNE_NULL = 'Claude není v tomto zobrazení k dispozici (artefakt nemá povolené volání Claude nebo nejste přihlášeni).';
 
 // ---------- stav panelu (po listech projektu; přežije přepnutí záložky panelu i nové vytvoření editoru) ----------
@@ -164,21 +138,7 @@ function dokonci(st, beh) {
     st.predAi = beh.predAi; st.poAi = ed.H.s[ed.H.i];
     if (beh.pridane.size && !beh.odchod && st.host?.isConnected) ed.naObsah();
   }
-  if (beh.spotreba) zprava(st, 'info', textSpotreby(beh));
   obnovUI(st);
-}
-
-// Webová verze se platí podle spotřeby – po zásahu panel ukáže tokeny a orientační cenu (ceník v js/ai/web.js).
-const cislo = (n) => Math.round(n || 0).toLocaleString('cs-CZ');
-function textSpotreby(beh) {
-  const u = beh.spotreba, vstup = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-  const cena = beh.cena < 0.005 ? 'méně než 0,01 USD' : `${beh.cena.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
-  return `Spotřeba Claude: vstup ${cislo(vstup)} tokenů (z mezipaměti ${cislo(u.cache_read_input_tokens)}), výstup ${cislo(u.output_tokens)} – odhadem ${cena}.`;
-}
-function zapisSpotrebu(beh, usage, tier) {
-  if (!usage) return;
-  prictiSpotrebu(beh.spotreba ||= {}, usage);
-  beh.cena = (beh.cena || 0) + odhadCeny(usage, tier);
 }
 
 async function spust(st, zadani) {
@@ -210,8 +170,7 @@ async function spust(st, zadani) {
     }));
     // Jedno volání Claude (může mít několik kol s nástroji). onText dává CELÝ dosavadní text všech kol; text po akci nástroje
     // se ukazuje v nové bublině (od místa řezu). Selže-li volání bez e.text, zmizí jen bubliny TOHOTO volání.
-    // Pokyny jdou v artefaktu jako první zpráva uživatele, ve webové verzi jako systémové pokyny (API je ukládá do mezipaměti).
-    const zavolej = async (tahy, obrazky) => {
+    const zavolej = async (vstup, obrazky) => {
       let rez = 0, posledni = '', bub = null;
       const moje = [];
       beh.kolo = { rez: () => { rez = posledni.length; bub = null; } };
@@ -224,18 +183,13 @@ async function spust(st, zadani) {
       };
       const opt = { tools: nastroje, signal: beh.ctl.signal, modelTier: st.model, onText: ({ text }) => ukaz(text) };
       if (obrazky.length) opt.images = obrazky;
-      const pokyny = A.pokyny(k);
-      let vstup = tahy;
-      if (sample.web) opt.system = pokyny; else vstup = [{ role: 'user', content: pokyny }, ...tahy];
       try {
         const r = await sample(vstup, opt);
-        if (sample.web) zapisSpotrebu(beh, r.usage, opt.modelTier);   // artefakt se platí předplatným, ne po tokenech
         ukaz(r.text);
         if (r.truncated) zprava(st, 'info', 'Odpověď byla zkrácena – příště zadejte menší část výkresu.');
         if (r.modelTierApplied && r.modelTierApplied !== st.model && !beh.modelOznamen) { beh.modelOznamen = true; zprava(st, 'info', `Odpověděl model ${MODELY[r.modelTierApplied] || r.modelTierApplied} – zvolený model ${MODELY[st.model] || st.model} teď není k dispozici.`); }
         return r;
       } catch (e) {
-        if (sample.web) zapisSpotrebu(beh, e?.usage, opt.modelTier);
         if (e?.text === undefined && moje.length) st.zpravy = st.zpravy.filter((z) => !moje.includes(z));
         throw e;
       } finally { beh.kolo = null; }
@@ -245,9 +199,9 @@ async function spust(st, zadani) {
     if (st.prilozitVykres && obrOk && (ed.v.prvky.length || ed.v.pozadi) && obrazky.length < maxObr) { obrazky.push(await obrazekListu(ed)); popisObr.push(`${obrazky.length}) kreslicí plocha aktuálního listu s purpurovou souřadnicovou mřížkou v metrech`); }
     if (obrazky.length && !obrOk) throw { code: 'images_unavailable' };
     if (obrazky.length > maxObr) throw { code: 'image_rejected', message: `nejvýš ${maxObr} obrázků` };
-    const tahy = [...st.historie.slice(-6),
+    const vstup = [{ role: 'user', content: A.pokyny(k) }, ...st.historie.slice(-6),
       { role: 'user', content: `${popisObr.length ? `PŘILOŽENÉ OBRÁZKY:\n${popisObr.join('\n')}\n\n` : ''}STAV LISTU:\n${A.popisStavu(k)}\n\nZADÁNÍ UŽIVATELE:\n${zadani}` }];
-    const r1 = await zavolej(tahy, obrazky);
+    const r1 = await zavolej(vstup, obrazky);
     st.historie.push({ role: 'user', content: `ZADÁNÍ UŽIVATELE:\n${zadani}` }, { role: 'assistant', content: r1.text.slice(0, 4000) });
     // Kontrolní kolo: Claude se podívá na výsledek (obrázek kreslicí plochy s mřížkou) a opraví, co nesedí. Posílá obrázek
     // listu, proto jen se zapnutým „Poslat i obrázek listu“. Když selže, výsledek prvního kola zůstává.
@@ -255,9 +209,9 @@ async function spust(st, zadani) {
       zprava(st, 'info', 'Kontrola: Claude se dívá na obrázek výsledku a opraví, co nesedí…');
       try {
         const obr = [await obrazekListu(ed), ...st.prilohy].slice(0, maxObr);
-        const tahy2 = [
+        const vstup2 = [{ role: 'user', content: A.pokyny(k) },
           { role: 'user', content: `KONTROLNÍ KOLO. Zadání uživatele bylo:\n${zadani}\n\nPrávě jsi list nakreslil/upravil. Obrázek 1 je kreslicí plocha listu s výsledkem a purpurovou souřadnicovou mřížkou v metrech${obr.length > 1 ? ', další obrázky jsou přílohy uživatele' : ''}.\n\nSTAV LISTU:\n${A.popisStavu(k)}\n\nZkontroluj výkres proti zadání: navazující stěny, dveře na stěnách, únikové cesty vedoucí k východům, překrývající se popisky a značky, prvky mimo rám nebo pod legendou, chybějící části zadání. Chyby oprav nástroji uprav/kresli/smaz (vše v co nejméně voláních). Je-li vše v pořádku, nic neměň. Na konci napiš 1–3 řádky „• “ co jsi opravil (nebo že je výkres v pořádku).` }];
-        const r2 = await zavolej(tahy2, obr);
+        const r2 = await zavolej(vstup2, obr);
         const h = st.historie[st.historie.length - 1]; h.content = `${h.content}\n${r2.text}`.slice(0, 4000);
       } catch (e) {
         if (e?.code === 'cancelled' || beh.ctl.signal.aborted) throw e;
@@ -268,17 +222,7 @@ async function spust(st, zadani) {
   } catch (e) {
     if (beh.odchod) return;   // zastaveno odchodem z listu – zpráva i commit už proběhly v zastavClaude
     if (e?.code === 'cancelled' || beh.ctl.signal.aborted) zprava(st, 'info', beh.zmeneno ? 'Zastaveno. Co Claude stihl nakreslit, zůstává ve výkresu – vrátíte to tlačítkem „Vrátit změny od Claude“.' : 'Zastaveno – Claude ve výkresu nic nezměnil.');
-    else {
-      zprava(st, 'chyba', zpravaChyby(e));
-      if (TRVALE.includes(e?.code)) nedostupne = zpravaChyby(e);
-      // Špatné heslo: zapomenout ho a vrátit zadání do pole, ať jde po zadání hesla jen znovu odeslat.
-      if (e?.code === 'heslo') {
-        ulozHeslo('');
-        if (!st.koncept) st.koncept = zadani;
-        const t = st.host?.isConnected ? st.host.querySelector('[data-ai-zadani]') : null;
-        if (t && !t.value) t.value = zadani;
-      }
-    }
+    else { zprava(st, 'chyba', zpravaChyby(e)); if (TRVALE.includes(e?.code)) nedostupne = zpravaChyby(e); }
   } finally {
     dokonci(st, beh);
   }
@@ -330,13 +274,6 @@ function obnovUI(st) {
   $('[data-ai-bezi]').textContent = b ? `Claude pracuje… ${Math.round((Date.now() - st.beh.start) / 1000)} s` : '';
   $('[data-ai-stav]').textContent = nedostupne;
   $('[data-ai-stav]').hidden = !nedostupne;
-  if ($('[data-ai-heslo-blok]')) {   // webová verze: pole pro heslo, dokud ho prohlížeč nemá uložené
-    const ulozene = !!nactiHeslo(), vstup = $('[data-ai-heslo]');
-    $('[data-ai-heslo-zadat]').hidden = ulozene;
-    vstup.required = !ulozene; vstup.disabled = b;
-    $('[data-ai-heslo-ulozene]').hidden = !ulozene;
-    $('[data-ai-heslo-zapomen]').disabled = b;
-  }
   const pr = $('[data-ai-prilohy]'), podpis = `${b}|${st.prilohy.map((f) => f.nahled).join('|')}`;
   if (pr.dataset.podpis !== podpis) {
     pr.dataset.podpis = podpis;
@@ -350,21 +287,13 @@ export function vykresliPanelClaude(host, ed) {
   const st = stavListu(ed);
   st.host = host; st.ed = ed;
   const evak = ed.projekt.typ === 'evakuacni_plan', priklad = evak ? PRIKLADY.evak : ed.list.typ === 'situace' ? PRIKLADY.situace : PRIKLADY.pudorys;
-  const web = jeWeb();
-  const volbyModelu = web
-    ? '<option value="default">Claude Opus 5.5 (doporučeno)</option><option value="quick">Claude Sonnet 5.5 – rychlejší, levnější</option>'
-    : '<option value="default">Vyvážený (doporučeno)</option><option value="complex">Nejschopnější – pomalejší, víc čerpá limit</option>';
   host.innerHTML = `<div class="ai-panel">
     <h3>Claude</h3>
-    <p class="napoveda">Popište, co má Claude nakreslit nebo upravit, případně přiložte fotku, skicu nebo plánek. Claude kreslí skutečné prvky výkresu (stěny, dveře, únikové cesty, značky, popisky), pak se na výsledek podívá a opraví ho. Vše, co udělá, vrátíte jedním <b>Zpět</b>. Výkres je návrh – za správnost odpovídá zpracovatel.${web ? ' Ve webové verzi se Claude platí z API klíče podle spotřeby – po každém kreslení panel ukáže spotřebu a odhad ceny.' : ''}</p>
+    <p class="napoveda">Popište, co má Claude nakreslit nebo upravit, případně přiložte fotku, skicu nebo plánek. Claude kreslí skutečné prvky výkresu (stěny, dveře, únikové cesty, značky, popisky), pak se na výsledek podívá a opraví ho. Vše, co udělá, vrátíte jedním <b>Zpět</b>. Výkres je návrh – za správnost odpovídá zpracovatel.</p>
     <p class="varuj" data-ai-stav hidden></p>
     <div class="ai-log" data-ai-log role="log" aria-live="polite" aria-label="Konverzace s Claude"></div>
     <p class="ai-bezi" data-ai-bezi hidden></p>
     <form class="ai-form" data-ai-form>
-      ${web ? `<div class="ai-heslo" data-ai-heslo-blok>
-        <label class="f" data-ai-heslo-zadat><span>Heslo ke Claude</span><input id="ai-heslo" name="heslo" type="password" autocomplete="current-password" data-ai-heslo></label>
-        <p class="napoveda" data-ai-heslo-ulozene>Heslo ke Claude je uložené v tomto prohlížeči. <button type="button" class="btn mal" data-ai-heslo-zapomen>Zapomenout heslo</button></p>
-      </div>` : ''}
       <label class="f"><span>Zadání</span><textarea id="ai-zadani" rows="4" data-ai-zadani placeholder="${esc(priklad)}"></textarea></label>
       <div class="ai-prilohy" data-ai-prilohy></div>
       <div class="ai-radek" data-ai-obr-volby>
@@ -372,7 +301,7 @@ export function vykresliPanelClaude(host, ed) {
       </div>
       <label class="chk" data-ai-obr-volby><input id="ai-obr-listu" type="checkbox" data-ai-volba="prilozitVykres" ${st.prilozitVykres ? 'checked' : ''}> Poslat i obrázek listu (kreslicí plocha s mřížkou, bez razítka)</label>
       <label class="chk" data-ai-obr-volby><input id="ai-kontrola" type="checkbox" data-ai-volba="kontrola" ${st.kontrola ? 'checked' : ''}> Po nakreslení výsledek zkontrolovat a opravit (pošle obrázek listu)</label>
-      <label class="f"><span>Model</span><select id="ai-model" data-ai-model>${volbyModelu}</select></label>
+      <label class="f"><span>Model</span><select id="ai-model" data-ai-model><option value="default">Vyvážený (doporučeno)</option><option value="complex">Nejschopnější – pomalejší, víc čerpá limit</option></select></label>
       <div class="ai-tlacitka">
         <button type="submit" class="btn pri" data-ai-spust>Nakreslit</button>
         <button type="button" class="btn" data-ai-stop hidden>Zastavit</button>
@@ -389,14 +318,8 @@ export function vykresliPanelClaude(host, ed) {
     e.preventDefault();
     const t = $('[data-ai-zadani]'), zadani = t.value.trim();
     if (!zadani || bezi(st) || nedostupne) { if (!zadani) t.focus(); return; }
-    if (web && !nactiHeslo()) {   // (prázdné pole hesla zastaví už kontrola formuláře – required)
-      const h = $('[data-ai-heslo]');
-      if (!h.value.trim()) { h.focus(); return; }
-      ulozHeslo(h.value.trim()); h.value = '';
-    }
     t.value = ''; st.koncept = ''; spust(st, zadani);
   });
-  $('[data-ai-heslo-zapomen]')?.addEventListener('click', () => { ulozHeslo(''); obnovUI(st); $('[data-ai-heslo]')?.focus(); });
   $('[data-ai-zadani]').addEventListener('input', (e) => { st.koncept = e.target.value; });
   $('[data-ai-zadani]').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $('[data-ai-form]').requestSubmit(); } });
   $('[data-ai-stop]').addEventListener('click', () => { if (bezi(st)) st.beh.ctl.abort(); });
@@ -427,7 +350,6 @@ export function vykresliPanelClaude(host, ed) {
   claudeSample().then(async (sample) => {
     if (!sample) nedostupne ||= globalThis.claude ? NEDOSTUPNE_NULL : NEDOSTUPNE_MIMO;
     else {
-      if (sample.web) { const s = await sample.stav?.(); if (s?.code) nedostupne ||= zpravaChyby({ code: s.code }); }   // funkce na webu chybí / není nastavená
       const lim = await limity(sample);
       if (!lim?.tools) nedostupne ||= CHYBY.tools_unavailable;
       if (root.isConnected) {
