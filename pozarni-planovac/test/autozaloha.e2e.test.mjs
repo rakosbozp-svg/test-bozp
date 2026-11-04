@@ -3,9 +3,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { falesneUloziste } from './falesne-uloziste.mjs';
 
 const require = createRequire(import.meta.url);
@@ -174,4 +174,21 @@ test('automatická záloha: obnova, dialog zálohy, připomínka', { skip: !chro
       await ctx.close();
     });
   } finally { await browser.close(); srv.kill(); }
+});
+
+test('jednosouborová sestava obsahuje automatickou zálohu', { skip: !chromium && 'Playwright není dostupný' }, async () => {
+  execSync('node tools/sestav_jeden_soubor.mjs', { cwd: root, stdio: 'pipe' });
+  const browser = await chromium.launch();
+  try {
+    const ctx = await kontext(browser), { page, chyby } = await stranka(ctx);
+    await page.goto(`${pathToFileURL(join(root, 'dist/pozarni-planovac.html')).href}#/dzp`); await page.waitForSelector('.dash');
+    await page.fill('#d-novy [name=nazev]', 'DZP jedna HTML'); await page.click('#d-novy button'); await page.waitForSelector('.editor');
+    await page.fill('[data-pole="objekt.nazev"]', 'Hala jedna HTML');
+    await zalohovano(page);
+    await page.click('#logo'); await page.waitForSelector('.dash');
+    await page.waitForFunction(() => /Zálohováno: 1 projekt/.test(document.querySelector('#d-autozaloha-stav')?.textContent || ''), null, { timeout: 8000 });
+    assert.ok(await page.isVisible('#d-autozaloha'));
+    assert.deepEqual(chyby, []);
+    await ctx.close();
+  } finally { await browser.close(); }
 });

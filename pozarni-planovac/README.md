@@ -130,8 +130,27 @@ V editoru situace, půdorysu, schématu i listu evakuačního plánu je v pravé
 Projekty jsou jen v úložišti prohlížeče – vymazání dat prohlížeče nebo přeinstalace je smaže. Na úvodní stránce:
 - **Zálohovat všechny projekty** stáhne jeden soubor `Pozarni_planovac_zaloha_RRRR-MM-DD.pplan-zaloha.json` se všemi projekty (DZP i evakuační plány, včetně importovaných podkladů).
 - **Importovat projekt** pozná soubor zálohy a nabídne obnovu: jen chybějící projekty (výchozí), nebo vše s tím, že existující se přidají jako kopie „(ze zálohy)“. Nic se nepřepíše; vadný projekt v záloze se přeskočí a vypíše.
-- **Připomínka** na úvodní stránce: když se od poslední zálohy projekty změnily a záloha je starší než 7 dní (nebo ještě nebyla), ukáže se upozornění s tlačítkem Zálohovat teď. Datum poslední zálohy si pamatuje prohlížeč.
+- **Připomínka** na úvodní stránce: když se od poslední zálohy projekty změnily a záloha je starší než 7 dní (při běžící automatické záloze 30 dní, viz níže) (nebo ještě nebyla), ukáže se upozornění s tlačítkem Zálohovat teď. Datum poslední zálohy si pamatuje prohlížeč.
 - V artefaktu na claude.ai se záloha uloží přes potvrzovací dialog platformy (`js/stazeni.js`, schopnost `downloads`); datum poslední zálohy se zapíše, jen když se soubor opravdu uložil. Když claude.ai uložení odmítne (platí pro zálohu, projekt, PDF i obrázky), dialog ukáže důvod, **kód chyby** a stav oprávnění; kde pomůže oprávnění artefaktu, nabídne panel *Oprávnění* a po jeho zavření soubor uloží znovu. V artefaktu se nikdy nestahuje obyčejným odkazem (sandbox ho tiše zahodí). **Přenos projektů mezi dvěma kopiemi plánovače** (každý artefakt má vlastní úložiště v prohlížeči): v jedné *Zálohovat všechny projekty*, ve druhé *Importovat projekt* → vybrat soubor zálohy → obnovit chybějící.
+
+## Automatická záloha (artefakt na claude.ai)
+V artefaktu na claude.ai se projekty zálohují samy, bez stahování (`js/zaloha/`, specifikace `docs/superpowers/specs/2026-11-04-automaticka-zaloha-design.md`).
+- **Kam:** do soukromého úložiště artefaktu (schopnosti `db` a `user`, cesta `data/users/<id uživatele>/…`). Každý projekt se ukládá zvlášť, včetně podkladů, komprimovaný a rozdělený na části (limit platformy je 256 kB na záznam). Zálohu vidí jen přihlášený uživatel, ostatní lidé, s kterými je artefakt sdílený, ne.
+- **Kdy:** asi 30 s po poslední změně se zálohují jen změněné projekty. Po otevření plánovače se doženou ty, které jsou v prohlížeči novější než v záloze.
+- **Bezpečný přepis:** nová verze se nejdřív celá zapíše a teprve pak ji záloha začne používat. Přerušení ani dvě současně otevřené karty nepoškodí poslední platnou zálohu.
+- **Karta „Automatická záloha“** na úvodní stránce ukazuje stav (zálohováno a kdy, zálohuji, nebo chyba s důvodem). **Zobrazit zálohu** otevře seznam projektů v záloze se štítky „není v tomto prohlížeči“, „smazán v prohlížeči“ a „v záloze novější“, s obnovou vybraných.
+- **Obnova:** když záloha obsahuje projekty, které v prohlížeči nejsou (nový počítač, vymazaná data), ukáže se nahoře **Obnovit ze zálohy**. Následuje stejný dialog jako u souboru zálohy: jen chybějící, nebo jako kopie. Obnova ověří otisk každého projektu a poškozený projekt přeskočí.
+- **Smazaný projekt** zůstane v záloze označený „smazán v prohlížeči“. Odstraní se jen tlačítkem **Odstranit ze zálohy** v dialogu.
+- **Připomínka ruční zálohy:** při běžící automatické záloze se ozve jednou za 30 dní. Ruční kopie mimo claude.ai chrání i před smazáním artefaktu.
+- **Kde nefunguje:** ve webové verzi (Vercel) a v souboru otevřeném z disku karta není a zůstává jen ruční záloha.
+- **Limity a nejistoty:**
+  - claude.ai neuvádí celkový limit velikosti úložiště ani počtu záznamů. Při plném úložišti karta ukáže hlášku a ukládání v prohlížeči běží dál.
+  - Záloha patří k artefaktu, takže se smazáním artefaktu zmizí.
+  - Není to synchronizace: při práci na více počítačích platí v záloze poslední uložená verze.
+- **Testy:**
+  - `test/zaloha.test.mjs`: kódování, úložiště, fronta, souběh, chyby a obnova.
+  - `test/autozaloha.e2e.test.mjs`: prohlížeč se zálohou, obnova v novém prohlížeči, smazání, plné úložiště, připomínka a jedna HTML.
+  - Falešné úložiště je v `test/falesne-uloziste.mjs`. `window.__PP_PRODLEVA_ZALOHY__` (ms) zkracuje prodlevu jen pro testy.
 
 ## Dotazník pro klienta (DZP)
 V levém panelu projektu DZP (karta i operativní plán) je položka **Dotazník pro klienta** (`js/dotaznik.js`, 40 otázek v 7 oddílech): provoz a kontakty, změny proti projektu, hlavní vypínač a uzávěry, prostory pod napětím po vypnutí, FVE, nebezpečné látky a tlakové lahve, EPS a PCO, další PBZ, hydrant s ověřeným průtokem, jiné zdroje vody, organizace PO (zjištění a ohlášení požáru, jednotka podniku), příjezd a místa nebezpečná pro hasiče.
