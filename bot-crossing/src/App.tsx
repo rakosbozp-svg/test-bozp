@@ -35,12 +35,21 @@ class SceneBoundary extends Component<{ children: ReactNode }, { error: string |
   }
 }
 
+function HooksHint() {
+  return (
+    <div className="hooks-hint">
+      <strong>Hooky zatím nic neposlaly.</strong> Stav „Potřebuje tě“ a okamžité změny fungují nejlépe s hooky
+      (návod v README → Hooky). Bez nich se stav odhaduje ze souborů relací.
+    </div>
+  );
+}
+
 export function App() {
-  const { sessions, error, reload } = useSessions();
+  const { sessions, meta, error, live, version, reload } = useSessions();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [view, setViewState] = useState<View>(readView);
-  const detail = useSessionDetail(selectedId);
+  const detail = useSessionDetail(selectedId, version);
   const now = useNow();
 
   const setView = (v: View) => {
@@ -74,7 +83,7 @@ export function App() {
 
   return (
     <div className={`app app--${view}`}>
-      <TopBar sessions={list} view={view} onView={setView} />
+      <TopBar sessions={list} view={view} onView={setView} live={live} />
       {error && <div className="offline">Backend neodpovídá ({error}). Běží <code>npm run dev</code>?</div>}
       <NeedsYouBanner sessions={list} onSelect={setSelectedId} />
       {view === 'list' ? (
@@ -84,7 +93,10 @@ export function App() {
         </main>
       ) : (
         <main className={`layout3d ${detailEl ? 'has-detail' : ''}`}>
-          <aside className="sidebar">{listEl}</aside>
+          <aside className="sidebar">
+            {meta && meta.received === 0 && <HooksHint />}
+            {listEl}
+          </aside>
           <section className="stage">
             <SceneBoundary>
               <Suspense fallback={<div className="stage-fallback">Stavím kolonii…</div>}>

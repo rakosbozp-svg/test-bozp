@@ -11,6 +11,7 @@
     "dev": "tsx server/index.ts",
     "list": "tsx server/cli-list.ts",
     "demo": "tsx server/demo.ts",
+    "hooks:status": "tsx server/hooks-status.ts",
     "test": "node --import tsx --test server/*.test.ts src/scene/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

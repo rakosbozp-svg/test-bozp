@@ -1,7 +1,8 @@
 /** Combines transcripts, live registry and archive flags into API-ready session objects. */
 import type { LiveProcess, ParsedSession, SessionDetail, SessionStatus, SessionSummary } from './types.ts';
 import { TranscriptStore, projectNameOf, projectPathOf } from './transcripts.ts';
-import { computeStatus, signalsFromTranscript } from './status.ts';
+import { computeStatus, mergeSignals, signalsFromTranscript } from './status.ts';
+import { HookStore } from './hooks.ts';
 import { readLiveRegistry } from './live-registry.ts';
 import { AppState } from './app-state.ts';
 import { config } from './config.ts';
@@ -26,6 +27,7 @@ export function resumeCommand(s: ParsedSession, platform = process.platform): st
 export class SessionService {
   readonly transcripts = new TranscriptStore(config.projectsDir, config.lookbackDays);
   readonly state = new AppState(config.dataDir);
+  readonly hooks = new HookStore();
   private live = new Map<string, LiveProcess>();
 
   async refresh(): Promise<void> {
@@ -35,7 +37,12 @@ export class SessionService {
 
   summarize(s: ParsedSession, now = Date.now()): SessionSummary {
     const archivedAt = this.state.archivedAt(s.id);
-    const st = computeStatus(signalsFromTranscript(s, archivedAt !== undefined), now, config.status);
+    const h = this.hooks.get(s.id);
+    const proc = this.live.get(s.id) ?? null;
+    const sig = mergeSignals(signalsFromTranscript(s, archivedAt !== undefined), h, proc, now, config.status);
+    const st = computeStatus(sig, now, config.status);
+    const lastActivity = sig.lastActivityAt;
+    const closed = (h?.sessionEndAt !== undefined && h.sessionEndAt >= (lastActivity ?? 0)) || (proc !== null && !proc.alive);
     const lt = s.recentTools.at(-1);
     return {
       id: s.id,
@@ -49,11 +56,12 @@ export class SessionService {
       statusReason: st.reason,
       idleKind: st.idleKind,
       startedAt: iso(s.startedAt),
-      lastActivityAt: iso(s.lastActivityAt),
-      lastActivityAgoSec: s.lastActivityAt === undefined ? undefined : Math.max(0, Math.round((now - s.lastActivityAt) / 1000)),
+      lastActivityAt: iso(lastActivity),
+      lastActivityAgoSec: lastActivity === undefined ? undefined : Math.max(0, Math.round((now - lastActivity) / 1000)),
       archived: archivedAt !== undefined,
       archivedAt,
-      process: this.live.get(s.id) ?? null,
+      process: proc,
+      live: { hooks: h !== undefined, subagents: h?.subagents.size ?? 0, closed },
       counts: { ...s.counts },
       lastTool: lt ? { name: lt.name, summary: lt.summary, outcome: lt.outcome, at: iso(lt.endedAt ?? lt.startedAt)! } : null,
       resumeCommand: resumeCommand(s),
@@ -75,7 +83,9 @@ export class SessionService {
       transcriptFile: s.file,
       recentTools: [...s.recentTools].reverse().map((t) => ({ ...t, startedAt: iso(t.startedAt)!, endedAt: iso(t.endedAt) })),
       messages: [...s.messages].reverse().map((m) => ({ role: m.role, text: m.text, at: iso(m.ts)! })),
-      timeline: [...s.timeline].reverse().map((e) => ({ at: iso(e.ts)!, kind: e.kind, label: e.label, source: e.source })),
+      timeline: [...s.timeline, ...(this.hooks.get(id)?.timeline ?? [])]
+        .sort((a, b) => b.ts - a.ts)
+        .map((e) => ({ at: iso(e.ts)!, kind: e.kind, label: e.label, source: e.source })),
     };
   }
 }

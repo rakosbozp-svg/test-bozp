@@ -112,3 +112,41 @@ process.env.CLAUDE_CONFIG_DIR = claudeDir;
 process.env.BC_DATA_DIR = path.join(demoRoot, 'state');
 console.log(`\n  DEMO MODE — fake sessions in ${demoRoot} (your real ~/.claude is not used)`);
 await import('./index.ts');
+
+// ---- Simulated hook events, POSTed to our own /hook exactly like Claude Code does ----
+const port = Number(process.env.PORT) || 4545;
+const hook = (session_id: string, hook_event_name: string, extra: Record<string, unknown> = {}) =>
+  fetch(`http://127.0.0.1:${port}/hook`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ session_id, transcript_path: '', cwd: '', permission_mode: 'default', hook_event_name, ...extra }),
+  }).catch(() => {});
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+for (let i = 0; i < 50; i++) {
+  if (await fetch(`http://127.0.0.1:${port}/api/health`).then((r) => r.ok, () => false)) break;
+  await sleep(200);
+}
+
+// A session that has ended: lights go off.
+await hook('demo-quiet-0004', 'SessionEnd', { reason: 'other' });
+// The busy session runs a subagent → an extra worker joins.
+await hook('demo-working-0001', 'UserPromptSubmit');
+await hook('demo-working-0001', 'SubagentStart', { agent_id: 'demo-agent-1', agent_type: 'general-purpose' });
+
+// Every minute the Docker session asks for permission, waits ~25 s, then you "approve" it.
+async function permissionCycle() {
+  for (;;) {
+    const id = 'toolu_demo_push_' + Date.now();
+    await hook('demo-build-0006', 'UserPromptSubmit');
+    await hook('demo-build-0006', 'PreToolUse', { tool_name: 'Bash', tool_use_id: id });
+    await sleep(1500);
+    await hook('demo-build-0006', 'PermissionRequest', { tool_name: 'Bash' });
+    await hook('demo-build-0006', 'Notification', { notification_type: 'permission_prompt' });
+    await sleep(25_000);
+    await hook('demo-build-0006', 'PostToolUse', { tool_name: 'Bash', tool_use_id: id });
+    await sleep(4000);
+    await hook('demo-build-0006', 'Stop');
+    await sleep(30_000);
+  }
+}
+permissionCycle();

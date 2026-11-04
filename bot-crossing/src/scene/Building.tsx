@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { SessionSummary } from '../api.ts';
 import type { PlacedBuilding } from './layout.ts';
 import { hash, rng } from './random.ts';
+import { Worker, type Pose } from './Worker.tsx';
 import { METAL, PANEL, POD, POD_TRIM, STATUS_COLOR, WINDOW_DARK, WINDOW_LIT } from './palette.ts';
 
 interface Props {
@@ -37,7 +38,9 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
   const body = useRef<THREE.Group>(null);
   const beacon = useRef<THREE.MeshStandardMaterial>(null);
   const status = s.status;
-  const lit = status === 'working' || status === 'needs_you';
+  const closed = s.live?.closed === true;
+  const lit = (status === 'working' || status === 'needs_you') && !closed;
+  const crew = useMemo(() => crewFor(s), [s.status, s.live?.subagents, s.live?.closed, s.lastActivityAt]);
   const statusColor = STATUS_COLOR[status];
   const phase = useMemo(() => (hash(s.id) % 1000) / 160, [s.id]);
 
@@ -45,7 +48,7 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
     const t = clock.elapsedTime + phase;
     if (beacon.current) {
       beacon.current.emissiveIntensity =
-        status === 'needs_you' ? 1.2 + Math.sin(t * 6) * 1.1 : status === 'working' ? 1.1 + Math.sin(t * 2.5) * 0.4 : status === 'blocked' ? 0.9 + Math.sin(t * 9) * 0.6 : 0.35;
+        status === 'needs_you' ? 1.2 + Math.sin(t * 6) * 1.1 : status === 'working' ? 1.1 + Math.sin(t * 2.5) * 0.4 : status === 'blocked' ? 0.9 + Math.sin(t * 9) * 0.6 : closed ? 0.05 : 0.35;
     }
     if (body.current) {
       const k = status === 'needs_you' ? 1 + Math.max(0, Math.sin(t * 4)) * 0.06 : 1;
@@ -165,7 +168,29 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
         ))}
 
         {status === 'shipped' && <Flag color={accent} />}
+
+        {/* workers that face the building (hammering / puzzled / sitting) */}
+        {crew.pose !== 'wave' &&
+          crew.slots.map((a, i) => {
+            const R = crew.pose === 'sit' ? 0.74 : podR + 0.24;
+            return (
+              <Worker
+                key={i}
+                pose={crew.pose}
+                color={accent}
+                seed={phase + i}
+                position={[Math.sin(a) * R, 0.06, Math.cos(a) * R]}
+                rotation={crew.pose === 'sit' ? a : a + Math.PI}
+              />
+            );
+          })}
       </group>
+
+      {/* waving workers face the default camera direction (+Z), not the building */}
+      {crew.pose === 'wave' &&
+        crew.slots.map((a, i) => (
+          <Worker key={i} pose="wave" color={accent} seed={phase + i} position={[Math.sin(a) * 0.78, 0.06, Math.cos(a) * 0.78]} rotation={0} />
+        ))}
 
       {status === 'blocked' && <Smoke y={domeY + podR} seed={phase} />}
       {status === 'needs_you' && <AlertRing />}
@@ -179,6 +204,26 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover }:
 
     </group>
   );
+}
+
+const SIX_HOURS = 6 * 3600_000;
+/** Who stands around the building, and doing what. Angles are in the building's local frame. */
+function crewFor(s: SessionSummary): { pose: Pose; slots: number[] } {
+  if (s.live?.closed || s.status === 'shipped') return { pose: 'sit', slots: [] }; // everyone went home
+  switch (s.status) {
+    case 'working': {
+      const extra = Math.min(3, s.live?.subagents ?? 0); // one more worker per running subagent
+      return { pose: 'hammer', slots: [0.6, -0.75, 2.4, -2.3, 3.1].slice(0, 2 + extra) };
+    }
+    case 'needs_you':
+      return { pose: 'wave', slots: [0.5, -0.5] };
+    case 'blocked':
+      return { pose: 'scratch', slots: [0.7, -0.8] };
+    case 'idle': {
+      const quietFor = s.lastActivityAt ? Date.now() - Date.parse(s.lastActivityAt) : Infinity;
+      return { pose: 'sit', slots: quietFor < SIX_HOURS ? [0.5, -0.55] : [] };
+    }
+  }
 }
 
 /** Victory flag for shipped (archived) sessions. */

@@ -45,7 +45,11 @@ export function SessionList({ sessions, selectedId, hoveredId, now, compact, onS
               {s.counts.errors ? ` · ${plural(s.counts.errors, 'chyba', 'chyby', 'chyb')}` : ''}
             </span>
           </div>
-          <div className="session__reason">{s.statusReason}</div>
+          <div className="session__reason">
+            {s.statusReason}
+            {s.live?.closed && s.status !== 'shipped' && <span className="closed-tag"> · zavřeno</span>}
+            {(s.live?.subagents ?? 0) > 0 && <span> · subagenti: {s.live.subagents}</span>}
+          </div>
           <SessionActions s={s} onChanged={onChanged} />
         </li>
       ))}

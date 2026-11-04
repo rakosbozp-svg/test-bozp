@@ -30,9 +30,9 @@ export function clock(iso: string): string {
     : d.toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-/** Crew = workers on screen: 2 per working session (subagents add more in phase 4). */
-export function crewCount(statuses: SessionStatus[]): number {
-  return statuses.filter((s) => s === 'working').length * 2;
+/** Crew = workers busy hammering: 2 per working session + 1 per running subagent (max 3 extra). */
+export function crewCount(sessions: { status: SessionStatus; live?: { subagents: number } }[]): number {
+  return sessions.filter((s) => s.status === 'working').reduce((n, s) => n + 2 + Math.min(3, s.live?.subagents ?? 0), 0);
 }
 
 /** Czech plural: plural(1,'nástroj','nástroje','nástrojů') → "1 nástroj", 3 → "3 nástroje", 5 → "5 nástrojů". */

@@ -211,3 +211,12 @@ code, .mono { font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monos
   font-weight: 800; font-size: 13px; color: var(--ink); letter-spacing: 0.01em;
 }
 .sign.is-active { background: #fff; box-shadow: 0 0 0 3px rgba(164, 89, 58, 0.25); }
+
+/* ---------- live indicators ---------- */
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--idle); margin-left: 4px; }
+.live-dot.is-live { background: var(--working); box-shadow: 0 0 0 3px rgba(79, 157, 87, 0.2); }
+.hooks-hint { font-size: 0.8rem; line-height: 1.4; color: var(--ink-soft); background: var(--sand-100); border: 1px dashed var(--sand-300); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.hooks-hint strong { color: var(--ink); }
+.closed-tag { color: var(--ink-soft); font-style: italic; }
+.tl--subagent { border-left-color: var(--shipped); }
+.tl--session_start, .tl--session_end { color: var(--ink-soft); font-style: italic; }

@@ -31,6 +31,8 @@ export async function readLiveRegistry(dir: string): Promise<Map<string, LivePro
       out.set(j.sessionId, {
         pid: j.pid,
         status: typeof j.status === 'string' ? j.status : undefined,
+        waitingFor: typeof j.waitingFor === 'string' ? j.waitingFor.slice(0, 80) : undefined,
+        statusUpdatedAt: typeof j.statusUpdatedAt === 'number' ? j.statusUpdatedAt : undefined,
         updatedAt: typeof j.updatedAt === 'number' ? j.updatedAt : undefined,
         alive: pidAlive(j.pid),
       });

@@ -137,3 +137,20 @@ Testování tady: tvoje skutečné relace nevidím, takže budu testovat na skut
 5. **Port.** Výchozí `4545`, dá se změnit přes `PORT=`.
 
 Pořadí stavby podle tvého zadání: fáze 1→5, po každé zastavím.
+
+---
+
+## 6. Ověřeno ve fázi 4 (skutečný běh Claude Code 2.1.318 s `--settings hooks/bot-crossing-hooks.json`)
+
+- ✅ Hooky typu `http` fungují: POST s `Content-Type: application/json`, bez hlavičky `Origin`.
+- ✅ Skutečné pořadí při dvou paralelních voláních Bash (jedno povolené, druhé vyžadující povolení):
+  `UserPromptSubmit → PreToolUse → PreToolUse → PermissionRequest → PostToolUse → Stop → SessionEnd`.
+- ✅ `PermissionRequest` **nemá** `tool_use_id` → žádost se páruje s otevřenými voláními stejného nástroje.
+- ✅ Zamítnuté volání v režimu `-p` neposlalo `PostToolUseFailure` ani `PermissionDenied`; čistí to až `Stop`.
+- ✅ Klíče payloadů: společné `session_id, transcript_path, cwd, scratchpad_dir, prompt_id, permission_mode, effort, hook_event_name`;
+  `PostToolUse` navíc `tool_response, duration_ms`; `Stop` navíc `stop_hook_active, last_assistant_message, background_tasks, session_crons`; `SessionEnd` má `reason`.
+- ✅ Když backend neběží, Claude Code doběhne normálně (exit 0), ale vypíše `… hook [http hook] failed: … (ECONNREFUSED)`.
+  `onFailure` zná jen `continue` (výchozí) a `block`; tichý režim neexistuje.
+- 🔎 Registr `~/.claude/sessions/<pid>.json`: `status` je `"waiting"` (s `waitingFor`: „input needed“, dialog, žádost sandboxu…), jinak `"busy"` (běží tah) nebo `"idle"`.
+  Nevyzkoušeno živě s dialogem povolení, odvozeno z kódu programu. Používá se jen jako doplněk.
+- ❓ Neověřeno: jak se hláška o selhání hooku zobrazuje v interaktivním terminálu (viděl jsem jen režim `-p`); zda běžící relace načte změnu `settings.json` bez restartu.

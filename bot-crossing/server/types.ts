@@ -30,7 +30,8 @@ export type TimelineKind =
   | 'needs_you'
   | 'session_start'
   | 'session_end'
-  | 'stop_failure';
+  | 'stop_failure'
+  | 'subagent';
 
 export interface TimelineEvent {
   ts: number;
@@ -84,6 +85,8 @@ export interface StatusSignals {
   needsYouLabel?: string;
   /** Set only by hooks: the turn died on an API error. */
   stopFailureAt?: number;
+  /** Is a turn running right now? From the live process registry or hooks; undefined = unknown. */
+  turnOpen?: boolean;
 }
 
 export interface StatusResult {
@@ -96,7 +99,11 @@ export interface StatusResult {
 
 export interface LiveProcess {
   pid: number;
+  /** "busy" | "idle" | "waiting" (Claude Code internal, undocumented). */
   status?: string;
+  /** Why it is waiting, e.g. "input needed" (only with status "waiting"). */
+  waitingFor?: string;
+  statusUpdatedAt?: number;
   alive: boolean;
   updatedAt?: number;
 }
@@ -118,6 +125,15 @@ export interface SessionSummary {
   archived: boolean;
   archivedAt?: string;
   process: LiveProcess | null;
+  /** Live info from hooks/registry. */
+  live: {
+    /** Has this session sent any hook event since the server started? */
+    hooks: boolean;
+    /** Running subagents (each adds a worker). */
+    subagents: number;
+    /** The session's process has exited (SessionEnd, or registry says it's gone). */
+    closed: boolean;
+  };
   counts: { prompts: number; tools: number; errors: number };
   lastTool: { name: string; summary: string; outcome: ToolOutcome; at: string } | null;
   resumeCommand: string;
