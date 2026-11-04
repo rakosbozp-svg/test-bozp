@@ -21,7 +21,7 @@ npm run dev
 
 Pak otevři v prohlížeči <http://127.0.0.1:4545>. Jeden proces obsluhuje API i stránku, na jednom portu.
 
-- **Otevřít** zkopíruje do schránky příkaz `cd "<projekt>" && claude --resume <id>` (na Windows se `;` místo `&&`). Vlož ho do terminálu.
+- **Otevřít** zkopíruje do schránky příkaz `cd "<projekt>" && claude --resume <id>` (na Windows se místo `&&` použije `;`). Vlož ho do terminálu.
 - **Archivovat** přesune relaci do stavu Hotovo. Pracující relaci archivovat nejde. **Obnovit** archivaci zruší.
 - Kliknutím na relaci se otevře detail: cesta, model, poslední nástroje, zprávy, časová osa a surová data pro kontrolu.
 
