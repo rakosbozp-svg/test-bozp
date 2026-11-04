@@ -19,11 +19,7 @@ export function odhadCeny(u, tier = 'default') {
     + (u.cache_read_input_tokens || 0) * c.cteni + (u.output_tokens || 0) * c.vystup) / 1e6;
 }
 const POLE_SPOTREBY = ['input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens', 'output_tokens'];
-export const jeSpotreba = (u) => !!u && POLE_SPOTREBY.some((k) => Number(u[k]) > 0);
-export function prictiSpotrebu(cil, u) {
-  if (jeSpotreba(u)) for (const k of POLE_SPOTREBY) cil[k] = (cil[k] || 0) + (Number(u[k]) || 0);
-  return cil;
-}
+export function prictiSpotrebu(cil, u) { for (const k of POLE_SPOTREBY) cil[k] = (cil[k] || 0) + (Number(u?.[k]) || 0); return cil; }
 
 // Chyba se stejnými kódy jako schopnost „sample“ (panel je přeloží) + kódy webu: heslo, konfigurace, api_key, billing,
 // permission, model, overloaded, endpoint, timeout. detail = podrobnost ze serveru (text API) pro zprávu v panelu.
@@ -40,7 +36,7 @@ export class ChybaClaude extends Error {
 const KOD_STAVU = { 401: 'heslo', 404: 'endpoint', 413: 'prompt_too_large', 429: 'rate_limited', 504: 'timeout' };
 function chybaOdpovedi(status, j) {
   const kod = (j && typeof j.kod === 'string' && j.kod) || KOD_STAVU[status] || (status >= 500 ? 'upstream_error' : 'invalid_request');
-  return new ChybaClaude(kod, { status, detail: j?.zprava ? String(j.zprava).slice(0, 400) : undefined, usage: jeSpotreba(j?.usage) ? j.usage : undefined });
+  return new ChybaClaude(kod, { status, detail: j?.zprava ? String(j.zprava).slice(0, 400) : undefined });
 }
 
 // Tahy z panelu → zprávy Messages API: prázdné texty pryč (API je odmítne), po sobě jdoucí tahy stejné role se spojí,
@@ -162,12 +158,7 @@ export function vytvorWebSample({ endpoint = ENDPOINT, heslo = () => '', fetch: 
     const podleJmena = new Map(tools.map((t) => [t.name, t]));
     const usage = {};
     let hotovo = '', truncated = false, akci = 0;
-    // Chyba pro panel nese text, který už Claude napsal (i rozepsaný v přerušeném kole), a spotřebu (jen když nějaká je).
-    // Odmítnutá odpověď se zahodí celá – bez textu, panel pak bubliny tohoto volání smaže (akce nástrojů zůstanou v logu).
-    const chyba = (code, o = {}, rozepsano = '') => {
-      const text = spoj(hotovo, rozepsano);
-      return new ChybaClaude(code, { ...o, ...(jeSpotreba(usage) ? { usage } : {}), ...(code !== 'refused' && (text || akci) ? { text } : {}) });
-    };
+    const chyba = (code, o = {}) => new ChybaClaude(code, { ...o, usage, ...(hotovo || akci ? { text: hotovo } : {}) });
     for (let kolo = 0; ; kolo++) {
       if (kolo >= maxKol) { truncated = true; break; }
       let cast = '';
@@ -176,15 +167,13 @@ export function vytvorWebSample({ endpoint = ENDPOINT, heslo = () => '', fetch: 
         zprava = await dotaz({ model: modelTier, ...(system ? { system } : {}), messages: zpravy, ...(defs.length ? { tools: defs } : {}) },
           (d) => { cast += d; onText?.({ text: spoj(hotovo, cast) }); }, signal);
       } catch (e) {
-        if (!(e instanceof ChybaClaude)) throw e;
-        prictiSpotrebu(usage, e.usage);   // rozpracované kolo, které server stihl změřit
-        throw chyba(e.code, { detail: e.detail, status: e.status }, cast);
+        throw e instanceof ChybaClaude ? chyba(e.code, { detail: e.detail, status: e.status }) : e;
       }
       prictiSpotrebu(usage, zprava.usage);
-      const stop = zprava.stop_reason;
-      if (stop === 'refusal') throw chyba('refused');   // text ani nástroje odmítnuté odpovědi se nepoužijí
       if (!cast) { cast = textBloku(zprava.content); if (cast) onText?.({ text: spoj(hotovo, cast) }); }
       hotovo = spoj(hotovo, cast);
+      const stop = zprava.stop_reason;
+      if (stop === 'refusal') throw chyba('refused');   // nástroje odmítnuté odpovědi se nespouští
       if (stop === 'max_tokens' || stop === 'model_context_window_exceeded') { truncated = true; break; }   // vstup nástroje může být useknutý
       zpravy.push({ role: 'assistant', content: zprava.content });
       if (stop === 'pause_turn') continue;

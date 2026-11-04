@@ -15,10 +15,7 @@ import Anthropic from '@anthropic-ai/sdk';
 // Úrovně z panelu → modely. Opus je výchozí (nejlepší výsledky), Sonnet je rychlejší a za poloviční cenu.
 export const MODELY = { default: 'claude-opus-5-5', quick: 'claude-sonnet-5-5' };
 export const MAX_TELO = 4_200_000;   // bajtů – Vercel přijme tělo dotazu nejvýš 4,5 MB
-export const MAX_TOKENS = 32000;     // jedno kolo (přemýšlení + text + vstupy nástrojů)
-// Funkce smí běžet 300 s (vercel.json, maxDuration). Odpověď, která do té doby nedoběhne, funkce sama ukončí o chvíli dřív:
-// dotaz u Anthropic se zruší (dál se neplatí) a prohlížeč dostane srozumitelnou chybu místo useknutého spojení.
-export const LIMIT_ODPOVEDI_MS = 285_000;
+export const MAX_TOKENS = 32000;     // jedno kolo (přemýšlení + text + vstupy nástrojů) – vejde se do limitu funkce
 const MAX_ZPRAV = 160, MAX_NASTROJU = 16, MAX_SYSTEM = 400_000, PING_MS = 10_000;
 // Bloky, které panel posílá: text, obrázky, volání nástrojů a jejich výsledky, přemýšlení z předchozích kol (beze změny).
 const TYPY_BLOKU = new Set(['text', 'image', 'tool_use', 'tool_result', 'thinking', 'redacted_thinking']);
@@ -73,32 +70,22 @@ export function sestavParametry(d) {
 }
 
 const KODY = { 400: 'invalid_request', 401: 'api_key', 402: 'billing', 403: 'permission', 404: 'model', 413: 'prompt_too_large', 429: 'rate_limited', 529: 'overloaded' };
-// Typ chyby z těla odpovědi – rozhoduje i u chyby uprostřed streamu (SSE „error“), kde HTTP stav není.
-const KODY_TYPU = {
-  invalid_request_error: 'invalid_request', authentication_error: 'api_key', billing_error: 'billing', permission_error: 'permission',
-  not_found_error: 'model', request_too_large: 'prompt_too_large', rate_limit_error: 'rate_limited', api_error: 'upstream_error',
-  overloaded_error: 'overloaded', timeout_error: 'timeout',
-};
-// Pojistka: nic, co vypadá jako API klíč, nesmí odejít do prohlížeče (ani v textu chyby).
-const bezKlice = (s) => String(s || '').replace(/sk-ant-[\w-]+/g, 'sk-ant-…').slice(0, 400);
 // Chyba SDK → { status, kod, zprava?, id? } pro prohlížeč (kód podle typované chyby, ne podle textu zprávy).
 export function popisChyby(e) {
   if (e instanceof Anthropic.APIUserAbortError) return { status: 499, kod: 'cancelled' };
   if (e instanceof Anthropic.APIConnectionError) return { status: 502, kod: 'upstream_error', zprava: 'Spojení se servery Anthropic selhalo.' };
   if (e instanceof Anthropic.APIError) {
-    const kod = KODY_TYPU[e.type] || KODY[e.status] || (e.status >= 400 && e.status < 500 ? 'invalid_request' : 'upstream_error');
-    return { status: e.status ?? 502, kod, zprava: bezKlice(e.error?.error?.message || e.message), ...(e.requestID ? { id: e.requestID } : {}) };
+    const kod = KODY[e.status] || (e.status >= 500 ? 'upstream_error' : 'invalid_request');
+    const zprava = String(e.error?.error?.message || e.message || '').slice(0, 400);
+    return { status: e.status ?? 502, kod, zprava, ...(e.requestID ? { id: e.requestID } : {}) };
   }
-  // Jiné chyby (např. neplatná hlavička) mohou ve zprávě nést klíč – do prohlížeče jde jen obecný text.
-  return { status: 500, kod: 'upstream_error', zprava: 'Neočekávaná chyba serverové funkce.' };
+  return { status: 500, kod: 'upstream_error', zprava: String(e?.message || e).slice(0, 400) };
 }
 
-// Odpověď Claude jako stream NDJSON. Odpojí-li se prohlížeč (Zastavit, zavření stránky), zruší se i dotaz u Anthropic
-// (na Vercelu jen se „supportsCancellation“ ve vercel.json). Po limitu odpovědi se dotaz zruší a pošle se chyba timeout.
-function streamuj(klient, params, signal, limitMs) {
-  const enc = new TextEncoder(), zruseni = new AbortController();
-  let stream = null, tik = null, limit = null, prekroceno = false;
-  signal?.addEventListener('abort', () => zruseni.abort(), { once: true });
+// Odpověď Claude jako stream NDJSON. Odpojí-li se prohlížeč (Zastavit, zavření stránky), zruší se i dotaz u Anthropic.
+function streamuj(klient, params, signal) {
+  const enc = new TextEncoder();
+  let stream = null, tik = null;
   const telo = new ReadableStream({
     async start(ctl) {
       let zavreno = false;
@@ -108,35 +95,29 @@ function streamuj(klient, params, signal, limitMs) {
       };
       posli({ t: 'ping' });
       tik = setInterval(() => posli({ t: 'ping' }), PING_MS);
-      limit = setTimeout(() => { prekroceno = true; zruseni.abort(); }, limitMs);
       try {
-        stream = klient.messages.stream(params, { signal: zruseni.signal });
+        stream = klient.messages.stream(params, { signal });
         stream.on('text', (d) => posli({ t: 'text', d }));
         const message = await stream.finalMessage();
         posli({ t: 'final', message });
       } catch (e) {
-        const ch = prekroceno
-          ? { status: 504, kod: 'timeout', zprava: `odpověď nedoběhla do ${Math.round(limitMs / 1000)} s` }
-          : popisChyby(e);
-        const usage = stream?.currentMessage?.usage;   // rozpracovaná odpověď se platí i tak – ať ji panel započítá
-        if (usage) ch.usage = usage;
+        const ch = popisChyby(e);
         if (ch.kod !== 'cancelled') console.error(`[api/claude] ${ch.status} ${ch.kod}${ch.id ? ` ${ch.id}` : ''}`);
         posli({ t: 'chyba', ...ch });
       } finally {
-        clearInterval(tik); clearTimeout(limit);
+        clearInterval(tik);
         if (!zavreno) { zavreno = true; try { ctl.close(); } catch { /* už zavřeno */ } }
       }
     },
-    cancel() { clearInterval(tik); clearTimeout(limit); zruseni.abort(); },
+    cancel() { clearInterval(tik); stream?.abort(); },
   });
   return new Response(telo, {
     headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store, no-transform', 'x-accel-buffering': 'no' },
   });
 }
 
-// Obsluha dotazu. Parametry jsou kvůli testům (vlastní prostředí, falešný klient Anthropic, bez čekání po špatném hesle,
-// kratší limit odpovědi). Klient zkusí přetížené / omezené API ještě jednou, víc čekání by se do limitu funkce nevešlo.
-export function vytvorObsluhu({ prostredi = process.env, vytvorKlienta = (apiKey) => new Anthropic({ apiKey, maxRetries: 1 }), pauzaPriChybe = 700, limitMs = LIMIT_ODPOVEDI_MS } = {}) {
+// Obsluha dotazu. Parametry jsou kvůli testům (vlastní prostředí, falešný klient Anthropic, bez čekání po špatném hesle).
+export function vytvorObsluhu({ prostredi = process.env, vytvorKlienta = (apiKey) => new Anthropic({ apiKey }), pauzaPriChybe = 700 } = {}) {
   let klient = null, klicKlienta = null;
   return async function obsluha(request) {
     const apiKey = String(prostredi.ANTHROPIC_API_KEY || '').trim(), heslo = String(prostredi.PLANOVAC_HESLO || '').trim();
@@ -146,10 +127,6 @@ export function vytvorObsluhu({ prostredi = process.env, vytvorKlienta = (apiKey
     if (!apiKey || !heslo) {
       const chybi = [!apiKey && 'ANTHROPIC_API_KEY', !heslo && 'PLANOVAC_HESLO'].filter(Boolean).join(' a ');
       return odpovedJson(503, { kod: 'konfigurace', zprava: `Na serveru chybí proměnná prostředí ${chybi}.` });
-    }
-    // Klíč vložený přes dva řádky nebo s mezerou uprostřed by spadl až v hlavičce dotazu (a chyba by klíč obsahovala).
-    if (!/^[\x21-\x7e]+$/.test(apiKey)) {
-      return odpovedJson(503, { kod: 'konfigurace', zprava: 'ANTHROPIC_API_KEY obsahuje mezeru, zalomení řádku nebo jiný neplatný znak – vložte klíč na Vercelu znovu jako jeden řádek.' });
     }
     let zadane = '';
     try { zadane = decodeURIComponent(request.headers.get('x-planovac-heslo') || '').trim(); } catch { zadane = ''; }
@@ -166,7 +143,7 @@ export function vytvorObsluhu({ prostredi = process.env, vytvorKlienta = (apiKey
     const { params, chyba } = sestavParametry(dotaz);
     if (chyba) return odpovedJson(400, { kod: 'invalid_request', zprava: chyba });
     if (!klient || klicKlienta !== apiKey) { klient = vytvorKlienta(apiKey); klicKlienta = apiKey; }
-    return streamuj(klient, params, request.signal, limitMs);
+    return streamuj(klient, params, request.signal);
   };
 }
 
