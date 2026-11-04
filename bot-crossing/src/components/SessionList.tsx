@@ -6,12 +6,15 @@ import { SessionActions } from './SessionActions.tsx';
 interface Props {
   sessions: SessionSummary[];
   selectedId: string | null;
+  hoveredId?: string | null;
   now: number;
+  compact?: boolean;
   onSelect: (id: string) => void;
+  onHover?: (id: string | null) => void;
   onChanged: () => void;
 }
 
-export function SessionList({ sessions, selectedId, now, onSelect, onChanged }: Props) {
+export function SessionList({ sessions, selectedId, hoveredId, now, compact, onSelect, onHover, onChanged }: Props) {
   if (sessions.length === 0) {
     return (
       <div className="empty">
@@ -20,12 +23,14 @@ export function SessionList({ sessions, selectedId, now, onSelect, onChanged }: 
     );
   }
   return (
-    <ul className="session-list">
+    <ul className={`session-list ${compact ? 'session-list--compact' : ''}`}>
       {sessions.map((s) => (
         <li
           key={s.id}
-          className={`session session--${s.status} ${s.id === selectedId ? 'is-selected' : ''}`}
+          className={`session session--${s.status} ${s.id === selectedId ? 'is-selected' : ''} ${s.id === hoveredId ? 'is-hovered' : ''}`}
           onClick={() => onSelect(s.id)}
+          onMouseEnter={() => onHover?.(s.id)}
+          onMouseLeave={() => onHover?.(null)}
         >
           <div className="session__row">
             <StatusBadge status={s.status} idleKind={s.idleKind} />

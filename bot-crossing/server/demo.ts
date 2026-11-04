@@ -71,6 +71,22 @@ toolUse(build, 'Bash', { command: 'docker build -t app .', description: 'Build D
 build.t = now - 2 * min;
 write(build);
 
+// 7) A fuller colony: older idle sessions, a busy one (grows extra modules), another project.
+const extras: [string, string, string, number, number][] = [
+  ['demo-idle-0007', 'webshop', 'Refactor the cart reducer into smaller hooks', 30 * 60 * min, 12],
+  ['demo-idle-0008', 'webshop', 'Fix flaky e2e test for coupon codes', 40 * 60 * min, 45],
+  ['demo-idle-0009', 'mobile-app', 'Set up push notifications for iOS', 5 * 60 * min, 8],
+  ['demo-idle-0010', 'mobile-app', 'Translate onboarding screens to Czech', 20 * 60 * min, 210],
+  ['demo-idle-0011', 'blog', 'Generate social preview images for posts', 70 * 60 * min, 3],
+];
+for (const [id, project, title, agoMs, tools] of extras) {
+  const c = fakeSession(id, proj(project), now - agoMs - tools * 2000);
+  prompt(c, title);
+  for (let k = 0; k < tools; k++) tool(c, k % 3 ? 'Edit' : 'Read', { file_path: proj(project) + `/src/file${k}.ts` });
+  say(c, 'Done — summary above.', true);
+  write(c);
+}
+
 fs.mkdirSync(path.join(demoRoot, 'state'), { recursive: true });
 fs.writeFileSync(path.join(demoRoot, 'state', 'state.json'), JSON.stringify({ archived: { 'demo-shipped-0005': new Date(now - 60 * min).toISOString() } }, null, 2));
 

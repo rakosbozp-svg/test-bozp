@@ -3,8 +3,8 @@
 Útulný lokální dashboard, který zobrazuje tvoje relace Claude Code jako malou kolonii na hexagonální mapě.
 Podrobný plán a ověřený formát dat: [PLAN.md](PLAN.md).
 
-> **Stav: fáze 2 z 5** — backend čte existující relace (REST API) a v prohlížeči je 2D seznam se stejnými daty.
-> 3D kolonie, hooky a WebSocket přijdou v dalších fázích.
+> **Stav: fáze 3 z 5** — backend čte existující relace, v prohlížeči je 3D hexagonální kolonie (a 2D seznam).
+> Živé hooky, WebSocket a animovaní dělníci přijdou ve fázi 4.
 
 ## Požadavky
 
@@ -24,6 +24,16 @@ Pak otevři v prohlížeči <http://127.0.0.1:4545>. Jeden proces obsluhuje API 
 - **Otevřít** zkopíruje do schránky příkaz `cd "<projekt>" && claude --resume <id>` (na Windows se místo `&&` použije `;`). Vlož ho do terminálu.
 - **Archivovat** přesune relaci do stavu Hotovo. Pracující relaci archivovat nejde. **Obnovit** archivaci zruší.
 - Kliknutím na relaci se otevře detail: cesta, model, poslední nástroje, zprávy, časová osa a surová data pro kontrolu.
+
+### Kolonie (3D)
+
+- Každá relace je jedna budova. Relace stejného projektu tvoří shluk kolem cedule s názvem projektu; uprostřed mapy je základna.
+- **Ovládání:** levé tlačítko myši = otáčení, kolečko = přiblížení, pravé tlačítko = posun. Kliknutí na budovu (nebo na kartu vlevo) k ní plynule přiletí a otevře detail. Kliknutí do prázdna nebo **🗺 Celá kolonie** = zpět na přehled.
+- **Stav budovy:** maják na anténě má barvu stavu (zelená pracuje, žlutá potřebuje tě, červená zablokováno, šedá nečinné, modrá hotovo). Zablokovaná budova kouří, „potřebuje tě“ pulzuje se žlutým kruhem, hotová má vlajku. Okna svítí, když agent pracuje.
+- Budovy rostou s množstvím práce (od 40 a 200 volání nástrojů přibude modul).
+- Rozložení je stabilní: nová relace ani nový projekt existující budovy neposune.
+- Přepínač **Kolonie / Seznam** vpravo nahoře; volba se pamatuje v prohlížeči.
+- Vše se kreslí lokálně, scéna nestahuje nic z internetu (žádné fonty, textury ani HDR z CDN).
 
 Rychlá kontrola v terminálu bez serveru:
 
