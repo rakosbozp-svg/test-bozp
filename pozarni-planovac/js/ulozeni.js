@@ -24,6 +24,13 @@ const tx = (mode, fn) => new Promise((ok, ko) => { const t = db.transaction(OBJ,
 
 const zaznam = (p) => ({ id: p.id, nazev: p.nazev, typ: p.typ, zmeneno: p.zmeneno, text: serializuj(p) });
 
+// Sledování změn (automatická záloha, js/zaloha/autozaloha.js): fn({typ: 'ulozeno' | 'smazano', id}) po úspěšném uložení a po smazání.
+const posluchaci = new Set();
+export function sleduj(fn) { posluchaci.add(fn); return () => posluchaci.delete(fn); }
+const ohlas = (udalost) => { for (const fn of posluchaci) { try { fn(udalost); } catch { /* posluchač nesmí rozbít ukládání */ } } };
+// Surový záznam projektu z paměti (i s textem); null, když v prohlížeči není.
+export const zaznamProjektu = (id) => cache.get(id) ?? null;
+
 export async function init() {
   try {
     db = await otevri();
@@ -57,11 +64,14 @@ export function uloz(p) {
   const r = zaznam(p); cache.set(r.id, r);
   if (rezim === 'idb') {
     fronta = fronta.then(() => tx('readwrite', (s) => s.put(r))).then(() => ({ ok: true }), (e) => ({ ok: false, chyba: e?.message || 'Zápis do úložiště prohlížeče selhal' }));
-    return fronta;
+    const vysledek = fronta.then((v) => { if (v.ok) ohlas({ typ: 'ulozeno', id: r.id }); return v; });
+    fronta = vysledek;
+    return vysledek;
   }
   if (rezim === 'ls') {
     const idx = seznam();
     const ok = lsPis(LS_PROJ + r.id, r.text) && lsPis(LS_IDX, JSON.stringify(idx));
+    if (ok) ohlas({ typ: 'ulozeno', id: r.id });
     return Promise.resolve(ok ? { ok: true } : { ok: false, chyba: 'Úložiště prohlížeče je plné' });
   }
   return Promise.resolve({ ok: false, chyba: 'Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data)' });
@@ -69,6 +79,7 @@ export function uloz(p) {
 
 export function smaz(id) {
   cache.delete(id);
+  ohlas({ typ: 'smazano', id });
   if (lsCti(POSL) === id) lsMaz(POSL);
   if (rezim === 'idb') fronta = fronta.then(() => tx('readwrite', (s) => s.delete(id))).then(() => ({ ok: true }), () => ({ ok: false }));
   if (rezim === 'ls') { lsMaz(LS_PROJ + id); lsPis(LS_IDX, JSON.stringify(seznam())); }

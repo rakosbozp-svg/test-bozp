@@ -1,5 +1,7 @@
 import * as M from './model.js';
 import * as U from './ulozeni.js';
+import { pripoj as pripojUloziste, kodChyby } from './zaloha/uloziste.js';
+import { vytvorAutozalohu } from './zaloha/autozaloha.js';
 import { nactiKatalog } from './znacky.js';
 import { vykresliKartu, pripoj, esc } from './formular.js';
 import { nahledKarty, prizpusobNahled } from './nahled.js';
@@ -111,7 +113,9 @@ const malym = (t) => t.charAt(0).toLowerCase() + t.slice(1);   // „operativní
 function pripominkaZalohy(vse) {
   if (!vse.length || !U.dostupne()) return '';
   const posl = U.posledniZaloha(), zmenene = vse.filter((x) => !posl || x.zmeneno > posl).length;
-  if (!zmenene || (posl && Date.now() - Date.parse(posl) < 7 * DEN)) return '';
+  const sz = zaloha?.stav(), autoBezi = sz?.faze === 'ok' && sz.ceka === 0;   // běžící automatická záloha → ruční kopie jen jednou za měsíc
+  if (!zmenene || (posl && Date.now() - Date.parse(posl) < (autoBezi ? 30 : 7) * DEN)) return '';
+  if (autoBezi) return `<div class="rk-alert rk-alert--warn" role="status" id="d-pripominka"><span class="rk-alert__icon">${ikona('pozor', 18)}</span><div class="rk-alert__text"><span class="rk-alert__title">Zálohujte projekty</span><span class="rk-alert__body">Automatická záloha běží. Jednou za měsíc si stáhněte i kopii mimo claude.ai (Zálohovat všechny projekty).</span></div><button type="button" class="rk-btn rk-btn--secondary rk-btn--sm rk-alert__action" id="d-zalohovat-ted">Zálohovat teď</button></div>`;
   const kdy = posl ? `Poslední záloha všech projektů: ${new Date(posl).toLocaleDateString('cs-CZ')} (před ${Math.floor((Date.now() - Date.parse(posl)) / DEN)} dny). Od té doby změněno projektů: ${zmenene}.` : `Projekty (${vse.length}) ještě nebyly zálohovány.`;
   return `<div class="rk-alert rk-alert--warn" role="status" id="d-pripominka"><span class="rk-alert__icon">${ikona('pozor', 18)}</span><div class="rk-alert__text"><span class="rk-alert__title">Zálohujte projekty</span><span class="rk-alert__body">${esc(kdy)} Projekty jsou jen v tomto prohlížeči – vymazání dat prohlížeče nebo přeinstalace je smaže.</span></div><button type="button" class="rk-btn rk-btn--secondary rk-btn--sm rk-alert__action" id="d-zalohovat-ted">Zálohovat teď</button></div>`;
 }
@@ -121,6 +125,76 @@ async function zalohovatVse() {
   const r = await U.stahniZalohu();
   ohlas(r.ok ? `Záloha je stažená (${projektu(n)}). Uložte soubor mimo prohlížeč (disk, cloud).` : zpravaUlozeni(r));
   if (!S.p) dashboard();
+}
+// ---------- automatická záloha (soukromé úložiště artefaktu na claude.ai, js/zaloha/) ----------
+let zaloha = null, pripojujeZalohu = false;
+function predChvili(iso, ted = Date.now()) {
+  const ms = ted - Date.parse(iso);
+  if (!(ms >= 60000)) return 'před chvílí';
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return `před ${min} min`;
+  const h = Math.floor(min / 60);
+  return h < 24 ? `před ${h} h` : new Date(iso).toLocaleDateString('cs-CZ');
+}
+function textZalohy(s) {
+  if (s.faze === 'pripojuje') return 'Připojuji úložiště artefaktu…';
+  if (s.faze === 'probiha') return `Zálohuji ${s.hotovo + 1} z ${s.celkem}…`;
+  if (s.faze === 'chyba') return `${s.chyba?.text ?? 'Záloha selhala.'} Zkusí se znovu při další změně.`;
+  if (!s.posledni) return 'Zatím žádný projekt k zálohování.';
+  return `Zálohováno: ${projektu(s.pocet)}${s.smazanych ? ` (+ ${s.smazanych} smazané)` : ''} · naposledy ${predChvili(s.posledni)}`;
+}
+// Karta na úvodní stránce; volá se při každé změně stavu zálohy (bez překreslení stránky) a při vykreslení přehledu.
+function vykresliKartuZalohy() {
+  const karta = $('#d-autozaloha'); if (!karta) return;
+  const s = zaloha ? zaloha.stav() : pripojujeZalohu ? { faze: 'pripojuje' } : { faze: 'nedostupna' };
+  karta.hidden = s.faze === 'nedostupna';
+  const el = $('#d-autozaloha-stav'); el.textContent = textZalohy(s); el.classList.toggle('chyba', s.faze === 'chyba');
+  $('#d-autozaloha-zobrazit').onclick = zobrazZalohu;
+  const misto = $('#d-obnova-misto'); if (misto) { misto.innerHTML = nabidkaObnovy(); if ($('#d-obnovit-zalohu')) $('#d-obnovit-zalohu').onclick = obnovitChybejici; }
+  const pm = $('#d-pripominka-misto'); if (pm) { pm.innerHTML = pripominkaZalohy(U.seznam()); if ($('#d-zalohovat-ted')) $('#d-zalohovat-ted').onclick = zalohovatVse; }
+}
+const chybejiciVZaloze = () => { const mistni = new Set(U.seznam().map((x) => x.id)); return zaloha ? zaloha.projekty().filter((h) => !h.smazano && !mistni.has(h.pid)) : []; };
+// Upozornění nahoře na přehledu: záloha má projekty, které v prohlížeči nejsou (nový počítač, vymazaná data). Smazané se nenabízejí.
+function nabidkaObnovy() {
+  if (!zaloha || zaloha.stav().faze === 'nedostupna') return '';
+  const n = chybejiciVZaloze().length;
+  if (!n) return '';
+  const text = n === 1 ? 'V automatické záloze je 1 projekt, který v tomto prohlížeči není.' : n <= 4 ? `V automatické záloze jsou ${n} projekty, které v tomto prohlížeči nejsou.` : `V automatické záloze je ${n} projektů, které v tomto prohlížeči nejsou.`;
+  return `<div class="rk-alert rk-alert--ok" role="status" id="d-obnova-zalohy"><span class="rk-alert__icon">${ikona('info', 18)}</span><div class="rk-alert__text"><span class="rk-alert__title">Automatická záloha</span><span class="rk-alert__body">${esc(text)}</span></div><button type="button" class="rk-btn rk-btn--secondary rk-btn--sm rk-alert__action" id="d-obnovit-zalohu">Obnovit ze zálohy</button></div>`;
+}
+async function obnovitChybejici() { await obnovZalohu(await zaloha.nactiProObnovu(chybejiciVZaloze().map((h) => h.pid))); }
+// Dialog „Automatická záloha“: co je v záloze, obnova vybraných, odstranění projektů smazaných v prohlížeči.
+async function zobrazZalohu() {
+  if (!zaloha) return;
+  const titul = 'Automatická záloha', nacteno = await zaloha.obnov();   // čerstvé hlavičky: jiná karta nebo počítač mohl mezitím zálohovat
+  const radky = zaloha.projekty(), mistni = new Map(U.seznam().map((x) => [x.id, x]));
+  if (!radky.length) { await oznam(nacteno ? 'V automatické záloze zatím nic není.' : 'Zálohu se teď nepodařilo načíst. Zkuste to prosím za chvíli znovu.', { titul }); return; }
+  const stitek = (h) => { const m = mistni.get(h.pid); if (!m) return h.smazano ? 'smazán v prohlížeči' : 'není v tomto prohlížeči'; return String(h.zmeneno ?? '') > String(m.zmeneno ?? '') ? 'v záloze novější' : ''; };
+  const html = `<p class="dlg__text">Projekty v soukromém úložišti tohoto artefaktu na claude.ai. Vyberte, které obnovit.</p><ul class="zaloha-auto">${radky.map((h) => { const s = stitek(h); return `<li><label><input type="checkbox" name="z:${esc(h.pid)}"${mistni.has(h.pid) ? '' : ' checked'}><span><b>${esc(h.nazev)}</b> <small>${esc(malym(M.TYPY_DOKUMENTU_NAZVY[h.typ] || ''))} · zálohováno ${esc(predChvili(h.zalohovano))}</small>${s ? ` <span class="stitek">${esc(s)}</span>` : ''}</span></label>${s === 'smazán v prohlížeči' ? `<button type="button" class="btn mal nebezp" data-odstranit-zalohu="${esc(h.pid)}">Odstranit ze zálohy</button>` : ''}</li>`; }).join('')}</ul>`;
+  const odstraneni = async (e) => {
+    const b = e.target.closest?.('[data-odstranit-zalohu]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const pid = b.dataset.odstranitZalohu, h = radky.find((x) => x.pid === pid);
+    if (!(await potvrd(`Odstranit „${h?.nazev ?? pid}“ ze zálohy?`, { ano: 'Odstranit', nebezpecne: true }))) return;
+    try { await zaloha.odstranZeZalohy(pid); b.closest('li')?.remove(); } catch (err) { ohlas(`Projekt se nepodařilo odstranit ze zálohy (kód ${kodChyby(err)}).`); }
+  };
+  document.addEventListener('click', odstraneni, true);
+  let r;
+  try { r = await formular({ titul, ano: 'Obnovit', zrusit: 'Zavřít', html }); } finally { document.removeEventListener('click', odstraneni, true); }
+  if (!r.ok) return;
+  const pids = Object.entries(r.pole).filter(([k, v]) => k.startsWith('z:') && v === true).map(([k]) => k.slice(2));
+  if (pids.length) await obnovZalohu(await zaloha.nactiProObnovu(pids));
+}
+async function spustZalohu() {
+  if (!globalThis.claude || typeof globalThis.claude.use !== 'function') return;   // mimo artefakt na claude.ai jen ruční záloha
+  pripojujeZalohu = true; vykresliKartuZalohy();
+  const uloziste = await pripojUloziste();
+  pripojujeZalohu = false;
+  if (!uloziste) { vykresliKartuZalohy(); return; }
+  zaloha = vytvorAutozalohu({ ulozeni: { sleduj: U.sleduj, seznam: U.seznam, zaznam: U.zaznamProjektu }, uloziste, prodlevaMs: window.__PP_PRODLEVA_ZALOHY__ ?? 30000 });
+  zaloha.naZmenu(vykresliKartuZalohy);
+  vykresliKartuZalohy();
+  zaloha.start().catch(() => { /* chybu nese stav zálohy */ });
 }
 async function obnovZalohu(z) {
   const titul = 'Obnovit ze zálohy';
@@ -158,7 +232,8 @@ function dashboard() {
       <p class="rk-sh__lead">${R.hero[2]}</p>
     </header>
     ${U.dostupne() ? '' : `<div class="varovani" role="alert">${ikona('pozor', 20)}<span>Úložiště prohlížeče není dostupné (soukromé okno nebo zablokovaná data). Projekt se neuloží – po úpravách použijte Stáhnout → Editovatelný projekt.</span></div>`}
-    ${pripominkaZalohy(vse)}
+    <div id="d-obnova-misto">${nabidkaObnovy()}</div>
+    <div id="d-pripominka-misto">${pripominkaZalohy(vse)}</div>
     <section class="rk-callout">
       <div class="rk-callout__main">
         <header class="rk-sh rk-sh--dark"><div class="rk-eyebrow">${R.novy[0]}</div>
@@ -174,6 +249,7 @@ function dashboard() {
     <div class="dlazdice">
       ${poslProj ? `<a class="rk-card rk-card--interactive" href="#/p/${esc(poslProj.id)}" id="d-pokracovat"><div class="rk-card__top"><span class="rk-tile">${ikona('slozka', 20)}</span></div><div class="rk-card__title">Pokračovat v projektu</div><div class="rk-card__body">${esc(poslProj.nazev)}<br><small>upraveno ${new Date(poslProj.zmeneno).toLocaleString('cs-CZ')}</small></div><div class="rk-card__link"><span>Otevřít</span><span class="rk-card__arrow">→</span></div></a>` : ''}
       <button type="button" class="rk-card rk-card--interactive" id="d-zaloha"><div class="rk-card__top"><span class="rk-tile">${ikona('stahnout', 20)}</span></div><div class="rk-card__title">Zálohovat všechny projekty</div><div class="rk-card__body">Jeden soubor se všemi projekty v prohlížeči (teď ${projektu(vse.length)}) – DZP i evakuační plány včetně podkladů. Obnovíte ho přes Importovat projekt.</div><div class="rk-card__link"><span>Stáhnout zálohu</span><span class="rk-card__arrow">→</span></div></button>
+      <div class="rk-card" id="d-autozaloha" hidden><div class="rk-card__top"><span class="rk-tile">${ikona('stit', 20)}</span></div><div class="rk-card__title">Automatická záloha</div><div class="rk-card__body" id="d-autozaloha-stav"></div><div class="rk-card__link"><button type="button" class="btn mal" id="d-autozaloha-zobrazit">Zobrazit zálohu</button></div></div>
       <label class="rk-card rk-card--interactive" for="d-import"><div class="rk-card__top"><span class="rk-tile">${ikona('soubor', 20)}</span></div><div class="rk-card__title">Importovat projekt</div><div class="rk-card__body">Soubor .pplan.json (jeden projekt) nebo záloha všech projektů. Projekt se otevře v režimu podle svého druhu.</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-import" class="sr-only" accept=".json,application/json"></label>
       <label class="rk-card rk-card--interactive" for="d-podklad"><div class="rk-card__top"><span class="rk-tile">${ikona('import', 20)}</span></div><div class="rk-card__title">Importovat podklad</div><div class="rk-card__body">DXF, SVG, PDF, PNG nebo JPG. ${rezim === 'dzp' ? 'Založí novou DZP a vloží podklad do situace.' : 'Založí nový evakuační plán a vloží podklad do listu podlaží.'}</div><div class="rk-card__link"><span>Vybrat soubor</span><span class="rk-card__arrow">→</span></div><input type="file" id="d-podklad" class="sr-only" accept=".dxf,.svg,.pdf,.png,.jpg,.jpeg,.dwg,image/png,image/jpeg,image/svg+xml,application/pdf"></label>
       ${rezim === 'dzp' && !window.__WEB__ ? `<button type="button" class="rk-card rk-card--interactive" id="d-litice"><div class="rk-card__top"><span class="rk-tile">${ikona('plamen', 20)}</span></div><div class="rk-card__title">Referenční projekt Litice</div><div class="rk-card__body">Jen potvrzené údaje o FVE a poznámky o rozsahu. Ostatní pole zůstávají prázdná.</div><div class="rk-card__link"><span>Založit z Litic</span><span class="rk-card__arrow">→</span></div></button>` : ''}
@@ -192,6 +268,7 @@ function dashboard() {
     U.uloz(p); location.hash = `#/p/${p.id}`;
   };
   $('#d-zaloha').onclick = zalohovatVse;
+  vykresliKartuZalohy();
   if ($('#d-zalohovat-ted')) $('#d-zalohovat-ted').onclick = zalohovatVse;
   $('#d-import').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -532,4 +609,4 @@ const pismoKarty = (async () => {
 })();
 
 // ---------- start ----------
-Promise.all([U.init(), nactiKatalog().then((k) => { katalog = k; }).catch((e) => ohlas(`Katalog značek se nenačetl: ${e.message}`, true))]).finally(smeruj);
+Promise.all([U.init(), nactiKatalog().then((k) => { katalog = k; }).catch((e) => ohlas(`Katalog značek se nenačetl: ${e.message}`, true))]).finally(() => { smeruj(); spustZalohu(); });
