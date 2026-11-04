@@ -25,7 +25,10 @@ const ocr = `(function(){var c=null,W="${Buffer.from(ocrWorker, 'utf8').toString
 const verze = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 let html = txt('index.html');
-html = html.replace(/<link rel="stylesheet" href="css\/rakos.css">\s*<link rel="stylesheet" href="css\/app.css">/, () => `<style>\n${txt('css/rakos.css')}\n${txt('css/app.css')}\n</style>`);
+// Obrázky pozadí z CSS (url(../pozadi/…)) vloží jako data: – jedna HTML nesmí odkazovat na soubory.
+const vlozObrazky = (css) => css.replace(/url\(\.\.\/(pozadi\/[\w-]+\.webp)\)/g, (_, p) => `url(data:image/webp;base64,${cti(p).toString('base64')})`);
+html = html.replace(/<link rel="stylesheet" href="css\/rakos.css">\s*<link rel="stylesheet" href="css\/app.css">/, () => `<style>\n${vlozObrazky(txt('css/rakos.css'))}\n${vlozObrazky(txt('css/app.css'))}\n</style>`);
+if (/url\(\.\.\//.test(html)) throw new Error('Sestavení selhalo: v CSS zůstal odkaz na soubor');
 html = html.replace(/<script type="module" src="js\/app.js"><\/script>/, () =>
   `<script>window.__KATALOG__=${zabezpecit(JSON.stringify(kat))};window.__LITICE__=${zabezpecit(JSON.stringify(litice))};window.__SESTAVENO__=${JSON.stringify(verze)};window.__FONTY__=${JSON.stringify({ regular: cti('vendor/fonts/Roboto-Regular.woff').toString('base64'), bold: cti('vendor/fonts/Roboto-Bold.woff').toString('base64') })};` +
   `try{var b=atob("${worker}"),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.__PDFJS_WORKER_URL__=URL.createObjectURL(new Blob([u],{type:"text/javascript"}));}catch(e){}</script>\n` +

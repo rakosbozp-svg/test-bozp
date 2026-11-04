@@ -243,6 +243,7 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 }
 @media print {
   body { background: #fff; }
+  body::before, body::after { display: none; }
   .top, .hlaska, .listy, .panel, .zalozky, .skok-uplnost { display: none !important; }
   main { padding: 0; max-width: none; }
   .editor { display: block; }
@@ -326,3 +327,15 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .ed-zamek { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 24px); padding: 6px 12px; border-radius: var(--radius-md); background: var(--inverse); color: var(--on-inverse); font: 600 13px/1.4 var(--font-sans); text-align: center; box-shadow: var(--shadow-md); pointer-events: none; }
 .ed--zamceno .ed-nastroje [data-nastroj], .ed--zamceno .ed-nastroje label:has(> [data-podklad]) { opacity: .4; pointer-events: none; }
 .ed--zamceno .ed-scena { cursor: grab; }
+/* Tematické pozadí úvodní stránky podle režimu: body[data-pozadi="dzp" | "evakuace"] nastavuje přehled projektů (app.js), editor ho ruší.
+   Dvě pevné vrstvy za obsahem se při přepnutí prolnou; karty zůstávají neprůhledné. Obrázky vytváří tools/vytvor_pozadi.mjs. */
+:root { --pozadi-kryti: .12; --pozadi-filtr: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pozadi-kryti: .08; --pozadi-filtr: invert(1) hue-rotate(180deg); } }
+:root[data-theme="dark"] { --pozadi-kryti: .08; --pozadi-filtr: invert(1) hue-rotate(180deg); }
+body { isolation: isolate; }
+body::before, body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: center / cover no-repeat; opacity: 0; filter: var(--pozadi-filtr); transition: opacity .5s ease; }
+body::before { background-image: url(../pozadi/situace-dzp.webp); }
+body::after { background-image: url(../pozadi/unikovy-plan.webp); }
+body[data-pozadi="dzp"]::before, body[data-pozadi="evakuace"]::after { opacity: var(--pozadi-kryti); }
+html.web body::before { background-image: none; }   /* webová verze: situace Litice (skutečný areál) se nepřibaluje ani nenačítá */
+@media (prefers-reduced-motion: reduce) { body::before, body::after { transition: none; } }
