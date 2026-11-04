@@ -1,7 +1,7 @@
 // E2E panelu Claude v Chromiu. Skutečné window.claude (claude.ai) tu není, proto ho test podstrčí: simulovaný `sample`
 // přehrává připravené scénáře – posílá text (onText), volá SKUTEČNÉ nástroje stránky (execute) a vrací odpověď.
 // Ověřuje se celé napojení: kreslení přes nástroje, jeden krok Zpět, obrázky pro Claude, kontrolní kolo, chyby, Zastavit,
-// přizpůsobení rámu, evakuační plán a chování bez Claude (soubor z disku). Webovou verzi (/api/claude) testuje web.e2e.test.mjs.
+// přizpůsobení rámu, evakuační plán a chování bez Claude (soubor z disku / web).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -27,7 +27,7 @@ test.after(async () => { await browser?.close(); srv?.kill(); });
 
 // Simulace schopnosti „sample“ podle typů platformy (window.claude.use('sample'), limits, onText, tools[].execute, signal).
 function simulaceClaude({ obrazky = true, stahovani = false } = {}) {
-  const log = window.__ai = { volani: [], vysledky: [], scenare: [], ulozeno: [], odmitnout: false };
+  const log = window.__ai = { volani: [], vysledky: [], scenare: [], ulozeno: [], odmitnout: false, pokusy: [], chybaUlozeni: null, opravneni: 'granted', manage: 0 };
   const cekej = (ms, signal) => new Promise((ok, ko) => {
     const t = setTimeout(ok, ms);
     signal?.addEventListener('abort', () => { clearTimeout(t); ko({ code: 'cancelled', message: 'aborted' }); });
@@ -55,8 +55,13 @@ function simulaceClaude({ obrazky = true, stahovani = false } = {}) {
   };
   sample.limits = async () => ({ maxPromptBytes: 262144, tools: { maxCount: 16 }, ...(obrazky ? { images: { maxCount: 5, maxInputBytes: 20e6, mediaTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] } } : {}), modelTiers: ['default', 'complex', 'quick'] });
   // schopnost „downloads“: save({filename, data}) – zaznamená soubor; s log.odmitnout uživatel uložení odmítne
-  const dl = { save: async ({ filename, data }) => { const text = typeof data === 'string' ? data : await data.text(); log.ulozeno.push({ filename, text, velikost: data.size ?? text.length }); if (log.odmitnout) throw { code: 'declined', message: 'x' }; return { status: 'saved' }; } };
-  window.claude = { use: async (n) => (n === 'sample' ? sample : n === 'downloads' && stahovani ? dl : null) };
+  // s log.chybaUlozeni save() odmítne s tímto kódem (jako claude.ai); „permissions“: stav oprávnění a panel Oprávnění (manage)
+  const dl = { save: async ({ filename, data }) => {
+    if (log.chybaUlozeni) { log.pokusy.push({ filename, kod: log.chybaUlozeni }); throw { code: log.chybaUlozeni, message: 'simulace' }; }
+    const text = typeof data === 'string' ? data : await data.text(); log.ulozeno.push({ filename, text, velikost: data.size ?? text.length }); if (log.odmitnout) throw { code: 'declined', message: 'x' }; return { status: 'saved' };
+  } };
+  const prava = { state: async () => log.opravneni, request: async () => ({}), manage: async () => { log.manage++; if ('poManage' in log) log.chybaUlozeni = log.poManage; } };
+  window.claude = { use: async (n) => (n === 'sample' ? sample : n === 'downloads' && stahovani ? dl : n === 'permissions' ? prava : null) };
 }
 
 async function nova({ claude = true, obrazky = true, evak = false, stahovani = false } = {}) {
@@ -248,11 +253,10 @@ test('evakuační plán: bez nástupní plochy, se značkami evakuační knihovn
   await p.context().close();
 });
 
-test('bez Claude (soubor z disku): panel vysvětlí, kde Claude funguje, a nic se neposílá; bez obrázků se přílohy skryjí', skip, async () => {
+test('bez Claude (soubor z disku, web): panel vysvětlí, kde Claude funguje, a nic se neposílá; bez obrázků se přílohy skryjí', skip, async () => {
   const p = await nova({ claude: false });
   await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
-  await p.waitForFunction(() => /webové verzi plánovače a v artefaktu na claude\.ai.*soubor otevřený z disku/.test(document.querySelector('[data-ai-stav]').textContent));
-  assert.equal(await p.locator('[data-ai-heslo]').count(), 0, 'mimo web žádné pole pro heslo');
+  await p.waitForFunction(() => document.querySelector('[data-ai-stav]').textContent.includes('artefakt na claude.ai'));
   assert.equal(await p.locator('[data-ai-spust]').isDisabled(), true);
   assert.deepEqual(p.chyby, []);
   await p.context().close();
@@ -426,7 +430,7 @@ test('„Vrátit změny od Claude“ funguje i po novém vytvoření editoru (p�
 });
 
 test('stahování v artefaktu přes schopnost downloads; přenos projektů zálohou do jiné kopie plánovače (jiné úložiště)', skip, async () => {
-  const p = await nova({ stahovani: true });   // „kopie AI“: projekt s nakreslenou stěnou
+  const p = await nova({ stahovani: true });   // jedna kopie plánovače (artefakt): projekt s nakreslenou stěnou
   await p.click('[data-p=claude]'); await p.waitForSelector('.ai-panel');
   await p.click('[data-ai-volba=kontrola]');
   await p.scenare([{ kroky: [{ nastroje: [{ name: 'kresli', input: { prvky: PUDORYS.slice(0, 2) } }] }], konec: '• Ok.' }]);
@@ -448,7 +452,7 @@ test('stahování v artefaktu přes schopnost downloads; přenos projektů zálo
   const zaloha = (await p.ai()).ulozeno.at(-1);
   assert.match(zaloha.filename, /^Pozarni_planovac_zaloha_\d{4}-\d{2}-\d{2}\.pplan-zaloha\.json$/);
   assert.match(await p.locator('#hlaska').textContent(), /Záloha je stažená/);
-  // „původní plánovač“: nový kontext = jiné úložiště; import zálohy obnoví projekt i se stěnami
+  // druhá kopie (např. webová verze): nový kontext = jiné úložiště; import zálohy obnoví projekt i se stěnami
   const ctx2 = await browser.newContext({ viewport: { width: 1500, height: 950 } });
   await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const q = await ctx2.newPage(); const chyby2 = []; q.on('pageerror', (e) => chyby2.push(e.message));
@@ -463,4 +467,37 @@ test('stahování v artefaktu přes schopnost downloads; přenos projektů zálo
   assert.equal(await q.locator('#svet [data-druh=stena]').count(), 2, 'přenesený projekt má stěny nakreslené Claude');
   assert.deepEqual(p.chyby, []); assert.deepEqual(chyby2, []);
   await ctx2.close(); await p.context().close();
+});
+
+test('stahování v artefaktu: odmítnuté uložení ukáže důvod s kódem; u oprávnění otevře panel a uloží znovu; bez schopnosti se nestahuje odkazem', skip, async () => {
+  const p = await nova({ stahovani: true });
+  // 1) oprávnění odepřené: dialog s kódem a stavem → Otevřít oprávnění → po zavření panelu se soubor uloží
+  await p.evaluate(() => Object.assign(window.__ai, { chybaUlozeni: 'not_granted', opravneni: 'denied', poManage: null }));
+  await p.click('#a-stahnout');
+  await p.waitForSelector('.dlg[open]');
+  const t1 = await p.locator('.dlg[open]').innerText();
+  assert.match(t1, /Soubor se neuložil/); assert.match(t1, /kód: not_granted, oprávnění: denied/); assert.match(t1, /Otevřít oprávnění/);
+  await p.click('.dlg[open] [data-vysledek=ok]');
+  await p.waitForFunction(() => window.__ai.ulozeno.some((u) => u.filename === 'AI_test.pplan.json'));
+  assert.equal((await p.ai()).manage, 1); assert.equal(await p.locator('.dlg[open]').count(), 0);
+  // 2) typ souboru v tomto zobrazení vypnutý: jen vysvětlení s kódem (bez panelu oprávnění) a žádná druhá hláška
+  await p.evaluate(() => Object.assign(window.__ai, { chybaUlozeni: 'extension_not_enabled', opravneni: 'granted' }));
+  await p.click('[data-akce=export-pdf]');
+  await p.waitForSelector('.dlg[open]', { timeout: 30000 });
+  assert.match(await p.locator('.dlg[open]').innerText(), /PDF, SVG[\s\S]*kód: extension_not_enabled/);
+  assert.equal(await p.locator('.dlg[open] [data-vysledek=zrusit]').count(), 0, 'jen „Rozumím“');
+  await p.click('.dlg[open] [data-vysledek=ok]'); await p.waitForSelector('.dlg', { state: 'detached' });
+  await p.waitForTimeout(300); assert.equal(await p.locator('.dlg[open]').count(), 0, 'žádný druhý dialog');
+  assert.equal((await p.ai()).pokusy.length, 2);
+  assert.deepEqual(p.chyby, []);
+  await p.context().close();
+  // 3) artefakt, kde schopnost downloads není: žádné tiché „stažení“ odkazem (sandbox by ho zahodil), ale vysvětlení s kódem
+  const q = await nova({ stahovani: false });
+  let stazeno = false; q.on('download', () => { stazeno = true; });
+  await q.click('#a-stahnout');
+  await q.waitForSelector('.dlg[open]');
+  assert.match(await q.locator('.dlg[open]').innerText(), /kód: unavailable/);
+  assert.equal(stazeno, false);
+  assert.deepEqual(q.chyby, []);
+  await q.context().close();
 });

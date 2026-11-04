@@ -148,6 +148,7 @@ function dashboard() {
   S.ed?.zrusit(); S.ed = null;
   topAkce.innerHTML = '';
   const rezim = aktualniRezim(), R = REZIMY[rezim]; nastavLogo(rezim);
+  document.body.dataset.pozadi = rezim;   // tematické pozadí jen na úvodní stránce (css/app.css)
   const vse = U.seznam(), sez = vse.filter((x) => rezimProjektu(x.typ) === rezim), jine = vse.length - sez.length, posl = U.posledni();
   const poslProj = sez.find((x) => x.id === posl) || sez[0];
   app.innerHTML = `<section class="dash dash--${rezim}">
@@ -363,6 +364,7 @@ const panelyListu = (list) => (list && VYKRES.includes(list.typ) ? ['vlastnosti'
 
 function editor() {
   zastavClaude(); S.ed?.zrusit(); S.ed = null;   // rozkreslené od Claude se při zastavení uloží do listu, kde začalo
+  delete document.body.dataset.pozadi;
   { const r = rezimProjektu(S.p.typ); nastavLogo(r); try { localStorage.setItem('pp-rezim', r); } catch { /* bez úložiště */ } }
   const p = S.p, list = S.listId === 'dotaznik' ? { id: 'dotaznik', typ: 'dotaznik', nazev: 'Dotazník pro klienta', virtualni: true } : p.listy.find((l) => l.id === S.listId);
   const dostupne = panelyListu(list); if (!dostupne.includes(S.panel)) S.panel = dostupne[0];
