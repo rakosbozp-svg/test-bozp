@@ -43,7 +43,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 
 ---
 
-### Úkol 1: Kódování zálohy (`js/zaloha/kodovani.js`)
+### Task 1: Kódování zálohy (`js/zaloha/kodovani.js`)
 
 **Soubory:**
 - Vytvořit: `js/zaloha/kodovani.js`
@@ -78,7 +78,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 - [ ] **Krok 5: Commit**
   `git commit -m "Záloha: kódování (otisk, gzip, base64, části, bezpečné segmenty)"`
 
-### Úkol 2: Vrstva nad úložištěm (`js/zaloha/uloziste.js`) a falešné úložiště pro testy
+### Task 2: Vrstva nad úložištěm (`js/zaloha/uloziste.js`) a falešné úložiště pro testy
 
 **Soubory:**
 - Vytvořit: `js/zaloha/uloziste.js`
@@ -130,7 +130,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 - [ ] **Krok 5: Commit**
   `git commit -m "Záloha: vrstva nad úložištěm artefaktu a falešné úložiště pro testy"`
 
-### Úkol 3: Automatická záloha – fronta, dohánění, stav, chyby, obnova (`js/zaloha/autozaloha.js`)
+### Task 3: Automatická záloha – fronta, dohánění, stav, chyby, obnova (`js/zaloha/autozaloha.js`)
 
 **Soubory:**
 - Vytvořit: `js/zaloha/autozaloha.js`
@@ -193,7 +193,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 - [ ] **Krok 5: Commit**
   `git commit -m "Záloha: fronta, bezpečný přepis verzí, dohánění, chyby a obnova"`
 
-### Úkol 4: Napojení na ukládání a karta „Automatická záloha“
+### Task 4: Napojení na ukládání a karta „Automatická záloha“
 
 **Soubory:**
 - Upravit: `js/ulozeni.js` (přidat `sleduj`, `zaznam`; volat posluchače po úspěšném `uloz` a v `smaz`)
@@ -242,7 +242,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 - [ ] **Krok 5: Commit**
   `git commit -m "Automatická záloha: napojení na ukládání a karta na úvodní stránce"`
 
-### Úkol 5: Obnova, dialog „Automatická záloha“ a připomínka
+### Task 5: Obnova, dialog „Automatická záloha“ a připomínka
 
 **Soubory:**
 - Upravit: `js/app.js` (upozornění `#d-obnova-zalohy`, dialog, `pripominkaZalohy`)
@@ -291,7 +291,7 @@ Všechny cesty níže jsou relativní k `pozarni-planovac/`.
 - [ ] **Krok 5: Commit**
   `git commit -m "Automatická záloha: obnova, dialog zálohy, připomínka ruční zálohy"`
 
-### Úkol 6: Sestavení, dokumentace, publikace a ověření
+### Task 6: Sestavení, dokumentace, publikace a ověření
 
 **Soubory:**
 - Upravit test: `test/autozaloha.e2e.test.mjs` (jedna HTML)
