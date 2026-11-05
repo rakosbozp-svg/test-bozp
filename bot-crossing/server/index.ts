@@ -4,6 +4,7 @@
  * middleware mode), all on one port.
  */
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 import express from 'express';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Request, Response, NextFunction } from 'express';
@@ -167,6 +168,20 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 // --- Start -----------------------------------------------------------------------
+const appUrl = `http://${config.host}:${config.port}`;
+
+/** Opens the dashboard in the default browser (only for `npm start` / the launchers). */
+function openBrowser() {
+  if (process.env.BC_OPEN_BROWSER !== '1') return;
+  const [cmd, args] =
+    process.platform === 'darwin' ? ['open', [appUrl]] : process.platform === 'win32' ? ['explorer', [appUrl]] : ['xdg-open', [appUrl]];
+  try {
+    spawn(cmd, args as string[], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
+  } catch {
+    /* no browser available: the URL is printed anyway */
+  }
+}
+
 async function main() {
   await service.refresh();
   setInterval(() => {
@@ -207,9 +222,20 @@ async function main() {
   });
   app.use(vite.middlewares);
 
-  server.on('error', (e: any) => {
-    if (e.code === 'EADDRINUSE') console.error(`Port ${config.port} je obsazený. Spusť s jiným: PORT=4546 npm run dev`);
-    else console.error(e);
+  server.on('error', async (e: any) => {
+    if (e.code === 'EADDRINUSE') {
+      // Already running (e.g. launcher double-clicked twice)? Then just open it.
+      const ours = await fetch(`${appUrl}/api/health`, { signal: AbortSignal.timeout(1000) })
+        .then((r) => r.ok && r.json())
+        .then((j) => Boolean(j && j.claudeDir))
+        .catch(() => false);
+      if (ours) {
+        console.log(`\n  Bot Crossing už běží → ${appUrl}\n`);
+        openBrowser();
+        process.exit(0);
+      }
+      console.error(`Port ${config.port} je obsazený jiným programem. Spusť s jiným: PORT=4546 npm start`);
+    } else console.error(e);
     process.exit(1);
   });
   server.listen(config.port, config.host, () => {
@@ -218,8 +244,9 @@ async function main() {
     console.log(`  Čtu (jen pro čtení): ${config.projectsDir}`);
     console.log(`  ${n} relací za posledních ${config.lookbackDays} dní`);
     for (const e of service.transcripts.lastErrors) console.log(`  ! ${e}`);
-    console.log(`  Hooky posílej na: http://${config.host}:${config.port}/hook  (viz hooks/bot-crossing-hooks.json)`);
+    console.log(`  Hooky: npm run hooks:status   ·   Ukončení: Ctrl+C`);
     console.log('');
+    openBrowser();
   });
 }
 

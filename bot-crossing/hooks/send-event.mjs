@@ -5,7 +5,8 @@
  * localhost and ALWAYS exits 0 with no output — so it can never block or change what Claude does.
  */
 const KEEP = ['session_id', 'hook_event_name', 'cwd', 'tool_name', 'tool_use_id', 'notification_type', 'is_interrupt', 'agent_id'];
-const port = Number(process.env.BOT_CROSSING_PORT) || 4545;
+// Port comes as the first argument (written by `npm run hooks:install`), else env, else 4545.
+const port = Number(process.argv[2]) || Number(process.env.BOT_CROSSING_PORT) || 4545;
 
 let raw = '';
 process.stdin.setEncoding('utf8');

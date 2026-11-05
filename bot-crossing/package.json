@@ -8,10 +8,14 @@
     "node": ">=20.19"
   },
   "scripts": {
+    "start": "tsx server/start.ts",
     "dev": "tsx server/index.ts",
+    "setup": "tsx server/setup.ts",
     "list": "tsx server/cli-list.ts",
     "demo": "tsx server/demo.ts",
-    "hooks:status": "tsx server/hooks-status.ts",
+    "hooks:install": "tsx server/hooks-cli.ts install",
+    "hooks:uninstall": "tsx server/hooks-cli.ts uninstall",
+    "hooks:status": "tsx server/hooks-cli.ts status",
     "test": "node --import tsx --test server/*.test.ts src/scene/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
