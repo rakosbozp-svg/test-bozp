@@ -5,7 +5,7 @@ import * as THREE from 'three';
 export type Pose = 'hammer' | 'wave' | 'scratch' | 'sit';
 
 /** Workers are drawn larger than "real" scale, cozy-game style, so they read at a glance. */
-const SCALE = 1.6;
+const SCALE = 2.2;
 
 // Shared geometry/materials: created once, reused by every worker.
 const G = {
@@ -20,8 +20,9 @@ const G = {
   spark: new THREE.OctahedronGeometry(0.02, 0),
 };
 const M = {
-  helmet: new THREE.MeshStandardMaterial({ color: '#fbf6ee', flatShading: true, roughness: 0.5 }),
-  visor: new THREE.MeshStandardMaterial({ color: '#2b3f5c', metalness: 0.6, roughness: 0.2 }),
+  // A faint self-glow keeps the white helmets readable at night, from the overview camera.
+  helmet: new THREE.MeshStandardMaterial({ color: '#fbf6ee', flatShading: true, roughness: 0.5, emissive: '#fff1d6', emissiveIntensity: 0.45 }),
+  visor: new THREE.MeshStandardMaterial({ color: '#2b3f5c', metalness: 0.6, roughness: 0.2, emissive: '#5fb4ff', emissiveIntensity: 0.35 }),
   dark: new THREE.MeshStandardMaterial({ color: '#5b4a40', flatShading: true }),
   wood: new THREE.MeshStandardMaterial({ color: '#9a6a43', flatShading: true }),
   metal: new THREE.MeshStandardMaterial({ color: '#8d96a0', metalness: 0.7, roughness: 0.3 }),

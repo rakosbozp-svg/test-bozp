@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import type { SessionSummary } from '../api.ts';
 import type { PlacedBuilding } from './layout.ts';
 import { hash, rng } from './random.ts';
-import { Worker, type Pose } from './Worker.tsx';
+import { Worker } from './Worker.tsx';
+import { crewFor } from './crew.ts';
 import { METAL, PANEL, POD, POD_TRIM, STATUS_COLOR, WINDOW_DARK, WINDOW_LIT } from './palette.ts';
 
 interface Props {
@@ -216,26 +217,6 @@ export function Building({ b, s, accent, selected, hovered, onSelect, onHover, n
 
     </group>
   );
-}
-
-const SIX_HOURS = 6 * 3600_000;
-/** Who stands around the building, and doing what. Angles are in the building's local frame. */
-function crewFor(s: SessionSummary): { pose: Pose; slots: number[] } {
-  if (s.live?.closed || s.status === 'shipped') return { pose: 'sit', slots: [] }; // everyone went home
-  switch (s.status) {
-    case 'working': {
-      const extra = Math.min(3, s.live?.subagents ?? 0); // one more worker per running subagent
-      return { pose: 'hammer', slots: [0.6, -0.75, 2.4, -2.3, 3.1].slice(0, 2 + extra) };
-    }
-    case 'needs_you':
-      return { pose: 'wave', slots: [0.5, -0.5] };
-    case 'blocked':
-      return { pose: 'scratch', slots: [0.7, -0.8] };
-    case 'idle': {
-      const quietFor = s.lastActivityAt ? Date.now() - Date.parse(s.lastActivityAt) : Infinity;
-      return { pose: 'sit', slots: quietFor < SIX_HOURS ? [0.5, -0.55] : [] };
-    }
-  }
 }
 
 /** Victory flag for shipped (archived) sessions. */

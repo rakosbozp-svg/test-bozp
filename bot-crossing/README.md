@@ -55,7 +55,7 @@ npm start
 - Každá relace je jedna budova. Relace stejného projektu tvoří shluk kolem cedule s názvem projektu; uprostřed mapy je základna.
 - **Ovládání:** levé tlačítko myši = otáčení, kolečko = přiblížení, pravé tlačítko = posun. Kliknutí na budovu (nebo na kartu vlevo) k ní plynule přiletí a otevře detail. Kliknutí do prázdna nebo **🗺 Celá kolonie** = zpět na přehled.
 - **Stav budovy:** maják na anténě má barvu stavu (zelená pracuje, žlutá potřebuje tě, červená zablokováno, šedá nečinné, modrá hotovo). Zablokovaná budova kouří, „potřebuje tě“ pulzuje se žlutým kruhem, hotová má vlajku. Okna svítí, když agent pracuje.
-- **Dělníci:** u pracující budovy bouchají kladivem 2 dělníci + 1 za každého běžícího subagenta. „Potřebuje tě“ = mávají, zablokováno = drbou se na hlavě, nečinné = sedí (po 6 h bez aktivity odejdou domů). U ukončené relace zhasnou světla a nikdo tam není.
+- **Dělníci:** u pracující budovy bouchají kladivem 2 dělníci + 1 za každého běžícího subagenta. „Potřebuje tě“ = mávají, zablokováno = drbou se na hlavě, nečinné = sedí dva (po 6 h bez aktivity nebo po zavření terminálu zůstane jeden). U ukončené relace zhasnou světla. Prázdná je jen archivovaná budova — má místo dělníků vlajku 🏁.
 - Budovy rostou s množstvím práce (od 40 a 200 volání nástrojů přibude modul).
 - Zelená tečka vedle názvu = živé spojení (WebSocket). Šedá = spojení vypadlo, data se obnovují každé 2 s.
 - Rozložení je stabilní: nová relace ani nový projekt existující budovy neposune.
