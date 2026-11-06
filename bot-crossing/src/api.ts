@@ -9,6 +9,9 @@ export interface LiveMeta {
   received: number;
   ignored: number;
   lastHookAt: string | null;
+  /** Folder Bot Crossing reads transcripts from (shown when the colony is empty). */
+  projectsDir?: string;
+  lookbackDays?: number;
 }
 
 async function getJson<T>(url: string): Promise<T> {

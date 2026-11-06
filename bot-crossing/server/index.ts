@@ -134,7 +134,13 @@ let pushTimer: NodeJS.Timeout | undefined;
 
 function meta() {
   const h = service.hooks;
-  return { received: h.received, ignored: h.ignored, lastHookAt: h.lastHookAt ? new Date(h.lastHookAt).toISOString() : null };
+  return {
+    received: h.received,
+    ignored: h.ignored,
+    lastHookAt: h.lastHookAt ? new Date(h.lastHookAt).toISOString() : null,
+    projectsDir: config.projectsDir,
+    lookbackDays: config.lookbackDays,
+  };
 }
 
 function snapshot() {

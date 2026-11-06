@@ -242,3 +242,6 @@ code, .mono { font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monos
   position: absolute; left: 50%; top: 18px; transform: translateX(-50%); max-width: 460px; text-align: center;
   background: rgba(255, 252, 245, 0.94); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; box-shadow: var(--shadow);
 }
+.stage-empty { width: min(460px, calc(100% - 32px)); }
+.stage-empty__more { display: block; margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+.stage-empty code { font-size: 12px; word-break: break-all; background: rgba(0, 0, 0, 0.05); padding: 1px 4px; border-radius: 4px; }

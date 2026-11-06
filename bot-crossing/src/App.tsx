@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { useSessionDetail, useSessions } from './api.ts';
+import { useSessionDetail, useSessions, type LiveMeta } from './api.ts';
 import { useNow } from './useNow.ts';
 import { TopBar, type View } from './components/TopBar.tsx';
 import { NeedsYouBanner } from './components/NeedsYouBanner.tsx';
@@ -134,7 +134,7 @@ export function App() {
             </SceneBoundary>
             {sessions !== null && list.length === 0 && (
               <div className="stage-empty">
-                Kolonie je zatím prázdná. Spusť Claude Code v nějakém projektu a za pár sekund tu vyroste první budova.
+                <EmptyColony meta={meta} />
               </div>
             )}
             <TimeControl hour={hour} manual={manualHour !== null} onChange={setManualHour} />
@@ -148,5 +148,24 @@ export function App() {
         </main>
       )}
     </div>
+  );
+}
+
+/** Explains an empty colony: where we looked, and the common reason (sessions running in the cloud, not here). */
+function EmptyColony({ meta }: { meta: LiveMeta | null }) {
+  return (
+    <>
+      <strong>Na tomhle počítači jsem nenašel žádnou relaci Claude Code</strong>
+      {meta?.lookbackDays ? ` za posledních ${meta.lookbackDays} dní` : ''}.
+      <span className="stage-empty__more">
+        Bot Crossing vidí jen Claude Code spuštěný <b>na tomto počítači</b> (příkaz <code>claude</code> v terminálu).
+        Relace z claude.ai/code na webu nebo v mobilu běží v cloudu a sem nedorazí.
+        {meta?.projectsDir && (
+          <>
+            {' '}Hledám v: <code>{meta.projectsDir}</code>
+          </>
+        )}
+      </span>
+    </>
   );
 }
