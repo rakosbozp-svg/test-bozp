@@ -106,7 +106,13 @@ export function App() {
         live={live}
         notify={{ on: attention.notify, supported: attention.supported, set: attention.setNotify }}
       />
-      {error && <div className="offline">Backend neodpovídá ({error}). Běží <code>npm run dev</code>?</div>}
+      {error && (
+        <div className="offline">
+          <strong>Bot Crossing neběží</strong> (okno terminálu se zavřelo nebo spadlo). Spusť ho znovu dvojklikem na{' '}
+          <code>Bot Crossing.command</code> (Mac) / <code>Bot Crossing.bat</code> (Windows). Stránka se pak sama obnoví.
+          Pokud okno terminálu ukazuje chybu, pošli mi ji.
+        </div>
+      )}
       <NeedsYouBanner sessions={list} onSelect={setSelectedId} />
       {view === 'list' ? (
         <main className="layout">
@@ -132,7 +138,7 @@ export function App() {
                 />
               </Suspense>
             </SceneBoundary>
-            {sessions !== null && list.length === 0 && (
+            {sessions !== null && list.length === 0 && !error && (
               <div className="stage-empty">
                 <EmptyColony meta={meta} />
               </div>
