@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
-import { renderListu, nadpisListu, NADPIS_LEGENDY, sirkaTextu } from '../js/kresleni/render.js';
+import { renderListu, nadpisListu, NADPIS_LEGENDY, sirkaTextu, popiskySite, jmenoSloupce } from '../js/kresleni/render.js';
 import * as P from '../js/kresleni/prvky.js';
 import { novyList } from '../js/model.js';
 
@@ -68,4 +68,29 @@ test('render: červený nadpis nad rámem (dlouhý se zmenší a zkrátí), nov�
   assert.equal(NADPIS_LEGENDY, 'Legenda pro dokumentaci zdolávání požárů');
   const e = novyList('evak_plan');
   assert.ok(!renderListu(e.vykres, { objektNazev: 'Hala', nazevListu: e.nazev, znacky: new Map(), symbolHref: () => '', prilohy: {} }).includes('data-nadpis'));
+});
+
+test('popisky sítě: písmena nad rámem, čísla vlevo, krajní poloviny bez popisku', () => {
+  const v = novyList('situace').vykres; v.meritko.pomer = 500; v.okno = { x: 0, y: 0 };
+  const p = popiskySite(v);
+  assert.deepEqual(p.sloupce.map((s) => s.text), [...'ABCDEFGHIJKLMN']);
+  assert.equal(p.sloupce[0].x, 20); assert.equal(p.radky.length, 8); assert.equal(p.radky[0].y, 25); assert.equal(p.radky[7].text, '8');
+  v.okno = { x: -5, y: -5 }; const q = popiskySite(v);
+  assert.equal(q.sloupce[0].text, 'A'); assert.equal(q.sloupce[0].x, 30); assert.equal(q.radky[0].y, 35);
+});
+
+test('popisky sítě: AA za Z, nic bez sítě, v evakuačním plánu ani při buňce pod 4 mm', () => {
+  assert.deepEqual([0, 25, 26, 27].map(jmenoSloupce), ['A', 'Z', 'AA', 'AB']);
+  const v = novyList('situace').vykres; v.meritko.pomer = 1000; v.okno = { x: 0, y: 0 };
+  assert.equal(popiskySite(v).sloupce.at(-1).text, 'AB');
+  v.meritko.pomer = 2500; assert.ok(popiskySite(v));
+  v.meritko.pomer = 5000; assert.equal(popiskySite(v), null);
+  v.meritko.pomer = 500; v.sit10m = false; assert.equal(popiskySite(v), null);
+  assert.equal(popiskySite(novyList('evak_plan').vykres), null);
+});
+
+test('render: síť je tečkovaná, popisky leží mimo rám, „10 m“ v rohu', () => {
+  const v = novyList('situace').vykres; v.meritko.pomer = 500;
+  const svg = renderListu(v, o());
+  assert.ok(svg.includes('stroke-dasharray="0.125,0.525"') && svg.includes('data-popis-site="1"') && svg.includes('>10 m</text>'));
 });

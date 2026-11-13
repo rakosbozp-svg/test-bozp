@@ -223,6 +223,30 @@ function razitko(v, o, L) {
     stitek(xd + P, yd + 3.2, 'ZPRACOVAL:') + T(x3 - P, yd + 3.2, `datum: ${datumCz(u.datum)}`, 2.4, 'text-anchor="end"') + radky(xd + P, yd + 6.6, zpr) + `</g>`;
 }
 
+// ---------- síť 10 m: popisky sloupců (A, B, … Z, AA …) nad rámem a řádků (1, 2, …) vlevo od rámu ----------
+export function jmenoSloupce(i) {
+  let t = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) t = String.fromCharCode(65 + ((n - 1) % 26)) + t;
+  return t;
+}
+// Polohy popisků na papíře (mm). Popisek dostane jen buňka, jejíž střed leží v rámu víc než 1 mm od okraje; null = bez popisků
+// (evakuační plán, vypnutá síť, buňka menší než 4 mm).
+export function popiskySite(v) {
+  if (v.evakPlan || !v.sit10m) return null;
+  const { ram } = rozlozeniListu(v), s = 1000 / v.meritko.pomer;
+  if (!(10 * s >= 4)) return null;
+  const ox = ram.x - v.okno.x * s, oy = ram.y - v.okno.y * s, r3 = (n) => Math.round(n * 1000) / 1000, sloupce = [], radky = [];
+  for (let x = Math.floor(v.okno.x / 10) * 10; ox + x * s < ram.x + ram.w; x += 10) { const c = ox + (x + 5) * s; if (c > ram.x + 1 && c < ram.x + ram.w - 1) sloupce.push({ x: r3(c), text: jmenoSloupce(sloupce.length) }); }
+  for (let y = Math.floor(v.okno.y / 10) * 10; oy + y * s < ram.y + ram.h; y += 10) { const c = oy + (y + 5) * s; if (c > ram.y + 1 && c < ram.y + ram.h - 1) radky.push({ y: r3(c), text: String(radky.length + 1) }); }
+  return { sloupce, radky };
+}
+function popiskySiteSvg(v, L) {
+  const p = popiskySite(v); if (!p) return '';
+  const T = (x, y, t, a) => `<text x="${f(x)}" y="${f(y)}" font-size="3" font-weight="700" font-family="Arial,sans-serif" text-anchor="${a}">${t}</text>`;
+  return `<g data-popis-site="1">${p.sloupce.map((c) => T(c.x, L.ram.y - 1.3, c.text, 'middle')).join('')}${p.radky.map((r) => T(L.ram.x - 1.2, r.y + 1.05, r.text, 'end')).join('')}` +
+    `<text x="${f(L.ram.x - 1.2)}" y="${f(L.ram.y - 1.3)}" font-size="2.2" font-family="Arial,sans-serif" text-anchor="end">10 m</text></g>`;
+}
+
 // Nadpis listu DZP nad rámem (vzory uživatele): druh dokumentace a název listu velkými písmeny.
 export function nadpisListu({ typDokumentu, nazevListu, typListu } = {}) {
   const list = (String(nazevListu ?? '').trim() || TYP_LISTU[typListu] || '').toLocaleUpperCase('cs');
@@ -250,7 +274,8 @@ export function renderListu(v, o) {
     const x0 = Math.floor(v.okno.x / 10) * 10, y0 = Math.floor(v.okno.y / 10) * 10, ln = [];
     for (let x = x0; x <= v.okno.x + sirkaSvete; x += 10) ln.push(`M${f(x)} ${f(v.okno.y)}V${f(v.okno.y + vyskaSvete)}`);
     for (let y = y0; y <= v.okno.y + vyskaSvete; y += 10) ln.push(`M${f(v.okno.x)} ${f(y)}H${f(v.okno.x + sirkaSvete)}`);
-    grid = `<path d="${ln.join('')}" stroke="#7a7a7a" stroke-opacity=".55" stroke-width="${f(k(0.12))}" fill="none" data-sit="1"/>`;
+    const styl = v.evakPlan ? `stroke="#7a7a7a" stroke-opacity=".55" stroke-width="${f(k(0.12))}"` : `stroke="#333" stroke-opacity=".8" stroke-width="${f(k(0.2))}" stroke-dasharray="${f(k(0.25))},${f(k(1.05))}"`;   // DZP: tečkovaná (vzory uživatele)
+    grid = `<path d="${ln.join('')}" ${styl} fill="none" data-sit="1"/>`;
   }
 
   let pozadi = '';
@@ -270,7 +295,7 @@ export function renderListu(v, o) {
     `<g clip-path="url(#ramClip)"><rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="#fff"/>` +
     `<g id="svet" transform="translate(${f(ox)} ${f(oy)}) scale(${f(s)})">${pozadi}${grid}${vrstvy}${bezVrstvy}</g>` +
     `${pravitko(L, s, k)}${maSeverku(v) ? severka(L, v.severka.uhel) : ''}${legenda(v, oo)}</g>` +
-    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${nadpisSvg(L, o)}${razitko(v, oo, L)}</svg>`;
+    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${nadpisSvg(L, o)}${popiskySiteSvg(v, L)}${razitko(v, oo, L)}</svg>`;
 }
 
 export { delkaLomene };
