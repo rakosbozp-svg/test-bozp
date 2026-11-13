@@ -1,5 +1,6 @@
 // Vykreslení listu výkresu do SVG (mm na papíře). Stejný kód pro editor i pro export (SVG/PNG/PDF).
-import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky, bboxVsech, viditelnePrvky, prekryvaObdelnik } from './prvky.js';
+import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky, bboxVsech, viditelnePrvky, prekryvaObdelnik, sirkaTextu, geometriePrijezdu } from './prvky.js';
+export { sirkaTextu };
 import { trasaEvakSvg, jsteZdeSvg, slozEvakSvg, MIN_STENA_MM, MIN_PRICKA_MM } from './evakplan.js';
 import { delkaLomene } from './geom.js';
 
@@ -71,6 +72,11 @@ function prvekSvg(p, ctx) {
       return z
         ? `<image ${id} href="${esc(z)}" x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" preserveAspectRatio="xMidYMid meet" transform="${r}"/>`
         : `<g ${id} transform="${r}"><rect x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" fill="#fff" stroke="#c00" stroke-width="${f(k(0.4))}" stroke-dasharray="${f(k(1))}"/><text x="${f(p.x)}" y="${f(p.y)}" font-size="${f(w * 0.6)}" text-anchor="middle" dominant-baseline="central" fill="#c00">?</text></g>`;
+    }
+    case 'prijezd': {   // šipka směru příjezdu: černý mnohoúhelník, bílý tučný text na dříku (čitelně, zdola nahoru)
+      const g = geometriePrijezdu(p, pomer); if (!g) return '';
+      const t = g.text;
+      return `<g ${id}><polygon points="${pts(g.obrys)}" fill="${barva(p.barva)}"/>${t ? `<text x="${f(t.cx)}" y="${f(t.cy + mmNaM(0.36 * t.vel, pomer))}" font-size="${f(mmNaM(t.vel, pomer))}" font-family="Arial,sans-serif" font-weight="700" fill="#fff" text-anchor="middle" transform="rotate(${f(t.uhel)} ${f(t.cx)} ${f(t.cy)})">${esc(String(p.text).trim())}</text>` : ''}</g>`;
     }
     case 'dvere': return dveře(p, prvky, s, k);
     default: return '';
@@ -157,22 +163,6 @@ export function udajeRazitka(v, { karta = null, objektNazev = '' } = {}) {
 }
 export { datumCz };
 
-// Přibližná šířka znaku písma Arial v em (diakritika jako základní písmeno) – zalomení textu v razítku platí stejně pro obrazovku i PDF.
-function em(c) {
-  const z = c.normalize('NFD')[0] || c;
-  if (z === ' ') return 0.28;
-  if ('iljI.,:;\'!|'.includes(z)) return 0.25;
-  if ('ft()[]/-'.includes(z)) return 0.31;
-  if (z === 'r') return 0.34;
-  if (z === 'm' || z === 'M') return 0.84;
-  if (z === 'w') return 0.73;
-  if (z === 'W') return 0.95;
-  if (z >= '0' && z <= '9') return 0.56;
-  if (z >= 'A' && z <= 'Z') return 0.7;
-  if (z >= 'a' && z <= 'z') return 0.54;
-  return 0.62;
-}
-export const sirkaTextu = (t, vel, tucne = false) => { let s = 0; for (const c of String(t)) s += em(c); return s * vel * (tucne ? 1.08 : 1); };
 function rozdel(text, sirka, vel, tucne) {
   const out = []; let cur = '';
   for (const slovo of text.split(' ')) {

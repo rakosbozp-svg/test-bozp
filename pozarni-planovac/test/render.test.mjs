@@ -99,3 +99,11 @@ test('tučný text se vykreslí tučně', () => {
   const v = novyList('situace').vykres; v.prvky.push(P.novyPrvek('text', { x: 1, y: 1, text: 'ul. Tyršova', tucne: true, vrstva: 'popisky' }));
   assert.match(renderListu(v, o()), /data-druh="text"[^>]*font-weight="700"/);
 });
+
+test('render příjezdu: černý mnohoúhelník a bílý tučný text; poškozená šipka se nevykreslí', () => {
+  const v = novyList('situace').vykres; v.meritko.pomer = 500;
+  v.prvky.push(P.novyPrvek('prijezd', { body: [[0, 20], [0, 0]], vrstva: 'komunikace' }), P.novyPrvek('prijezd', { body: [[0, 0]], vrstva: 'komunikace' }));
+  const svg = renderListu(v, o());
+  assert.match(svg, /data-druh="prijezd"><polygon points="[^"]+" fill="#000000"\/><text [^>]*font-weight="700" fill="#fff"[^>]*>směr příjezdu<\/text>/);
+  assert.equal((svg.match(/data-druh="prijezd"/g) || []).length, 1);
+});

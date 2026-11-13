@@ -127,3 +127,23 @@ test('výplně podle významu: hodnoty ze vzorů, zápis do prvku a rozpoznání
   assert.equal(P.vyznamVyplne({ ...p, vypln: '#123456' }), null); assert.equal(P.vyznamVyplne({ druh: 'text' }), null);
   assert.throws(() => P.pouzijVyznam(p, 'les'), /Neznámý význam výplně/);
 });
+
+test('příjezd: hrot 2× šířka, délka 1,35× šířka a nejvýš 45 % délky; obrys a zásah', () => {
+  const p = P.novyPrvek('prijezd', { body: [[0, 20], [0, 0]] });
+  assert.deepEqual([p.sirka, p.text, p.barva], [6, 'směr příjezdu', '#000000']);
+  const g = P.geometriePrijezdu(p, 500);
+  assert.equal(g.obrys.length, 7); close(g.obrys[3][0], 0); close(g.obrys[3][1], 0);
+  close(g.obrys[2][0] - g.obrys[4][0], 6); close(g.obrys[2][1], 4.05);
+  close(P.geometriePrijezdu(P.novyPrvek('prijezd', { body: [[0, 4], [0, 0]] }), 500).obrys[2][1], 1.8);
+  const b = P.bboxPrvku(p, 500); close(b.x0, -3); close(b.x1, 3); close(b.y0, 0); close(b.y1, 20);
+  assert.ok(P.zasah(p, [0, 10], 0.1, 500)); assert.ok(!P.zasah(p, [5, 10], 0.1, 500));
+});
+
+test('příjezd: text čitelně podél šipky, zmenší se, krátká šipka bez textu', () => {
+  const g = (body, text) => P.geometriePrijezdu(P.novyPrvek('prijezd', { body, ...(text ? { text } : {}) }), 500);
+  close(g([[0, 20], [0, 0]]).text.uhel, -90); close(g([[0, 0], [0, 20]]).text.uhel, -90);
+  close(g([[20, 0], [0, 0]]).text.uhel, 0); close(g([[0, 0], [20, 0]]).text.uhel, 0);
+  assert.equal(g([[0, 20], [0, 0]]).text.vel, 3.12);
+  const t = g([[0, 15], [0, 0]]).text; assert.ok(t.vel < 3.12 && t.vel >= 1.8);
+  assert.equal(g([[0, 4], [0, 0]], 'příjezd jednotek HZS ze severu').text, null);
+});

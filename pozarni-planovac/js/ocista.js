@@ -36,6 +36,7 @@ function prvek(p) {
   for (const [k, d] of Object.entries(CISLA_PRVKU)) cislo(p, k, d);
   cislo(p, 'kryti', 1, 0, 1); cislo(p, 'vyska', 3, 1, 500); cislo(p, 'velikost', 8, 1, 500);   // velikosti v mm na papíře 1–500
   ano(p, 'tucne', false);
+  if (p.druh === 'prijezd') cislo(p, 'sirka', 6, 2, 30);   // šipka příjezdu: šířka dříku v mm na papíře
   if ('body' in p) p.body = body(p.body);
   return p;
 }

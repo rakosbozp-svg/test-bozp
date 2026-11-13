@@ -143,3 +143,10 @@ test('očista: tucne jiné než boolean je false', () => {
   pr.listy.at(-1).vykres.prvky.push({ id: 'e_t1', druh: 'text', vrstva: 'popisky', x: 1, y: 1, text: 'A', vyska: 3, tucne: 'ano' });
   assert.equal(M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky[0].tucne, false);
 });
+
+test('očista: šipka příjezdu z cizího souboru – šířka do mezí, text na řetězec, neúplná nespadne', () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_p1', druh: 'prijezd', vrstva: 'komunikace', body: [[0, 0], [0, 9]], sirka: 999, text: 5 }, { id: 'e_p2', druh: 'prijezd', vrstva: 'komunikace', body: [[0, 0], [Number.NaN, 1]], sirka: 'x' });
+  const [a, b] = M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky;
+  assert.equal(a.sirka, 30); assert.equal(a.text, '5'); assert.equal(b.sirka, 6); assert.equal(b.body.length, 1);
+});
