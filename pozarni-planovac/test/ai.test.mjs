@@ -368,3 +368,42 @@ test('přizpůsobit vrátí obsah celý do nižšího rámu DZP', () => {
   const R = A.ramSvet(k.v);
   assert.ok(R.x0 <= 0 && R.y0 <= 0 && R.x1 >= 120 && R.y1 >= 95);
 });
+
+test('kresli DZP: vyznam nastaví výplň, krytí, obrys a tloušťku; výslovné hodnoty mají přednost; neznámý je chyba', () => {
+  const k = kontext('situace');
+  const r = A.provedNastroj('kresli', { prvky: [
+    { druh: 'plocha', body: [[0, 0], [5, 0], [5, 5]], vyznam: 'Řešený objekt' },
+    { druh: 'obdelnik', x: 0, y: 0, w: 2, h: 2, vyznam: 'zeleň', tloustka_mm: 0.5 },
+    { druh: 'plocha', body: [[0, 0], [5, 0], [5, 5]], vyznam: 'les' },
+  ] }, k);
+  const [a, b] = r.vysledek.id.map((id) => P.najdi(k.v.prvky, id));
+  assert.deepEqual([a.vypln, a.kryti, a.barva, a.tloustka], ['#c0c0c0', 1, '#000000', 0.7]);
+  assert.deepEqual([b.vypln, b.tloustka], ['#94f993', 0.5]);
+  assert.match(JSON.stringify(r.vysledek.chyby), /zelen, komunikace, objekt, okoli, voda/);
+});
+
+test('kresli DZP: šipka příjezdu se 2 body, výchozím textem a šířkou; jiný počet bodů je chyba; evakuační plán ji odmítne', () => {
+  const k = kontext('situace');
+  const r = A.provedNastroj('kresli', { prvky: [{ druh: 'prijezd', body: [[0, 30], [0, 5]] }, { druh: 'prijezd', body: [[0, 0], [1, 1], [2, 2]] }, { druh: 'prijezd', body: [[9, 9], [9, 1]], text: 'příjezd HZS', sirka_mm: 99 }] }, k);
+  const [p, chybna, q] = r.vysledek.id.map((id) => id && P.najdi(k.v.prvky, id));   // id drží pořadí zadání, chybný prvek má null
+  assert.equal(chybna, null);
+  assert.deepEqual([p.sirka, p.text, p.vrstva], [6, 'směr příjezdu', 'komunikace']);
+  assert.deepEqual([q.sirka, q.text], [30, 'příjezd HZS']);
+  assert.match(JSON.stringify(r.vysledek.chyby), /právě 2 body/);
+  const e = kontext('evak_plan');
+  assert.match(JSON.stringify(A.provedNastroj('kresli', { prvky: [{ druh: 'prijezd', body: [[0, 1], [0, 0]] }, { druh: 'obdelnik', x: 0, y: 0, w: 1, h: 1, vyznam: 'zelen' }, { druh: 'text', x: 1, y: 1, text: 'A' }] }, e).vysledek), /evakuační/);
+});
+
+test('uprav: tucne, text a šířka šipky, vyznam; popis prvků je vrací', () => {
+  const k = kontext('situace');
+  const r = A.provedNastroj('kresli', { prvky: [{ druh: 'text', x: 1, y: 1, text: 'ul. Tyršova' }, { druh: 'prijezd', body: [[0, 30], [0, 5]] }, { druh: 'obdelnik', x: 0, y: 0, w: 2, h: 2 }] }, k);
+  const [t, s, o2] = r.vysledek.id;
+  A.provedNastroj('uprav', { zmeny: [{ id: t, tucne: true }, { id: s, text: 'příjezd HZS', sirka_mm: 8 }, { id: o2, vyznam: 'okoli' }] }, k);
+  const popis = k.v.prvky.map((p) => A.popisPrvku(p, k));
+  assert.equal(popis[0].tucne, true); assert.deepEqual([popis[1].text, popis[1].sirka_mm], ['příjezd HZS', 8]); assert.equal(popis[2].vyznam, 'okoli');
+});
+
+test('pokyny: odstavec STYL DZP jen u DZP', () => {
+  assert.match(A.pokyny(kontext('situace')), /STYL DZP/); assert.match(A.pokyny(kontext('situace')), /prijezd/);
+  assert.doesNotMatch(A.pokyny(kontext('evak_plan')), /prijezd|STYL DZP/);
+});
