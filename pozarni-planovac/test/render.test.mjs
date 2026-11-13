@@ -107,3 +107,12 @@ test('render příjezdu: černý mnohoúhelník a bílý tučný text; poškozen
   assert.match(svg, /data-druh="prijezd"><polygon points="[^"]+" fill="#000000"\/><text [^>]*font-weight="700" fill="#fff"[^>]*>směr příjezdu<\/text>/);
   assert.equal((svg.match(/data-druh="prijezd"/g) || []).length, 1);
 });
+
+test('popisky sítě: při 1 : 2500 se písmena zmenší, aby se sousední nepřekrývala; při 1 : 500 zůstanou 3 mm', () => {
+  const v = novyList('situace').vykres; v.meritko.pomer = 2500; v.okno = { x: 0, y: 0 };
+  const p = popiskySite(v), w = (t) => sirkaTextu(t, p.velSloupcu, true);
+  assert.ok(p.velSloupcu < 3 && p.velSloupcu > 1.5, String(p.velSloupcu));
+  for (let i = 1; i < p.sloupce.length; i++) assert.ok(p.sloupce[i].x - p.sloupce[i - 1].x >= (w(p.sloupce[i].text) + w(p.sloupce[i - 1].text)) / 2, `${p.sloupce[i - 1].text}/${p.sloupce[i].text}`);
+  assert.ok(renderListu(v, o()).includes(`font-size="${p.velSloupcu}"`));
+  v.meritko.pomer = 500; assert.equal(popiskySite(v).velSloupcu, 3);
+});

@@ -38,7 +38,7 @@ Postup jsem ověřil na DS Kladno – O. Pešky 1440: situace 1:500, půdorysy 1
    - podzemní hydrant DZP-004;
    - vedlejší vchody DZP-108.
 5. **Popisky:** názvy ulic a objektu jako **Text** se zaškrtnutým **Tučně**.
-6. **Nastavení listu:** severka, měřítko a **Přizpůsobit**. Hotový podklad pak můžete skrýt nebo smazat.
+6. **Nastavení listu** (panel Vlastnosti, když není vybraný žádný prvek): severka, měřítko, **Navrhnout měřítko podle obsahu** a **Vycentrovat obsah v rámu**. Hotový podklad pak můžete skrýt nebo smazat.
 
 ## 4. Půdorysy
 

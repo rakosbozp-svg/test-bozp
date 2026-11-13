@@ -150,3 +150,12 @@ test('očista: šipka příjezdu z cizího souboru – šířka do mezí, text n
   const [a, b] = M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky;
   assert.equal(a.sirka, 30); assert.equal(a.text, '5'); assert.equal(b.sirka, 6); assert.equal(b.body.length, 1);
 });
+
+test('očista: šipka a lomený prvek bez pole bodů dostanou prázdné body – popis listu pro Clauda nespadne', async () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_b1', druh: 'prijezd', vrstva: 'komunikace' }, { id: 'e_b2', druh: 'cara', vrstva: 'zaklad' });
+  const l = M.nactiProjekt(JSON.stringify(pr)).listy.at(-1);
+  assert.deepEqual(l.vykres.prvky.map((p) => p.body), [[], []]);
+  const A = await import('../js/ai/nastroje.js');
+  assert.doesNotThrow(() => A.popisStavu({ v: l.vykres, katalog: new Map(), evak: false, nazevListu: 'S', typListu: 'situace' }));
+});

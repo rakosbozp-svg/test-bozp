@@ -120,7 +120,7 @@ Situace: zdroj vody (skupina I přílohy č. 1), nástupní plocha (žlutá ploc
 
 ### Vzhled grafické části DZP (podle vzorů uživatele)
 Okénka vzoru HZS SČK (razítko listu a operativní karta) zůstávají beze změny. Nový je vzhled listů situace, půdorys a schéma:
-- **Nadpis nad rámem:** červeně „GRAFICKÁ ČÁST OPERATIVNÍ KARTY – SITUACE –“. U operativního plánu „… OPERATIVNÍHO PLÁNU …“, u půdorysu název listu, např. „– PŮDORYS 1.NP –“. Nad rámem je kvůli němu pás 5 mm. Starší výkres, který sahal ke spodnímu okraji, srovná tlačítko „Přizpůsobit“.
+- **Nadpis nad rámem:** červeně „GRAFICKÁ ČÁST OPERATIVNÍ KARTY – SITUACE –“. U operativního plánu „… OPERATIVNÍHO PLÁNU …“, u půdorysu název listu, např. „– PŮDORYS 1.NP –“. Nad rámem je kvůli němu pás 5 mm. Starší výkres, který sahal ke spodnímu okraji, srovnají tlačítka „Navrhnout měřítko podle obsahu“ a „Vycentrovat obsah v rámu“ (panel Vlastnosti listu).
 - **Síť 10 m:** tečkovaná, nad rámem písmena A, B, C… (za Z pokračuje AA), vlevo čísla 1, 2, 3…, v rohu „10 m“. Hasič může hlásit polohu „čtverec F4“.
 - **Výplň podle významu:** v panelu Vlastnosti plochy, obdélníku nebo elipsy. Jedno kliknutí nastaví výplň, krytí, obrys a tloušťku: zeleň, komunikace a zpevněné plochy, řešený objekt (tmavší šedá, silný obrys), okolní zástavba, vodní plocha.
 - **Směr příjezdu:** nový nástroj. Klik = odkud, druhý klik = kam (hrot). Vznikne velká černá šipka s bílým textem (text a šířku jde změnit).

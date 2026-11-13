@@ -407,3 +407,10 @@ test('pokyny: odstavec STYL DZP jen u DZP', () => {
   assert.match(A.pokyny(kontext('situace')), /STYL DZP/); assert.match(A.pokyny(kontext('situace')), /prijezd/);
   assert.doesNotMatch(A.pokyny(kontext('evak_plan')), /prijezd|STYL DZP/);
 });
+
+test('pokyny situace jsou v souladu se stylem DZP: budovy a ulice jako plochy s vyznam, šipky a značky až za plochami', () => {
+  const t = A.pokyny(kontext('situace'));
+  assert.doesNotMatch(t, /objekty jako uzavřené stěny/);
+  assert.doesNotMatch(t, /nástupní plochy pro techniku jako plocha žlutá/);
+  assert.match(t, /SITUACE[^\n]*vyznam objekt/); assert.match(t, /SITUACE[^\n]*nakonec/);
+});

@@ -220,7 +220,7 @@ export function jmenoSloupce(i) {
   return t;
 }
 // Polohy popisků na papíře (mm). Popisek dostane jen buňka, jejíž střed leží v rámu víc než 1 mm od okraje; null = bez popisků
-// (evakuační plán, vypnutá síť, buňka menší než 4 mm).
+// (evakuační plán, vypnutá síť, buňka menší než 4 mm). Písmo (nejvýš 3 mm) se zmenší tak, aby se sousední popisky nepřekrývaly.
 export function popiskySite(v) {
   if (v.evakPlan || !v.sit10m) return null;
   const { ram } = rozlozeniListu(v), s = 1000 / v.meritko.pomer;
@@ -228,12 +228,14 @@ export function popiskySite(v) {
   const ox = ram.x - v.okno.x * s, oy = ram.y - v.okno.y * s, r3 = (n) => Math.round(n * 1000) / 1000, sloupce = [], radky = [];
   for (let x = Math.floor(v.okno.x / 10) * 10; ox + x * s < ram.x + ram.w; x += 10) { const c = ox + (x + 5) * s; if (c > ram.x + 1 && c < ram.x + ram.w - 1) sloupce.push({ x: r3(c), text: jmenoSloupce(sloupce.length) }); }
   for (let y = Math.floor(v.okno.y / 10) * 10; oy + y * s < ram.y + ram.h; y += 10) { const c = oy + (y + 5) * s; if (c > ram.y + 1 && c < ram.y + ram.h - 1) radky.push({ y: r3(c), text: String(radky.length + 1) }); }
-  return { sloupce, radky };
+  const bunka = 10 * s, nejsirsi = Math.max(1e-9, ...sloupce.map((c) => sirkaTextu(c.text, 1, true)));
+  const velSloupcu = Math.min(3, Math.floor(((0.9 * bunka) / nejsirsi) * 100) / 100), velRadku = Math.min(3, Math.floor(0.8 * bunka * 100) / 100);
+  return { sloupce, radky, velSloupcu, velRadku };
 }
 function popiskySiteSvg(v, L) {
   const p = popiskySite(v); if (!p) return '';
-  const T = (x, y, t, a) => `<text x="${f(x)}" y="${f(y)}" font-size="3" font-weight="700" font-family="Arial,sans-serif" text-anchor="${a}">${t}</text>`;
-  return `<g data-popis-site="1">${p.sloupce.map((c) => T(c.x, L.ram.y - 1.3, c.text, 'middle')).join('')}${p.radky.map((r) => T(L.ram.x - 1.2, r.y + 1.05, r.text, 'end')).join('')}` +
+  const T = (x, y, t, a, vel) => `<text x="${f(x)}" y="${f(y)}" font-size="${f(vel)}" font-weight="700" font-family="Arial,sans-serif" text-anchor="${a}">${t}</text>`;
+  return `<g data-popis-site="1">${p.sloupce.map((c) => T(c.x, L.ram.y - 1.3, c.text, 'middle', p.velSloupcu)).join('')}${p.radky.map((r) => T(L.ram.x - 1.2, r.y + 0.35 * p.velRadku, r.text, 'end', p.velRadku)).join('')}` +
     `<text x="${f(L.ram.x - 1.2)}" y="${f(L.ram.y - 1.3)}" font-size="2.2" font-family="Arial,sans-serif" text-anchor="end">10 m</text></g>`;
 }
 

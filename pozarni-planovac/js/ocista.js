@@ -37,7 +37,7 @@ function prvek(p) {
   cislo(p, 'kryti', 1, 0, 1); cislo(p, 'vyska', 3, 1, 500); cislo(p, 'velikost', 8, 1, 500);   // velikosti v mm na papíře 1–500
   ano(p, 'tucne', false);
   if (p.druh === 'prijezd') cislo(p, 'sirka', 6, 2, 30);   // šipka příjezdu: šířka dříku v mm na papíře
-  if ('body' in p) p.body = body(p.body);
+  if ('body' in p || ['stena', 'cara', 'trasa', 'plocha', 'volna', 'prijezd'].includes(p.druh)) p.body = body(p.body);   // lomené prvky a šipka vždy s polem bodů
   return p;
 }
 
