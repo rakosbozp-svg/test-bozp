@@ -183,7 +183,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   // ---------- vykreslení ----------
   const symbolHref = (id) => zn.get(id)?.png || '';
   const karta = () => projekt.listy.find((l) => l.karta)?.karta || null;
-  const mkO = (extra = {}) => ({ objektNazev: karta()?.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, typListu: list.typ, karta: karta(), znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
+  const mkO = (extra = {}) => ({ objektNazev: karta()?.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, typListu: list.typ, typDokumentu: projekt.typ, karta: karta(), znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
   // Celý list se vykresluje jen po změně modelu. Posun, přiblížení, náhled kreslení a přichytávání mění jen viewBox
   // a překryv (jenPrekryv); při tažení se překreslí jen tažené prvky a dveře – velké výkresy (tisíce prvků) se nezadrhávají.
   const SVG_NS = 'http://www.w3.org/2000/svg';

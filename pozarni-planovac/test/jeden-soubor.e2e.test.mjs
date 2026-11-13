@@ -51,7 +51,7 @@ test('jedna HTML bez serveru: projekt, kreslení, značky z vloženého katalogu
     // export SVG s vloženými obrázky značek
     const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
     const f = join(tmp, 'v.svg'); await dl.saveAs(f);
-    assert.match(require('node:fs').readFileSync(f, 'utf8'), /LEGENDA ZNAČEK/);
+    assert.match(require('node:fs').readFileSync(f, 'utf8'), /Legenda pro dokumentaci zdolávání požárů/);
     assert.deepEqual(chyby, []);
   } finally { await browser.close(); }
 });

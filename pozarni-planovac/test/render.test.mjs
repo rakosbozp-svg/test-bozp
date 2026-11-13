@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
-import { renderListu } from '../js/kresleni/render.js';
+import { renderListu, nadpisListu, NADPIS_LEGENDY, sirkaTextu } from '../js/kresleni/render.js';
 import * as P from '../js/kresleni/prvky.js';
 import { novyList } from '../js/model.js';
 
@@ -25,7 +25,7 @@ test('render: obsahuje prvky, délku trasy v metrech, razítko, legendu i varov�
   let svg = renderListu(v, o());
   assert.match(svg, /^<svg /); assert.ok(svg.includes('data-druh="stena"') && svg.includes('data-druh="dvere"'));
   assert.ok(svg.includes('20,0 m'), 'délka trasy 14 + 6 = 20 m');
-  assert.ok(svg.includes('LEGENDA ZNAČEK') && svg.includes('Nadzemní požární hydrant'));
+  assert.ok(svg.includes('Legenda pro dokumentaci zdolávání požárů') && svg.includes('Nadzemní požární hydrant'));
   assert.ok(svg.includes('1 : 100') && svg.includes('Ing. Test') && svg.includes('Hala PREFA 1'));
   assert.ok(!svg.includes('NEOVĚŘENO'));
   v.pozadi = { prilohaId: 'a', x: 0, y: 0, sirkaPx: 100, vyskaPx: 50, mNaPx: 0.1, kalibrace: null };
@@ -41,4 +41,31 @@ test('render: síť 10 × 10 m a osiřelý prvek se neztratí', () => {
   const v = ukazka(); v.prvky.push(P.novyPrvek('cara', { body: [[0, 0], [1, 1]], vrstva: 'neexistuje' }));
   assert.ok(renderListu(v, o()).includes('data-sit="1"') && renderListu(v, o()).includes('data-druh="cara"'));
   v.sit10m = false; assert.ok(!renderListu(v, o()).includes('data-sit="1"'));
+});
+
+test('rozvržení DZP: pás 5 mm nad rámem, evakuační plán beze změny', () => {
+  const v = novyList('situace').vykres;
+  assert.equal(P.HLAVICKA_MM, 5);
+  assert.deepEqual(P.rozlozeniListu(v).ram, { x: 10, y: 15, w: 277, h: 161 });
+  v.orientace = 'na_vysku'; assert.deepEqual(P.rozlozeniListu(v).ram, { x: 10, y: 15, w: 190, h: 248 });
+  assert.deepEqual(P.rozlozeniListu(novyList('evak_plan').vykres).ram, { x: 97, y: 51, w: 313, h: 236 });
+});
+
+test('nadpis listu podle druhu dokumentace a názvu listu', () => {
+  assert.equal(nadpisListu({ typDokumentu: 'operativni_karta', nazevListu: 'Situace', typListu: 'situace' }), 'GRAFICKÁ ČÁST OPERATIVNÍ KARTY – SITUACE –');
+  assert.equal(nadpisListu({ typDokumentu: 'operativni_plan', nazevListu: 'Půdorys 1.NP', typListu: 'pudorys' }), 'GRAFICKÁ ČÁST OPERATIVNÍHO PLÁNU – PŮDORYS 1.NP –');
+  assert.equal(nadpisListu({ nazevListu: '  ', typListu: 'schema' }), 'GRAFICKÁ ČÁST OPERATIVNÍ KARTY – SCHÉMA –');
+});
+
+test('render: červený nadpis nad rámem (dlouhý se zmenší a zkrátí), nový nadpis legendy, evakuační plán bez nadpisu', () => {
+  const nad = (svg) => /<text data-nadpis="1" x="148\.5" y="8\.8" font-size="([\d.]+)" font-weight="700" fill="#d00000"[^>]*>([^<]*)<\/text>/.exec(svg);
+  const m = nad(renderListu(ukazka(), o({ typDokumentu: 'operativni_karta' })));
+  assert.ok(m); assert.equal(m[1], '4.4'); assert.equal(m[2], 'GRAFICKÁ ČÁST OPERATIVNÍ KARTY – PŮDORYS 1.NP –');
+  const d = nad(renderListu(ukazka(), o({ nazevListu: 'X'.repeat(200) })));
+  assert.equal(d[1], '3'); assert.ok(d[2].endsWith('…')); assert.ok(sirkaTextu(d[2], 3, true) <= 277);
+  const svg = renderListu(ukazka(), o());
+  assert.ok(svg.includes(NADPIS_LEGENDY) && !svg.includes('LEGENDA ZNAČEK'));
+  assert.equal(NADPIS_LEGENDY, 'Legenda pro dokumentaci zdolávání požárů');
+  const e = novyList('evak_plan');
+  assert.ok(!renderListu(e.vykres, { objektNazev: 'Hala', nazevListu: e.nazev, znacky: new Map(), symbolHref: () => '', prilohy: {} }).includes('data-nadpis'));
 });

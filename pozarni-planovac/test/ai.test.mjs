@@ -90,7 +90,7 @@ test('kresli: celé volání bez prvků je chyba (Claude dostane zprávu), ostat
 test('kresli: obdélník zadaný levým horním rohem, elipsa, plocha; upozornění na prvky mimo rám', () => {
   const k = kontext();
   const R = A.ramSvet(k.v);
-  close(R.x1 - R.x0, 27.7); close(R.y1 - R.y0, 16.6);   // A4 na šířku 1 : 100 → rám 277 × 166 mm
+  close(R.x1 - R.x0, 27.7); close(R.y1 - R.y0, 16.1);   // A4 na šířku 1 : 100 → rám 277 × 161 mm (nad rámem pás 5 mm pro nadpis)
   const r = A.provedNastroj('kresli', { prvky: [
     { druh: 'obdelnik', x: 2, y: 3, w: 4, h: 2, vypln: 'zluta' },
     { druh: 'elipsa', cx: 10, cy: 10, rx: 1, ry: 2 },
@@ -336,7 +336,7 @@ test('barvy i s diakritikou, v jiném rodě a anglicky; minimum písma a značek
 
 test('zóny legendy a přehledového plánu v popisu listu; pojistka rámu nejdřív centruje a měřítko nezvětší', () => {
   const k = kontext();
-  assert.match(A.popisStavu(k), /nech volno pro legendu značek \(objeví se s první značkou\): x 19\.3 až 27\.5 m, y 12\.2 až 16\.4 m/);
+  assert.match(A.popisStavu(k), /nech volno pro legendu značek \(objeví se s první značkou\): x 19\.3 až 27\.5 m, y 11\.7 až 15\.9 m/);
   A.provedNastroj('kresli', { prvky: [{ druh: 'znacka', x: 5, y: 5, znacka: 'DZP-001' }] }, k);
   assert.match(A.popisStavu(k), /nech volno pro legendu značek: x/);
   // uživatel má 1 : 200; budova je mimo rám, ale po vycentrování se vejde – měřítko zůstane
@@ -359,4 +359,12 @@ test('mřížka se škáluje s formátem listu (čitelná i na A0)', () => {
   const vel = (svg) => Number(/font-size="([\d.]+)"/.exec(svg)[1]);
   assert.ok(Math.abs(vel(A.mrizkaSvg(v4)) - 2.6) < 0.2, `A4: ${vel(A.mrizkaSvg(v4))}`);
   assert.ok(vel(A.mrizkaSvg(v0)) > 7, `A0: ${vel(A.mrizkaSvg(v0))}`);
+});
+
+test('přizpůsobit vrátí obsah celý do nižšího rámu DZP', () => {
+  const k = kontext('situace');
+  A.provedNastroj('kresli', { prvky: [{ druh: 'plocha', body: [[0, 0], [120, 0], [120, 95], [0, 95]] }] }, k);
+  A.provedNastroj('nastav_list', { prizpusobit: true }, k);
+  const R = A.ramSvet(k.v);
+  assert.ok(R.x0 <= 0 && R.y0 <= 0 && R.x1 >= 120 && R.y1 >= 95);
 });

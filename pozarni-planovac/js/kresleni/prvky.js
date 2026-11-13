@@ -226,11 +226,13 @@ export const pouziteZnacky = (prvky) => [...new Set(prvky.filter((p) => p.druh =
 export function synchronizujLegendu(vykres) { vykres.legenda = pouziteZnacky(vykres.prvky); }
 
 // Rozložení listu A4 (mm): rám výkresu a razítko dole.
+// Pás nad rámem listu DZP pro nadpis „GRAFICKÁ ČÁST …“ a písmena sítě 10 m (mm).
+export const HLAVICKA_MM = 5;
 export function rozlozeniListu(vykres) {
   if (vykres.evakPlan) return rozlozeniEvak(vykres);   // list evakuačního plánu: A3 a větší, vlastní rozvržení (ČSN ISO 23601)
   const na = vykres.orientace === 'na_vysku';
   const W = na ? 210 : 297, H = na ? 297 : 210, M = 10, R = 24;
-  return { W, H, ram: { x: M, y: M, w: W - 2 * M, h: H - 2 * M - R }, razitko: { x: M, y: H - M - R, w: W - 2 * M, h: R } };
+  return { W, H, ram: { x: M, y: M + HLAVICKA_MM, w: W - 2 * M, h: H - 2 * M - R - HLAVICKA_MM }, razitko: { x: M, y: H - M - R, w: W - 2 * M, h: R } };
 }
 
 export function navrhniMeritko(vykres) {

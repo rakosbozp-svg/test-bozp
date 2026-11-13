@@ -43,7 +43,7 @@ test('export PDF: stránky, vložené písmo, česká diakritika, vektorový vý
   assert.match(info, /Pages:\s+3/); assert.match(info, /Title:\s+DZP Litice/); assert.match(info, /Page size:\s+595\.\d+ x 841\.\d+ pts \(A4\)/); assert.match(info, /Author:\s+Ing\. Tomáš Dufka/);
   const fonty = spawnSync('pdffonts', [f]).stdout.toString(); assert.match(fonty, /Roboto/);
   const txt = spawnSync('pdftotext', ['-layout', f, '-']).stdout.toString();
-  for (const s of ['Výrobní hala PREFA 1 – FVE', 'Litice nad Orlicí', 'HZS Pardubického kraje', 'Ing. Dušan Jičínský', 'Po–Pá 6:00–14:30', 'ŽPSV', 'Strojní dílny', 'příliš žluťoučký kůň', 'ěščřžýáíéúůťďň', 'LEGENDA ZNAČEK', 'MĚŘÍTKO', 'Nadzemní požární hydrant']) assert.ok(txt.includes(s), `v PDF chybí: ${s}`);
+  for (const s of ['Výrobní hala PREFA 1 – FVE', 'Litice nad Orlicí', 'HZS Pardubického kraje', 'Ing. Dušan Jičínský', 'Po–Pá 6:00–14:30', 'ŽPSV', 'Strojní dílny', 'příliš žluťoučký kůň', 'ěščřžýáíéúůťďň', 'Legenda pro dokumentaci zdolávání požárů', 'MĚŘÍTKO', 'Nadzemní požární hydrant']) assert.ok(txt.includes(s), `v PDF chybí: ${s}`);
   assert.ok(/20,0|25,0|55,0/.test(txt) || txt.includes(' m'), 'délka trasy ve výkresu');
   assert.doesNotMatch(txt, /�/);
   const img = join(tmp, 'str'); spawnSync('pdftoppm', ['-r', '60', '-png', f, img]);

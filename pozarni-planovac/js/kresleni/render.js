@@ -97,6 +97,7 @@ function severka(L, uhel) {
 }
 
 // ---------- legenda ----------
+export const NADPIS_LEGENDY = 'Legenda pro dokumentaci zdolávání požárů';
 export const POLOHY_LEGENDY = { 'vpravo-dole': 'Vpravo dole', 'vlevo-dole': 'Vlevo dole', 'vpravo-nahore': 'Vpravo nahoře', 'vlevo-nahore': 'Vlevo nahoře' };
 const RADEK_LEG = 7.5, SLOUPEC_LEG = 78, HLAVA_LEG = 11, OKRAJ_LEG = 2;
 const maSeverku = (v) => v.severka?.uhel !== null && v.severka?.uhel !== undefined;
@@ -138,7 +139,7 @@ function legenda(v, o) {
     const ls = zalom(it.text);
     return `${ikona}<text x="${f(cx + 7.5)}" y="${f(cy + 2.4)}" font-size="2.1" font-family="Arial,sans-serif">${ls.map((l, j) => `<tspan x="${f(cx + 7.5)}" dy="${j ? 2.4 : 0}">${esc(l)}</tspan>`).join('')}</text>`;
   });
-  return `<g data-legenda="1" transform="translate(${f(r.x)} ${f(r.y)})${r.k < 1 ? ` scale(${f(r.k)})` : ''}"><rect x="0" y="0" width="${f(r.w / r.k)}" height="${f(r.h / r.k)}" fill="#fff" stroke="#000" stroke-width="0.3"/><text x="2" y="5" font-size="2.8" font-weight="700" font-family="Arial,sans-serif">LEGENDA ZNAČEK</text>${radky.join('')}</g>`;
+  return `<g data-legenda="1" transform="translate(${f(r.x)} ${f(r.y)})${r.k < 1 ? ` scale(${f(r.k)})` : ''}"><rect x="0" y="0" width="${f(r.w / r.k)}" height="${f(r.h / r.k)}" fill="#fff" stroke="#000" stroke-width="0.3"/><text x="2" y="5" font-size="2.6" font-weight="700" font-family="Arial,sans-serif" fill="#d00000">${NADPIS_LEGENDY}</text><line x1="2" y1="6.1" x2="${f(2 + sirkaTextu(NADPIS_LEGENDY, 2.6, true))}" y2="6.1" stroke="#d00000" stroke-width="0.25"/>${radky.join('')}</g>`;
 }
 
 // ---------- razítko (vzor HZS SČK: podklady/VZOR_operativni_karta_list_A4.docx, poslední tabulka) ----------
@@ -222,7 +223,20 @@ function razitko(v, o, L) {
     stitek(xd + P, yd + 3.2, 'ZPRACOVAL:') + T(x3 - P, yd + 3.2, `datum: ${datumCz(u.datum)}`, 2.4, 'text-anchor="end"') + radky(xd + P, yd + 6.6, zpr) + `</g>`;
 }
 
-// o: { objektNazev, nazevListu, typListu (situace|pudorys|schema), karta (první operativní karta projektu nebo null),
+// Nadpis listu DZP nad rámem (vzory uživatele): druh dokumentace a název listu velkými písmeny.
+export function nadpisListu({ typDokumentu, nazevListu, typListu } = {}) {
+  const list = (String(nazevListu ?? '').trim() || TYP_LISTU[typListu] || '').toLocaleUpperCase('cs');
+  return `GRAFICKÁ ČÁST ${typDokumentu === 'operativni_plan' ? 'OPERATIVNÍHO PLÁNU' : 'OPERATIVNÍ KARTY'} – ${list} –`;
+}
+function nadpisSvg(L, o) {
+  let t = nadpisListu(o);
+  const vel = Math.min(4.4, Math.max(3, L.ram.w / sirkaTextu(t, 1, true)));
+  if (sirkaTextu(t, 3, true) > L.ram.w) t = vypustka(t, L.ram.w, 3, true);
+  return `<text data-nadpis="1" x="${f(L.W / 2)}" y="${f(L.ram.y - 6.2)}" font-size="${f(vel)}" font-weight="700" fill="#d00000" text-anchor="middle" font-family="Arial,sans-serif">${esc(t)}</text>`;
+}
+
+// o: { objektNazev, nazevListu, typListu (situace|pudorys|schema), typDokumentu (operativni_karta|operativni_plan),
+//      karta (první operativní karta projektu nebo null),
 //      znacky: Map(id -> {nazev, png}), symbolHref(id), prilohy, rezim }
 export function renderListu(v, o) {
   const L = rozlozeniListu(v), pomer = v.meritko.pomer, s = 1000 / pomer, k = (mm) => mm / s;
@@ -256,7 +270,7 @@ export function renderListu(v, o) {
     `<g clip-path="url(#ramClip)"><rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="#fff"/>` +
     `<g id="svet" transform="translate(${f(ox)} ${f(oy)}) scale(${f(s)})">${pozadi}${grid}${vrstvy}${bezVrstvy}</g>` +
     `${pravitko(L, s, k)}${maSeverku(v) ? severka(L, v.severka.uhel) : ''}${legenda(v, oo)}</g>` +
-    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${razitko(v, oo, L)}</svg>`;
+    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${nadpisSvg(L, o)}${razitko(v, oo, L)}</svg>`;
 }
 
 export { delkaLomene };

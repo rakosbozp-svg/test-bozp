@@ -194,7 +194,7 @@ test('značky z katalogu, velikost 1–500 s desetinami, legenda a trvanlivost p
   await text.fill('0'); await text.dispatchEvent('change'); assert.equal(await p.locator('#panel-obsah [data-vel-text]').inputValue(), '1');
   await text.fill('3,3'); await text.dispatchEvent('change');
   assert.ok(await p.locator('#svet').innerHTML().then((h) => h.includes('LEGENDA') === false) || true);
-  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('LEGENDA ZNAČEK'), 'legenda ve výkresu');
+  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('Legenda pro dokumentaci zdolávání požárů'), 'legenda ve výkresu');
   // po znovuotevření zůstane
   await p.waitForFunction(() => document.querySelector('#stav')?.textContent.startsWith('Uloženo'));
   await p.reload(); await p.waitForSelector('#svet');
@@ -208,7 +208,7 @@ test('export SVG a PNG obsahuje legendu, délky tras a značky', skip, async () 
   await p.nastroj('znacka'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt'); await p.klik(10, 8);
   const [d1] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
   const f = join(tmp, 'v.svg'); await d1.saveAs(f); const svg = readFileSync(f, 'utf8');
-  assert.ok(svg.includes('LEGENDA ZNAČEK') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
+  assert.ok(svg.includes('Legenda pro dokumentaci zdolávání požárů') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
   assert.ok(svg.includes('1 : 100') && !svg.includes('NaN'));
   const [d2] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-png]')]);
   const g = join(tmp, 'v.png'); await d2.saveAs(g); const png = readFileSync(g);
