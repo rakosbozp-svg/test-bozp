@@ -737,3 +737,25 @@ test('karta: GPS vložené z map se rozdělí, vzdálenost hydrantu se spočte',
   assert.match(await p.locator('#sek-voda [data-vzdalenost]').textContent(), /cca 140 m/, 'uloženo a po načtení se spočte znovu');
   assert.deepEqual(chyby, []); await ctx.close();
 });
+
+test('styl DZP: nástroj Směr příjezdu (2 kliknutí), výplň podle významu a tučný text; v evakuačním plánu nástroj není', skip, async () => {
+  const p = await nova();
+  await p.nastroj('prijezd'); await p.klik(5, 14); await p.klik(5, 3);   // uvnitř rámu půdorysu 1 : 100 (27,7 × 16,1 m)
+  assert.equal(await p.pocet('prijezd'), 1, 'dokončeno druhým kliknutím bez Enter');
+  assert.match(await p.locator('#svet [data-druh=prijezd] text').textContent(), /směr příjezdu/);
+  await p.nastroj('obdelnik'); await p.tahni([10, 5], [16, 9]);
+  await p.panel('vlastnosti'); await p.click('[data-vyznam=objekt]'); await p.klid();
+  assert.match(await p.locator('#svet [data-druh=obdelnik]').evaluate((e) => e.outerHTML), /fill="#c0c0c0"/);
+  assert.equal(await p.locator('[data-vyznam=objekt].akt').count(), 1);
+  await p.nastroj('text'); await p.klik(2, 2); await p.dlg('ul. Tyršova');
+  await p.getByLabel('Tučně').check(); await p.klid();
+  assert.match(await p.locator('#svet [data-druh=text]').evaluate((e) => e.outerHTML), /font-weight="700"/);
+  assert.deepEqual(p.chyby, []);
+  // evakuační plán: nástroj Směr příjezdu se nenabízí
+  await p.click('#logo'); await p.waitForSelector('#rezim');
+  await p.click('#rezim [data-rezim=evakuace]'); await p.waitForSelector('.dash--evakuace');
+  await p.fill('#d-novy [name=nazev]', 'Evakuace – styl DZP'); await p.click('#d-novy button'); await p.waitForSelector('.editor');
+  await p.selectOption('#l-typ', 'evak_plan'); await p.click('#l-pridej'); await p.dlg('1.NP'); await p.waitForSelector('.ed-scena');
+  assert.equal(await p.locator('[data-nastroj=prijezd]').count(), 0);
+  assert.equal(await p.locator('[data-nastroj=stena]').count(), 1);
+});

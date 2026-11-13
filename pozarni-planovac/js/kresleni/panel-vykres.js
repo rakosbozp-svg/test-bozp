@@ -7,7 +7,7 @@ import { ikona } from '../ikony.js';
 import { FORMATY, KATEGORIE } from './evakplan.js';
 import { normalizujVelikost, VELIKOST_MIN, VELIKOST_MAX, VELIKOST_KROK } from '../model.js';
 
-const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Úniková cesta', plocha: 'Nástupní plocha a komunikace pro techniku', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
+const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Úniková cesta', plocha: 'Nástupní plocha a komunikace pro techniku', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', prijezd: 'Směr příjezdu', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
 const f1 = (n) => zCisla(Math.round(n * 100) / 100);
 
 export function vykresliPanelVykresu(druh, host, ed) {
@@ -19,6 +19,8 @@ export function vykresliPanelVykresu(druh, host, ed) {
   const pole = (label, hodnota, fn, { cislo = false, tip = '', napoveda = '' } = {}) => `<label class="f"><span>${label}</span><input type="text" ${cislo ? 'inputmode="decimal"' : ''} data-h="${reg(fn)}" data-cislo="${cislo ? 1 : 0}" value="${esc(hodnota)}" ${tip ? `title="${esc(tip)}"` : ''} ${napoveda ? `placeholder="${esc(napoveda)}"` : ''}></label>`;
   const vyberHtml = (label, hodnoty, akt, fn) => `<label class="f"><span>${label}</span><select data-h="${reg(fn)}">${hodnoty.map(([k, n]) => `<option value="${esc(k)}" ${k === akt ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
   const zaskrt = (label, hodnota, fn) => `<label class="chk"><input type="checkbox" data-h="${reg(fn)}" ${hodnota ? 'checked' : ''}> ${label}</label>`;
+  // Výplň podle významu (vzory DZP): jedno kliknutí zapíše výplň, krytí, obrys a tloušťku obrysu.
+  const vyznamy = (p) => `<div class="f"><span>Výplň podle významu</span><div class="vyznamy">${Object.entries(P.VYPLNE).map(([kl, d]) => `<button type="button" class="vyznam ${P.vyznamVyplne(p) === kl ? 'akt' : ''}" data-vyznam="${kl}" data-h="${reg(zmen(() => { P.pouzijVyznam(p, kl); }))}" data-klik="1"><i style="background:${d.vypln};border-color:${d.barva}"></i>${esc(d.nazev)}</button>`).join('')}</div></div>`;
   const tlacitko = (label, fn, cls = '') => `<button type="button" class="btn mal ${cls}" data-h="${reg(fn)}" data-klik="1">${label}</button>`;
   const barvy = (label, aktualni, fn, povolNic = false) => `<div class="f"><span>${label}</span><div class="barvy-vyber">${Object.values(BARVY_E()).map(([c, n]) => `<button type="button" class="barva ${aktualni === c ? 'akt' : ''}" style="background:${c}" title="${esc(n)}" data-h="${reg(() => fn(c))}" data-klik="1"></button>`).join('')}${povolNic ? `<button type="button" class="barva zadna ${!aktualni ? 'akt' : ''}" title="Bez výplně" data-h="${reg(() => fn(null))}" data-klik="1">∅</button>` : ''}<input type="color" value="${/^#[0-9a-f]{6}$/i.test(aktualni || '') ? aktualni : '#000000'}" data-h="${reg(fn)}" aria-label="${label} – vlastní"></div></div>`;
   const velikost = (label, hodnota, fn, nahled) => {
@@ -83,10 +85,11 @@ export function vykresliPanelVykresu(druh, host, ed) {
     if (p.druh === 'cara' || p.druh === 'volna' || p.druh === 'trasa') typ = `${num('Tloušťka čáry (mm na papíře)', 'tloustka')}`;
     if (p.druh === 'cara') typ += vyberHtml('Styl', [['plna', 'Plná'], ['carkovana', 'Čárkovaná'], ['carkocara', 'Čerchovaná']], p.styl, c((t) => { p.styl = t; }));
     if (p.druh === 'trasa') typ += zaskrt('Šipka na konci', p.sipka, c((x) => { p.sipka = x; })) + `<p>Délka trasy: <b>${P.formatDelky(P.delkaTrasy(p))}</b>${P.meritkoOvereno(v) ? '' : ' <span class="varuj">(měřítko podkladu neověřeno)</span>'}</p>`;
-    if (p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa') typ = `${num('Tloušťka obrysu (mm na papíře)', 'tloustka')}${barvy('Výplň', p.vypln, c((x) => { p.vypln = x; }), true)}${num('Krytí výplně (0–1)', 'kryti')}`;
+    if (p.druh === 'plocha' || p.druh === 'obdelnik' || p.druh === 'elipsa') typ = `${v.evakPlan ? '' : vyznamy(p)}${num('Tloušťka obrysu (mm na papíře)', 'tloustka')}${barvy('Výplň', p.vypln, c((x) => { p.vypln = x; }), true)}${num('Krytí výplně (0–1)', 'kryti')}`;
+    if (p.druh === 'prijezd') typ = `${pole('Text na šipce', p.text ?? '', c((t) => { p.text = t; }))}${pole('Šířka šipky (mm na papíře)', f1(p.sirka ?? 6), c((t) => { const n = naCislo(t); if (n > 0) p.sirka = Math.min(30, Math.max(2, n)); }), { cislo: true })}`;
     if (p.druh === 'obdelnik') typ += num('Střed X (m)', 'cx') + num('Střed Y (m)', 'cy') + num('Šířka (m)', 'w') + num('Výška (m)', 'h') + num('Otočení (°)', 'uhel');
     if (p.druh === 'elipsa') typ += num('Střed X (m)', 'cx') + num('Střed Y (m)', 'cy') + num('Poloosa X (m)', 'rx') + num('Poloosa Y (m)', 'ry') + num('Otočení (°)', 'uhel');
-    if (p.druh === 'text') typ = `<label class="f"><span>Text</span><textarea rows="3" data-h="${reg(c((t) => { p.text = t; }))}">${esc(p.text)}</textarea></label>${velikost('Výška písma', p.vyska, (n) => { p.vyska = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}`;
+    if (p.druh === 'text') typ = `<label class="f"><span>Text</span><textarea rows="3" data-h="${reg(c((t) => { p.text = t; }))}">${esc(p.text)}</textarea></label>${velikost('Výška písma', p.vyska, (n) => { p.vyska = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}${zaskrt('Tučně', p.tucne === true, c((x) => { p.tucne = x; }))}`;
     if (p.druh === 'znacka') typ = `<p><img class="zn-nahled" src="${esc(ed.katalog.get(p.znackaId)?.png || '')}" alt=""> ${esc(ed.katalog.get(p.znackaId)?.nazev || p.znackaId || 'bez značky')}</p>${tlacitko('Změnit značku…', () => ed.zmenaZnacky(p))}${velikost('Velikost značky', p.velikost, (n) => { p.velikost = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}`;
     if (p.druh === 'dvere') {
       const st = p.stenaId ? P.najdi(v.prvky, p.stenaId) : null;

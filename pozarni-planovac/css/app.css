@@ -148,6 +148,10 @@ input[type=color] { width: 36px; height: 32px; padding: 2px; border: 1px solid v
 .barvy-vyber { display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
 .barva { width: 24px; height: 24px; border: 2px solid var(--bg-100); outline: 1px solid var(--line-strong); border-radius: var(--radius-pill); cursor: pointer; padding: 0; }
 .barva.akt { outline: 2px solid var(--focus); }
+.vyznamy { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.vyznam { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-size: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--bg-100); color: var(--ink); cursor: pointer; }
+.vyznam i { width: 14px; height: 14px; border: 1.5px solid; border-radius: 3px; flex: none; }
+.vyznam.akt { outline: 2px solid var(--focus); }
 .barva.zadna { background: var(--bg-100); color: var(--ink); font-size: 12px; }
 .vrstvy { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-1); }
 .vrstvy li { display: flex; gap: 2px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 4px; background: var(--bg-100); }
