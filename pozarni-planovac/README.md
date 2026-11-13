@@ -118,6 +118,16 @@ Kalkulačka podle kap. 3–5 a tabulek č. 1, 2, 4 metodiky (protokol v náhledu
 ### Kontrola grafické části DZP
 Situace: zdroj vody (skupina I přílohy č. 1), nástupní plocha (žlutá plocha nebo značka), uzávěry, vypínače a ovládací centra, místo soustředění evakuovaných, místo vyhlášení poplachu / řízení evakuace (Hanuška 2.3.2 b–e, g). Půdorys: únikové/zásahové cesty a vchody, hranice požárních úseků (DZP-062), rozvodny a hlavní uzávěry, zdroje vody a suchovody (2.3.3 a, c, g, i). Karta bez půdorysu (návod HZS SČK). Soulad s kartou: vnější hydrant (nadzemní/podzemní), vodní zdroje, hlavní uzávěr plynu/vody, hlavní vypínač, TOTAL/CENTRAL STOP, FVE, EPS a nebezpečí uvedené v kartě musí mít značku ve výkresech. Legenda: upozornění, je-li vypnutá nebo zakrývá výkres. Vše jen jako upozornění – aplikace nečte text ani obsah podkladu (obrázek, DXF).
 
+### Vzhled grafické části DZP (podle vzorů uživatele)
+Okénka vzoru HZS SČK (razítko listu a operativní karta) zůstávají beze změny. Nový je vzhled listů situace, půdorys a schéma:
+- **Nadpis nad rámem:** červeně „GRAFICKÁ ČÁST OPERATIVNÍ KARTY – SITUACE –“. U operativního plánu „… OPERATIVNÍHO PLÁNU …“, u půdorysu název listu, např. „– PŮDORYS 1.NP –“. Nad rámem je kvůli němu pás 5 mm. Starší výkres, který sahal ke spodnímu okraji, srovná tlačítko „Přizpůsobit“.
+- **Síť 10 m:** tečkovaná, nad rámem písmena A, B, C… (za Z pokračuje AA), vlevo čísla 1, 2, 3…, v rohu „10 m“. Hasič může hlásit polohu „čtverec F4“.
+- **Výplň podle významu:** v panelu Vlastnosti plochy, obdélníku nebo elipsy. Jedno kliknutí nastaví výplň, krytí, obrys a tloušťku: zeleň, komunikace a zpevněné plochy, řešený objekt (tmavší šedá, silný obrys), okolní zástavba, vodní plocha.
+- **Směr příjezdu:** nový nástroj. Klik = odkud, druhý klik = kam (hrot). Vznikne velká černá šipka s bílým textem (text a šířku jde změnit).
+- **Tučný text:** zaškrtávátko „Tučně“ u textu, např. pro názvy ulic a objektu.
+- **Legenda:** nadpis „Legenda pro dokumentaci zdolávání požárů“.
+- **Claude v editoru** umí totéž: `vyznam` u ploch, `tucne` u textu, druh `prijezd`. Pokyny „Styl DZP“ mu říkají, jak situaci kreslit.
+
 ## Kreslení s Claude (panel „Claude“ v editoru výkresu)
 V editoru situace, půdorysu, schématu i listu evakuačního plánu je v pravém panelu záložka **Claude**. Popíšete, co nakreslit nebo upravit, a můžete přiložit fotku, skicu nebo plánek (JPG, PNG). Claude kreslí **skutečné, upravitelné prvky** výkresu: stěny, dveře připojené ke stěnám, únikové cesty, čáry, plochy, obdélníky, elipsy, popisky a značky z katalogu projektu (v evakuačním plánu jen z knihovny evakuačních značek, navíc bod „Jste zde“). Potom proběhne **kontrolní kolo**: Claude dostane obrázek listu s pomocnou souřadnicovou mřížkou (na výkresu se netiskne), zkontroluje výsledek proti zadání a opraví, co nesedí.
 - **Kde funguje:** jen v artefaktu na claude.ai (prohlížeč nebo aplikace Claude). Stránka volá Claude schopností artefaktu `sample` s nástroji stránky a obrázky – na účtu toho, kdo artefakt otevřel (čerpá jeho limit Claude; poprvé se zeptá na povolení). Artefakt musí být zveřejněný s `capabilities: { sample: { images: true } }`. V jednosouborové verzi z disku a na webu panel jen vysvětlí, že Claude tam není k dispozici; zbytek aplikace funguje beze změny.

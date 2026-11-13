@@ -30,6 +30,7 @@ export function ukazkovyProjekt() {
   const v = p.listy[1].vykres; v.razitko.zpracoval = 'Ing. Tomáš Dufka'; v.severka.uhel = 15;
   const stena = P.novyPrvek('stena', { body: [[10, 10], [60, 10], [60, 40], [10, 40], [10, 10]] }), dv = P.novyPrvek('dvere'), tr = P.novyPrvek('trasa', { body: [[15, 15], [55, 15], [55, 35]], vrstva: 'trasy' });
   v.prvky.push(stena, dv, tr, P.novyPrvek('text', { x: 20, y: 25, text: 'Strojní dílny\nČerpadlo – příliš žluťoučký kůň', vyska: 3, vrstva: 'popisky' }), P.novyPrvek('znacka', { x: 30, y: 30, znackaId: 'DZP-001', velikost: 8, vrstva: 'znacky' }), P.novyPrvek('plocha', { body: [[70, 5], [90, 5], [90, 45], [70, 45]], vrstva: 'komunikace' }));
+  v.prvky.push(P.novyPrvek('prijezd', { body: [[40, 60], [80, 60]], vrstva: 'komunikace' }), P.novyPrvek('text', { x: 20, y: 50, text: 'ČÁST ÚŘADU', vyska: 3, tucne: true, vrstva: 'popisky' }));
   P.pripojDvere(dv, v.prvky, [30, 10]); P.synchronizujLegendu(v);
   M.pridejList(p, 'text', 'Poznámky').text = 'První odstavec s češtinou: ěščřžýáíéúůťďň.\nDruhý řádek.';
   return p;
@@ -43,7 +44,7 @@ test('export PDF: stránky, vložené písmo, česká diakritika, vektorový vý
   assert.match(info, /Pages:\s+3/); assert.match(info, /Title:\s+DZP Litice/); assert.match(info, /Page size:\s+595\.\d+ x 841\.\d+ pts \(A4\)/); assert.match(info, /Author:\s+Ing\. Tomáš Dufka/);
   const fonty = spawnSync('pdffonts', [f]).stdout.toString(); assert.match(fonty, /Roboto/);
   const txt = spawnSync('pdftotext', ['-layout', f, '-']).stdout.toString();
-  for (const s of ['Výrobní hala PREFA 1 – FVE', 'Litice nad Orlicí', 'HZS Pardubického kraje', 'Ing. Dušan Jičínský', 'Po–Pá 6:00–14:30', 'ŽPSV', 'Strojní dílny', 'příliš žluťoučký kůň', 'ěščřžýáíéúůťďň', 'Legenda pro dokumentaci zdolávání požárů', 'MĚŘÍTKO', 'Nadzemní požární hydrant']) assert.ok(txt.includes(s), `v PDF chybí: ${s}`);
+  for (const s of ['Výrobní hala PREFA 1 – FVE', 'Litice nad Orlicí', 'HZS Pardubického kraje', 'Ing. Dušan Jičínský', 'Po–Pá 6:00–14:30', 'ŽPSV', 'Strojní dílny', 'příliš žluťoučký kůň', 'ěščřžýáíéúůťďň', 'Legenda pro dokumentaci zdolávání požárů', 'GRAFICKÁ ČÁST OPERATIVNÍ KARTY', 'směr příjezdu', 'ČÁST ÚŘADU', 'MĚŘÍTKO', 'Nadzemní požární hydrant']) assert.ok(txt.includes(s), `v PDF chybí: ${s}`);
   assert.ok(/20,0|25,0|55,0/.test(txt) || txt.includes(' m'), 'délka trasy ve výkresu');
   assert.doesNotMatch(txt, /�/);
   const img = join(tmp, 'str'); spawnSync('pdftoppm', ['-r', '60', '-png', f, img]);
