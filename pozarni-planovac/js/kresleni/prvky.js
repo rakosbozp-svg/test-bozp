@@ -9,6 +9,27 @@ export const TYPY_DVERI = ['jednokridle', 'dvoukridle', 'vrata'];
 export const MERITKA = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 1500, 2000, 2500, 5000, 10000];
 
 // Barvy podle metodiky Hanuška 1996, kap. 2.3.1
+// Výplně podle významu (barvy převzaté ze vzorů uživatele): předvolba jen zapíše výplň, krytí, obrys a tloušťku obrysu do prvku.
+export const VYPLNE = {
+  zelen: { nazev: 'Zeleň', vypln: '#94f993', kryti: 1, barva: '#555555', tloustka: 0.18 },
+  komunikace: { nazev: 'Komunikace a zpevněné plochy', vypln: '#f6f884', kryti: 1, barva: '#555555', tloustka: 0.18 },
+  objekt: { nazev: 'Řešený objekt', vypln: '#c0c0c0', kryti: 1, barva: '#000000', tloustka: 0.7 },
+  okoli: { nazev: 'Okolní zástavba', vypln: '#e3e3e3', kryti: 1, barva: '#555555', tloustka: 0.25 },
+  voda: { nazev: 'Vodní plocha', vypln: '#a6d8ff', kryti: 1, barva: '#1e5fd0', tloustka: 0.18 },
+};
+const S_VYPLNI = ['plocha', 'obdelnik', 'elipsa'];
+export function vyznamVyplne(p) {
+  if (!S_VYPLNI.includes(p?.druh) || typeof p.vypln !== 'string') return null;
+  const c = p.vypln.toLowerCase();
+  return Object.keys(VYPLNE).find((k) => VYPLNE[k].vypln === c) ?? null;
+}
+export function pouzijVyznam(p, klic) {
+  const d = Object.hasOwn(VYPLNE, klic) ? VYPLNE[klic] : null;
+  if (!d) throw new Error(`Neznámý význam výplně: ${klic}`);
+  Object.assign(p, { vypln: d.vypln, kryti: d.kryti, barva: d.barva, tloustka: d.tloustka });
+  return p;
+}
+
 export const BARVY = {
   modra: ['#1e5fd0', 'modrá – hašení (vodní zdroje, sklady nářadí)'],
   cervena: ['#d62b1f', 'červená – komplikace a nebezpečí'],

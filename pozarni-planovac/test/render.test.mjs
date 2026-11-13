@@ -94,3 +94,8 @@ test('render: síť je tečkovaná, popisky leží mimo rám, „10 m“ v rohu'
   const svg = renderListu(v, o());
   assert.ok(svg.includes('stroke-dasharray="0.125,0.525"') && svg.includes('data-popis-site="1"') && svg.includes('>10 m</text>'));
 });
+
+test('tučný text se vykreslí tučně', () => {
+  const v = novyList('situace').vykres; v.prvky.push(P.novyPrvek('text', { x: 1, y: 1, text: 'ul. Tyršova', tucne: true, vrstva: 'popisky' }));
+  assert.match(renderListu(v, o()), /data-druh="text"[^>]*font-weight="700"/);
+});

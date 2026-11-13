@@ -117,3 +117,13 @@ test('historie: undo/redo a nová větev maže redo', () => {
   v.prvky.push(P.novyPrvek('cara', { body: [[0, 0], [1, 1]] })); v.meritko.pomer = 200;
   P.obnovZeSnimku(v, snap); assert.equal(v.prvky.length, 0); assert.equal(v.meritko.pomer, 1000);
 });
+
+test('výplně podle významu: hodnoty ze vzorů, zápis do prvku a rozpoznání', () => {
+  assert.deepEqual(Object.keys(P.VYPLNE), ['zelen', 'komunikace', 'objekt', 'okoli', 'voda']);
+  assert.deepEqual(P.VYPLNE.objekt, { nazev: 'Řešený objekt', vypln: '#c0c0c0', kryti: 1, barva: '#000000', tloustka: 0.7 });
+  const p = P.pouzijVyznam(P.novyPrvek('plocha', { body: [[0, 0], [1, 0], [1, 1]] }), 'okoli');
+  assert.deepEqual([p.vypln, p.kryti, p.barva, p.tloustka], ['#e3e3e3', 1, '#555555', 0.25]);
+  assert.equal(P.vyznamVyplne(p), 'okoli'); assert.equal(P.vyznamVyplne({ ...p, vypln: '#E3E3E3' }), 'okoli');
+  assert.equal(P.vyznamVyplne({ ...p, vypln: '#123456' }), null); assert.equal(P.vyznamVyplne({ druh: 'text' }), null);
+  assert.throws(() => P.pouzijVyznam(p, 'les'), /Neznámý význam výplně/);
+});

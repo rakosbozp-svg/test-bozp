@@ -137,3 +137,9 @@ test('záloha všech projektů: rozpozná se, vadný projekt se přeskočí, ost
   assert.equal(M.nactiZalohu(M.serializuj(a)), null, 'jeden projekt není záloha');
   assert.throws(() => M.nactiZalohu(JSON.stringify({ format: M.FORMAT_ZALOHY })), /seznam projektů/);
 });
+
+test('očista: tucne jiné než boolean je false', () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_t1', druh: 'text', vrstva: 'popisky', x: 1, y: 1, text: 'A', vyska: 3, tucne: 'ano' });
+  assert.equal(M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky[0].tucne, false);
+});

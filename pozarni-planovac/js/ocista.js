@@ -35,6 +35,7 @@ function prvek(p) {
   if ('vypln' in p && p.vypln !== null && !(typeof p.vypln === 'string' && BARVA.test(p.vypln))) p.vypln = null;
   for (const [k, d] of Object.entries(CISLA_PRVKU)) cislo(p, k, d);
   cislo(p, 'kryti', 1, 0, 1); cislo(p, 'vyska', 3, 1, 500); cislo(p, 'velikost', 8, 1, 500);   // velikosti v mm na papíře 1–500
+  ano(p, 'tucne', false);
   if ('body' in p) p.body = body(p.body);
   return p;
 }

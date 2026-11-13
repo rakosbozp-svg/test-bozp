@@ -63,7 +63,7 @@ function prvekSvg(p, ctx) {
     }
     case 'text': {
       const h = mmNaM(cislo(p.vyska, 3), pomer), lines = String(p.text ?? '').split('\n');
-      return `<text ${id} x="${f(p.x)}" y="${f(p.y)}" font-size="${f(h)}" font-family="Arial,sans-serif" fill="${barva(p.barva)}" transform="rotate(${uhel} ${f(p.x)} ${f(p.y)})">${lines.map((l, i) => `<tspan x="${f(p.x)}" dy="${i ? f(h * 1.2) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
+      return `<text ${id} x="${f(p.x)}" y="${f(p.y)}" font-size="${f(h)}" font-family="Arial,sans-serif"${p.tucne === true ? ' font-weight="700"' : ''} fill="${barva(p.barva)}" transform="rotate(${uhel} ${f(p.x)} ${f(p.y)})">${lines.map((l, i) => `<tspan x="${f(p.x)}" dy="${i ? f(h * 1.2) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
     }
     case 'znacka': {
       const w = mmNaM(cislo(p.velikost, 8), pomer), z = znacka(p.znackaId);
