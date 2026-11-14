@@ -1,5 +1,6 @@
 // Vykreslení listu výkresu do SVG (mm na papíře). Stejný kód pro editor i pro export (SVG/PNG/PDF).
-import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky, bboxVsech, viditelnePrvky, prekryvaObdelnik } from './prvky.js';
+import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvereno, pouziteZnacky, bboxVsech, viditelnePrvky, prekryvaObdelnik, sirkaTextu, geometriePrijezdu } from './prvky.js';
+export { sirkaTextu };
 import { trasaEvakSvg, jsteZdeSvg, slozEvakSvg, MIN_STENA_MM, MIN_PRICKA_MM } from './evakplan.js';
 import { delkaLomene } from './geom.js';
 
@@ -63,7 +64,7 @@ function prvekSvg(p, ctx) {
     }
     case 'text': {
       const h = mmNaM(cislo(p.vyska, 3), pomer), lines = String(p.text ?? '').split('\n');
-      return `<text ${id} x="${f(p.x)}" y="${f(p.y)}" font-size="${f(h)}" font-family="Arial,sans-serif" fill="${barva(p.barva)}" transform="rotate(${uhel} ${f(p.x)} ${f(p.y)})">${lines.map((l, i) => `<tspan x="${f(p.x)}" dy="${i ? f(h * 1.2) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
+      return `<text ${id} x="${f(p.x)}" y="${f(p.y)}" font-size="${f(h)}" font-family="Arial,sans-serif"${p.tucne === true ? ' font-weight="700"' : ''} fill="${barva(p.barva)}" transform="rotate(${uhel} ${f(p.x)} ${f(p.y)})">${lines.map((l, i) => `<tspan x="${f(p.x)}" dy="${i ? f(h * 1.2) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
     }
     case 'znacka': {
       const w = mmNaM(cislo(p.velikost, 8), pomer), z = znacka(p.znackaId);
@@ -71,6 +72,11 @@ function prvekSvg(p, ctx) {
       return z
         ? `<image ${id} href="${esc(z)}" x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" preserveAspectRatio="xMidYMid meet" transform="${r}"/>`
         : `<g ${id} transform="${r}"><rect x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" fill="#fff" stroke="#c00" stroke-width="${f(k(0.4))}" stroke-dasharray="${f(k(1))}"/><text x="${f(p.x)}" y="${f(p.y)}" font-size="${f(w * 0.6)}" text-anchor="middle" dominant-baseline="central" fill="#c00">?</text></g>`;
+    }
+    case 'prijezd': {   // šipka směru příjezdu: černý mnohoúhelník, bílý tučný text na dříku (čitelně, zdola nahoru)
+      const g = geometriePrijezdu(p, pomer); if (!g) return '';
+      const t = g.text;
+      return `<g ${id}><polygon points="${pts(g.obrys)}" fill="${barva(p.barva)}"/>${t ? `<text x="${f(t.cx)}" y="${f(t.cy + mmNaM(0.36 * t.vel, pomer))}" font-size="${f(mmNaM(t.vel, pomer))}" font-family="Arial,sans-serif" font-weight="700" fill="#fff" text-anchor="middle" transform="rotate(${f(t.uhel)} ${f(t.cx)} ${f(t.cy)})">${esc(String(p.text).trim())}</text>` : ''}</g>`;
     }
     case 'dvere': return dveře(p, prvky, s, k);
     default: return '';
@@ -97,6 +103,7 @@ function severka(L, uhel) {
 }
 
 // ---------- legenda ----------
+export const NADPIS_LEGENDY = 'Legenda pro dokumentaci zdolávání požárů';
 export const POLOHY_LEGENDY = { 'vpravo-dole': 'Vpravo dole', 'vlevo-dole': 'Vlevo dole', 'vpravo-nahore': 'Vpravo nahoře', 'vlevo-nahore': 'Vlevo nahoře' };
 const RADEK_LEG = 7.5, SLOUPEC_LEG = 78, HLAVA_LEG = 11, OKRAJ_LEG = 2;
 const maSeverku = (v) => v.severka?.uhel !== null && v.severka?.uhel !== undefined;
@@ -138,7 +145,7 @@ function legenda(v, o) {
     const ls = zalom(it.text);
     return `${ikona}<text x="${f(cx + 7.5)}" y="${f(cy + 2.4)}" font-size="2.1" font-family="Arial,sans-serif">${ls.map((l, j) => `<tspan x="${f(cx + 7.5)}" dy="${j ? 2.4 : 0}">${esc(l)}</tspan>`).join('')}</text>`;
   });
-  return `<g data-legenda="1" transform="translate(${f(r.x)} ${f(r.y)})${r.k < 1 ? ` scale(${f(r.k)})` : ''}"><rect x="0" y="0" width="${f(r.w / r.k)}" height="${f(r.h / r.k)}" fill="#fff" stroke="#000" stroke-width="0.3"/><text x="2" y="5" font-size="2.8" font-weight="700" font-family="Arial,sans-serif">LEGENDA ZNAČEK</text>${radky.join('')}</g>`;
+  return `<g data-legenda="1" transform="translate(${f(r.x)} ${f(r.y)})${r.k < 1 ? ` scale(${f(r.k)})` : ''}"><rect x="0" y="0" width="${f(r.w / r.k)}" height="${f(r.h / r.k)}" fill="#fff" stroke="#000" stroke-width="0.3"/><text x="2" y="5" font-size="2.6" font-weight="700" font-family="Arial,sans-serif" fill="#d00000">${NADPIS_LEGENDY}</text><line x1="2" y1="6.1" x2="${f(2 + sirkaTextu(NADPIS_LEGENDY, 2.6, true))}" y2="6.1" stroke="#d00000" stroke-width="0.25"/>${radky.join('')}</g>`;
 }
 
 // ---------- razítko (vzor HZS SČK: podklady/VZOR_operativni_karta_list_A4.docx, poslední tabulka) ----------
@@ -156,22 +163,6 @@ export function udajeRazitka(v, { karta = null, objektNazev = '' } = {}) {
 }
 export { datumCz };
 
-// Přibližná šířka znaku písma Arial v em (diakritika jako základní písmeno) – zalomení textu v razítku platí stejně pro obrazovku i PDF.
-function em(c) {
-  const z = c.normalize('NFD')[0] || c;
-  if (z === ' ') return 0.28;
-  if ('iljI.,:;\'!|'.includes(z)) return 0.25;
-  if ('ft()[]/-'.includes(z)) return 0.31;
-  if (z === 'r') return 0.34;
-  if (z === 'm' || z === 'M') return 0.84;
-  if (z === 'w') return 0.73;
-  if (z === 'W') return 0.95;
-  if (z >= '0' && z <= '9') return 0.56;
-  if (z >= 'A' && z <= 'Z') return 0.7;
-  if (z >= 'a' && z <= 'z') return 0.54;
-  return 0.62;
-}
-export const sirkaTextu = (t, vel, tucne = false) => { let s = 0; for (const c of String(t)) s += em(c); return s * vel * (tucne ? 1.08 : 1); };
 function rozdel(text, sirka, vel, tucne) {
   const out = []; let cur = '';
   for (const slovo of text.split(' ')) {
@@ -222,7 +213,46 @@ function razitko(v, o, L) {
     stitek(xd + P, yd + 3.2, 'ZPRACOVAL:') + T(x3 - P, yd + 3.2, `datum: ${datumCz(u.datum)}`, 2.4, 'text-anchor="end"') + radky(xd + P, yd + 6.6, zpr) + `</g>`;
 }
 
-// o: { objektNazev, nazevListu, typListu (situace|pudorys|schema), karta (první operativní karta projektu nebo null),
+// ---------- síť 10 m: popisky sloupců (A, B, … Z, AA …) nad rámem a řádků (1, 2, …) vlevo od rámu ----------
+export function jmenoSloupce(i) {
+  let t = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) t = String.fromCharCode(65 + ((n - 1) % 26)) + t;
+  return t;
+}
+// Polohy popisků na papíře (mm). Popisek dostane jen buňka, jejíž střed leží v rámu víc než 1 mm od okraje; null = bez popisků
+// (evakuační plán, vypnutá síť, buňka menší než 4 mm). Písmo (nejvýš 3 mm) se zmenší tak, aby se sousední popisky nepřekrývaly.
+export function popiskySite(v) {
+  if (v.evakPlan || !v.sit10m) return null;
+  const { ram } = rozlozeniListu(v), s = 1000 / v.meritko.pomer;
+  if (!(10 * s >= 4)) return null;
+  const ox = ram.x - v.okno.x * s, oy = ram.y - v.okno.y * s, r3 = (n) => Math.round(n * 1000) / 1000, sloupce = [], radky = [];
+  for (let x = Math.floor(v.okno.x / 10) * 10; ox + x * s < ram.x + ram.w; x += 10) { const c = ox + (x + 5) * s; if (c > ram.x + 1 && c < ram.x + ram.w - 1) sloupce.push({ x: r3(c), text: jmenoSloupce(sloupce.length) }); }
+  for (let y = Math.floor(v.okno.y / 10) * 10; oy + y * s < ram.y + ram.h; y += 10) { const c = oy + (y + 5) * s; if (c > ram.y + 1 && c < ram.y + ram.h - 1) radky.push({ y: r3(c), text: String(radky.length + 1) }); }
+  const bunka = 10 * s, nejsirsi = Math.max(1e-9, ...sloupce.map((c) => sirkaTextu(c.text, 1, true)));
+  const velSloupcu = Math.min(3, Math.floor(((0.9 * bunka) / nejsirsi) * 100) / 100), velRadku = Math.min(3, Math.floor(0.8 * bunka * 100) / 100);
+  return { sloupce, radky, velSloupcu, velRadku };
+}
+function popiskySiteSvg(v, L) {
+  const p = popiskySite(v); if (!p) return '';
+  const T = (x, y, t, a, vel) => `<text x="${f(x)}" y="${f(y)}" font-size="${f(vel)}" font-weight="700" font-family="Arial,sans-serif" text-anchor="${a}">${t}</text>`;
+  return `<g data-popis-site="1">${p.sloupce.map((c) => T(c.x, L.ram.y - 1.3, c.text, 'middle', p.velSloupcu)).join('')}${p.radky.map((r) => T(L.ram.x - 1.2, r.y + 0.35 * p.velRadku, r.text, 'end', p.velRadku)).join('')}` +
+    `<text x="${f(L.ram.x - 1.2)}" y="${f(L.ram.y - 1.3)}" font-size="2.2" font-family="Arial,sans-serif" text-anchor="end">10 m</text></g>`;
+}
+
+// Nadpis listu DZP nad rámem (vzory uživatele): druh dokumentace a název listu velkými písmeny.
+export function nadpisListu({ typDokumentu, nazevListu, typListu } = {}) {
+  const list = (String(nazevListu ?? '').trim() || TYP_LISTU[typListu] || '').toLocaleUpperCase('cs');
+  return `GRAFICKÁ ČÁST ${typDokumentu === 'operativni_plan' ? 'OPERATIVNÍHO PLÁNU' : 'OPERATIVNÍ KARTY'} – ${list} –`;
+}
+function nadpisSvg(L, o) {
+  let t = nadpisListu(o);
+  const vel = Math.min(4.4, Math.max(3, L.ram.w / sirkaTextu(t, 1, true)));
+  if (sirkaTextu(t, 3, true) > L.ram.w) t = vypustka(t, L.ram.w, 3, true);
+  return `<text data-nadpis="1" x="${f(L.W / 2)}" y="${f(L.ram.y - 6.2)}" font-size="${f(vel)}" font-weight="700" fill="#d00000" text-anchor="middle" font-family="Arial,sans-serif">${esc(t)}</text>`;
+}
+
+// o: { objektNazev, nazevListu, typListu (situace|pudorys|schema), typDokumentu (operativni_karta|operativni_plan),
+//      karta (první operativní karta projektu nebo null),
 //      znacky: Map(id -> {nazev, png}), symbolHref(id), prilohy, rezim }
 export function renderListu(v, o) {
   const L = rozlozeniListu(v), pomer = v.meritko.pomer, s = 1000 / pomer, k = (mm) => mm / s;
@@ -236,7 +266,8 @@ export function renderListu(v, o) {
     const x0 = Math.floor(v.okno.x / 10) * 10, y0 = Math.floor(v.okno.y / 10) * 10, ln = [];
     for (let x = x0; x <= v.okno.x + sirkaSvete; x += 10) ln.push(`M${f(x)} ${f(v.okno.y)}V${f(v.okno.y + vyskaSvete)}`);
     for (let y = y0; y <= v.okno.y + vyskaSvete; y += 10) ln.push(`M${f(v.okno.x)} ${f(y)}H${f(v.okno.x + sirkaSvete)}`);
-    grid = `<path d="${ln.join('')}" stroke="#7a7a7a" stroke-opacity=".55" stroke-width="${f(k(0.12))}" fill="none" data-sit="1"/>`;
+    const styl = v.evakPlan ? `stroke="#7a7a7a" stroke-opacity=".55" stroke-width="${f(k(0.12))}"` : `stroke="#333" stroke-opacity=".8" stroke-width="${f(k(0.2))}" stroke-dasharray="${f(k(0.25))},${f(k(1.05))}"`;   // DZP: tečkovaná (vzory uživatele)
+    grid = `<path d="${ln.join('')}" ${styl} fill="none" data-sit="1"/>`;
   }
 
   let pozadi = '';
@@ -256,7 +287,7 @@ export function renderListu(v, o) {
     `<g clip-path="url(#ramClip)"><rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="#fff"/>` +
     `<g id="svet" transform="translate(${f(ox)} ${f(oy)}) scale(${f(s)})">${pozadi}${grid}${vrstvy}${bezVrstvy}</g>` +
     `${pravitko(L, s, k)}${maSeverku(v) ? severka(L, v.severka.uhel) : ''}${legenda(v, oo)}</g>` +
-    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${razitko(v, oo, L)}</svg>`;
+    `<rect x="${ram.x}" y="${ram.y}" width="${ram.w}" height="${ram.h}" fill="none" stroke="#000" stroke-width="0.5"/>${nadpisSvg(L, o)}${popiskySiteSvg(v, L)}${razitko(v, oo, L)}</svg>`;
 }
 
 export { delkaLomene };

@@ -137,3 +137,25 @@ test('záloha všech projektů: rozpozná se, vadný projekt se přeskočí, ost
   assert.equal(M.nactiZalohu(M.serializuj(a)), null, 'jeden projekt není záloha');
   assert.throws(() => M.nactiZalohu(JSON.stringify({ format: M.FORMAT_ZALOHY })), /seznam projektů/);
 });
+
+test('očista: tucne jiné než boolean je false', () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_t1', druh: 'text', vrstva: 'popisky', x: 1, y: 1, text: 'A', vyska: 3, tucne: 'ano' });
+  assert.equal(M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky[0].tucne, false);
+});
+
+test('očista: šipka příjezdu z cizího souboru – šířka do mezí, text na řetězec, neúplná nespadne', () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_p1', druh: 'prijezd', vrstva: 'komunikace', body: [[0, 0], [0, 9]], sirka: 999, text: 5 }, { id: 'e_p2', druh: 'prijezd', vrstva: 'komunikace', body: [[0, 0], [Number.NaN, 1]], sirka: 'x' });
+  const [a, b] = M.nactiProjekt(JSON.stringify(pr)).listy.at(-1).vykres.prvky;
+  assert.equal(a.sirka, 30); assert.equal(a.text, '5'); assert.equal(b.sirka, 6); assert.equal(b.body.length, 1);
+});
+
+test('očista: šipka a lomený prvek bez pole bodů dostanou prázdné body – popis listu pro Clauda nespadne', async () => {
+  const pr = M.novyProjekt(); M.pridejList(pr, 'situace');
+  pr.listy.at(-1).vykres.prvky.push({ id: 'e_b1', druh: 'prijezd', vrstva: 'komunikace' }, { id: 'e_b2', druh: 'cara', vrstva: 'zaklad' });
+  const l = M.nactiProjekt(JSON.stringify(pr)).listy.at(-1);
+  assert.deepEqual(l.vykres.prvky.map((p) => p.body), [[], []]);
+  const A = await import('../js/ai/nastroje.js');
+  assert.doesNotThrow(() => A.popisStavu({ v: l.vykres, katalog: new Map(), evak: false, nazevListu: 'S', typListu: 'situace' }));
+});

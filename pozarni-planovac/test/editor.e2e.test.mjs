@@ -194,7 +194,7 @@ test('značky z katalogu, velikost 1–500 s desetinami, legenda a trvanlivost p
   await text.fill('0'); await text.dispatchEvent('change'); assert.equal(await p.locator('#panel-obsah [data-vel-text]').inputValue(), '1');
   await text.fill('3,3'); await text.dispatchEvent('change');
   assert.ok(await p.locator('#svet').innerHTML().then((h) => h.includes('LEGENDA') === false) || true);
-  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('LEGENDA ZNAČEK'), 'legenda ve výkresu');
+  await p.klid(); assert.ok((await p.locator('.ed-svg svg').innerHTML()).includes('Legenda pro dokumentaci zdolávání požárů'), 'legenda ve výkresu');
   // po znovuotevření zůstane
   await p.waitForFunction(() => document.querySelector('#stav')?.textContent.startsWith('Uloženo'));
   await p.reload(); await p.waitForSelector('#svet');
@@ -208,7 +208,7 @@ test('export SVG a PNG obsahuje legendu, délky tras a značky', skip, async () 
   await p.nastroj('znacka'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt'); await p.klik(10, 8);
   const [d1] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
   const f = join(tmp, 'v.svg'); await d1.saveAs(f); const svg = readFileSync(f, 'utf8');
-  assert.ok(svg.includes('LEGENDA ZNAČEK') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
+  assert.ok(svg.includes('Legenda pro dokumentaci zdolávání požárů') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
   assert.ok(svg.includes('1 : 100') && !svg.includes('NaN'));
   const [d2] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-png]')]);
   const g = join(tmp, 'v.png'); await d2.saveAs(g); const png = readFileSync(g);
@@ -736,4 +736,26 @@ test('karta: GPS vložené z map se rozdělí, vzdálenost hydrantu se spočte',
   await p.reload(); await p.waitForSelector('#sek-voda [data-vzdalenost]');
   assert.match(await p.locator('#sek-voda [data-vzdalenost]').textContent(), /cca 140 m/, 'uloženo a po načtení se spočte znovu');
   assert.deepEqual(chyby, []); await ctx.close();
+});
+
+test('styl DZP: nástroj Směr příjezdu (2 kliknutí), výplň podle významu a tučný text; v evakuačním plánu nástroj není', skip, async () => {
+  const p = await nova();
+  await p.nastroj('prijezd'); await p.klik(5, 14); await p.klik(5, 3);   // uvnitř rámu půdorysu 1 : 100 (27,7 × 16,1 m)
+  assert.equal(await p.pocet('prijezd'), 1, 'dokončeno druhým kliknutím bez Enter');
+  assert.match(await p.locator('#svet [data-druh=prijezd] text').textContent(), /směr příjezdu/);
+  await p.nastroj('obdelnik'); await p.tahni([10, 5], [16, 9]);
+  await p.panel('vlastnosti'); await p.click('[data-vyznam=objekt]'); await p.klid();
+  assert.match(await p.locator('#svet [data-druh=obdelnik]').evaluate((e) => e.outerHTML), /fill="#c0c0c0"/);
+  assert.equal(await p.locator('[data-vyznam=objekt].akt').count(), 1);
+  await p.nastroj('text'); await p.klik(2, 2); await p.dlg('ul. Tyršova');
+  await p.getByLabel('Tučně').check(); await p.klid();
+  assert.match(await p.locator('#svet [data-druh=text]').evaluate((e) => e.outerHTML), /font-weight="700"/);
+  assert.deepEqual(p.chyby, []);
+  // evakuační plán: nástroj Směr příjezdu se nenabízí
+  await p.click('#logo'); await p.waitForSelector('#rezim');
+  await p.click('#rezim [data-rezim=evakuace]'); await p.waitForSelector('.dash--evakuace');
+  await p.fill('#d-novy [name=nazev]', 'Evakuace – styl DZP'); await p.click('#d-novy button'); await p.waitForSelector('.editor');
+  await p.selectOption('#l-typ', 'evak_plan'); await p.click('#l-pridej'); await p.dlg('1.NP'); await p.waitForSelector('.ed-scena');
+  assert.equal(await p.locator('[data-nastroj=prijezd]').count(), 0);
+  assert.equal(await p.locator('[data-nastroj=stena]').count(), 1);
 });

@@ -78,7 +78,7 @@ export async function exportujPdf(projekt, volby = {}) {
     else if (l.typ === 'evak_text') await vykresliTextovyList(ctxZaklad, { nazev: 'Požární evakuační plán – textová část', text: evakJakoText(l.evak, projekt) });
     else if (l.vykres) {
       const v = l.vykres, { W, H } = rozlozeniListu(v), page = pdfDoc.addPage([W * MM, H * MM]);
-      const svg = renderListu(v, { objektNazev: objekt, nazevListu: l.nazev, znacky: katalog, symbolHref: (id) => uri.get(id) || '', prilohy: projekt.prilohy, karta, typListu: l.typ });
+      const svg = renderListu(v, { objektNazev: objekt, nazevListu: l.nazev, znacky: katalog, symbolHref: (id) => uri.get(id) || '', prilohy: projekt.prilohy, karta, typListu: l.typ, typDokumentu: projekt.typ });
       await vykresliSvgDoPdf(svg, { ...ctxZaklad, page });
     }
   }

@@ -1,7 +1,8 @@
 // Kontrola obsahu grafické části DZP (situace, půdorys) podle Hanušky 1996, kap. 2.3.2 a 2.3.3, a souladu výkresů s operativní kartou.
-// Pozná jen to, co je ve výkresu jako značka ČAHD (znacky/katalog.json), úniková cesta nebo žlutá plocha. Text a podklad (obrázek, DXF)
+// Pozná jen to, co je ve výkresu jako značka ČAHD (znacky/katalog.json), úniková cesta, žlutá plocha nebo plocha s výplní podle významu „komunikace“. Text a podklad (obrázek, DXF)
 // aplikace nečte – proto jsou všechny nálezy jen UPOZORNĚNÍ („ověřte“), nikdy chyby.
 import { stavPbz } from './kartaPole.js';
+import { vyznamVyplne } from './kresleni/prvky.js';
 
 const R = (od, ...ids) => new Set(ids.map((n) => `DZP-${String(n).padStart(3, '0')}`).concat(od || []));
 
@@ -26,7 +27,7 @@ const ZLUTA = '#f2d200';
 const ne = (v) => v === null || v === undefined || String(v).trim() === '' || String(v).trim().toUpperCase() === 'NE';
 
 const maZnacku = (prvky, kat) => prvky.some((p) => p.druh === 'znacka' && KATEGORIE[kat].has(p.znackaId));
-const maNastup = (prvky) => maZnacku(prvky, 'nastup') || prvky.some((p) => ['plocha', 'obdelnik'].includes(p.druh) && String(p.vypln || '').toLowerCase() === ZLUTA);
+const maNastup = (prvky) => maZnacku(prvky, 'nastup') || prvky.some((p) => ['plocha', 'obdelnik'].includes(p.druh) && (String(p.vypln || '').toLowerCase() === ZLUTA || vyznamVyplne(p) === 'komunikace'));
 
 export function kontrolaGrafikyDzp(projekt, upoz) {
   const vykresy = projekt.listy.filter((l) => l.vykres && ['situace', 'pudorys', 'schema'].includes(l.typ));

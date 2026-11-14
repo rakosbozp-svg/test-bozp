@@ -16,6 +16,7 @@ const NASTROJE = [
   ['vyber', 'Výběr', 'Výběr a úprava prvků (V)'], ['posun', 'Plátno', 'Posun plátna (H) – nebo střední tlačítko / mezerník'],
   ['stena', 'Stěna', 'Kreslení stěn: klik = bod, dvojklik / Enter = konec'], ['cara', 'Čára', 'Čára nebo lomená čára (hranice požárního úseku, plot…)'],
   ['trasa', 'Úniková cesta', 'Úniková cesta – délka se počítá v metrech'], ['plocha', 'Nástupní plocha a komunikace pro techniku', 'Uzavřená plocha: nástupní plocha a komunikace pro techniku'],
+  ['prijezd', 'Směr příjezdu', 'Šipka směru příjezdu hasičů: klik = odkud, druhý klik = kam (hrot)'],
   ['obdelnik', 'Obdélník', 'Obdélník tažením'], ['elipsa', 'Elipsa', 'Elipsa tažením'], ['volna', 'Volně', 'Volná kresba'],
   ['text', 'Text', 'Textový popisek'], ['znacka', 'Značka', 'Vložení značky z katalogu'], ['dvere', 'Dveře', 'Dveře – klik na stěnu je připojí'], ['jstezde', 'Jste zde', 'Bod „Jste zde“ na plánu (klik = umístění, další klik = přesun; štítek upravíte ve vlastnostech listu)'], ['kalibrace', 'Kalibrace', 'Kalibrace měřítka podkladu podle známé délky'],
 ];
@@ -31,9 +32,9 @@ const NAPOVEDA = [
   'Kolečko myši přibližuje k ukazateli, střední tlačítko nebo mezerník posouvá plátno, na dotyku dva prsty.',
 ].join('\n');
 // Evakuační plán není DZP: nemá nástroj nástupní plochy pro techniku a čára v něm neznamená hranici požárního úseku.
-const NASTROJE_EVAK = { cara: ['Čára', 'Čára nebo lomená čára (příčka, zábradlí, plot…)'] }, BEZ_V_EVAK = ['plocha'];
-const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', jstezde: 'stit', dvere: 'dvere', kalibrace: 'kalibrace' };
-const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
+const NASTROJE_EVAK = { cara: ['Čára', 'Čára nebo lomená čára (příčka, zábradlí, plot…)'] }, BEZ_V_EVAK = ['plocha', 'prijezd'];
+const IK = { vyber: 'vyber', posun: 'platno', stena: 'stena', cara: 'cara', trasa: 'trasa', plocha: 'plocha', prijezd: 'prijezd', obdelnik: 'obdelnik', elipsa: 'elipsa', volna: 'volna', text: 'text', znacka: 'znacka', jstezde: 'stit', dvere: 'dvere', kalibrace: 'kalibrace' };
+const VYCHOZI_VRSTVA = { stena: 'zaklad', dvere: 'zaklad', cara: 'zaklad', obdelnik: 'zaklad', elipsa: 'zaklad', volna: 'zaklad', plocha: 'komunikace', prijezd: 'komunikace', znacka: 'znacky', trasa: 'trasy', text: 'popisky' };
 const KROKY = [0.1, 0.5, 1, 5, 10];
 const bezCarky = (n, d = 2) => String(Math.round(n * 10 ** d) / 10 ** d).replace('.', ',');
 
@@ -64,7 +65,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   host.innerHTML = `<div class="ed">
     <div class="ed-nastroje" role="toolbar" aria-label="Nástroje výkresu">
       <div class="nast-skupina">${tl('vyber')}${tl('posun')}</div>
-      <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna'].filter((k) => !(evak && BEZ_V_EVAK.includes(k))).map(tl).join('')}</div>
+      <div class="nast-skupina">${['stena', 'cara', 'trasa', 'plocha', 'prijezd', 'obdelnik', 'elipsa', 'volna'].filter((k) => !(evak && BEZ_V_EVAK.includes(k))).map(tl).join('')}</div>
       <div class="nast-skupina">${['text', 'znacka', ...(v.evakPlan ? ['jstezde'] : []), 'dvere', 'kalibrace'].map(tl).join('')}</div>
       <div class="nast-skupina">${ak('zpet', 'zpet', 'Zpět (Ctrl+Z)')}${ak('vpred', 'vpred', 'Znovu (Ctrl+Y)')}</div>
       <div class="nast-skupina">${ak('priblizit', 'priblizit', 'Přiblížit')}${ak('oddalit', 'oddalit', 'Oddálit')}${ak('cely', 'cely', 'Zobrazit celý list')}${ak('obsah', 'obsah', 'Přiblížit na obsah výkresu')}</div>
@@ -183,7 +184,7 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
   // ---------- vykreslení ----------
   const symbolHref = (id) => zn.get(id)?.png || '';
   const karta = () => projekt.listy.find((l) => l.karta)?.karta || null;
-  const mkO = (extra = {}) => ({ objektNazev: karta()?.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, typListu: list.typ, karta: karta(), znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
+  const mkO = (extra = {}) => ({ objektNazev: karta()?.objekt.nazev || projekt.listy.find((l) => l.evak)?.evak.objekt.nazev || '', nazevListu: list.nazev, typListu: list.typ, typDokumentu: projekt.typ, karta: karta(), znacky: zn, symbolHref, prilohy: projekt.prilohy, ...extra });
   // Celý list se vykresluje jen po změně modelu. Posun, přiblížení, náhled kreslení a přichytávání mění jen viewBox
   // a překryv (jenPrekryv); při tažení se překreslí jen tažené prvky a dveře – velké výkresy (tisíce prvků) se nezadrhávají.
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -237,10 +238,11 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
     const b = bboxVyberu(); if (!b) return out;
     const jedna = sel.length === 1 ? sel[0] : null;
     if (jedna && jedna.druh === 'dvere') return out;   // dveře se vedou po stěně; vlastnosti v panelu
-    if (jedna && ['stena', 'cara', 'trasa', 'plocha', 'volna'].includes(jedna.druh)) {
+    if (jedna && ['stena', 'cara', 'trasa', 'plocha', 'volna', 'prijezd'].includes(jedna.druh)) {
       jedna.body.forEach((q, i) => out.push({ typ: 'vrchol', i, w: q }));
       const n = jedna.body.length, m = jedna.druh === 'plocha' ? n : n - 1;
-      for (let i = 0; i < m && jedna.druh !== 'volna'; i++) { const a = jedna.body[i], c = jedna.body[(i + 1) % n]; out.push({ typ: 'stred', i, w: [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2] }); }
+      for (let i = 0; i < m && !['volna', 'prijezd'].includes(jedna.druh); i++) {   // šipka příjezdu má vždy 2 body
+ const a = jedna.body[i], c = jedna.body[(i + 1) % n]; out.push({ typ: 'stred', i, w: [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2] }); }
     } else {
       const xs = [b.x0, (b.x0 + b.x1) / 2, b.x1], ys = [b.y0, (b.y0 + b.y1) / 2, b.y1];
       for (let a = 0; a < 3; a++) for (let c = 0; c < 3; c++) if (!(a === 1 && c === 1)) out.push({ typ: 'meritko', ix: a, iy: c, w: [xs[a], ys[c]] });
@@ -334,12 +336,14 @@ export function vytvorEditor({ host, projekt, list, katalog, naZmenu, naVyber, n
       } else { if (!e.shiftKey) { S.vyber = new Set(); naVyber?.(); } S.tah = { typ: 'oblast', od: w0, do: w0, shift: e.shiftKey, zaklad: new Set(S.vyber) }; vykresli(true); }
       return;
     }
-    if (['stena', 'cara', 'trasa', 'plocha'].includes(t)) {
+    if (['stena', 'cara', 'trasa', 'plocha', 'prijezd'].includes(t)) {
       const k = S.kresleni || (S.kresleni = { nastroj: t, body: [], kurzor: null });
       const prev = k.body[k.body.length - 1] || null;
       const b = snap(w0, { od: prev, ortho: S.ortho || e.shiftKey });
       if (t === 'stena' && k.body.length >= 3 && G.dist(b, k.body[0]) <= tolM(10)) { k.body.push([...k.body[0]]); S.ignorDo = Date.now() + 450; dokonciKresleni(); return; }
-      k.body.push(b); vykresli(true); return;
+      k.body.push(b);
+      if (t === 'prijezd' && k.body.length === 2) { dokonciKresleni(); return; }   // šipka příjezdu: odkud → kam (hrot)
+      vykresli(true); return;
     }
     if (t === 'obdelnik' || t === 'elipsa') { const b = snap(w0); S.tah = { typ: 'tvar', nastroj: t, od: b, do: b }; return; }
     if (t === 'volna') { S.tah = { typ: 'volna', body: [w0] }; return; }

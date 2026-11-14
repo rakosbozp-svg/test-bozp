@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as M from '../js/model.js';
+import * as P from '../js/kresleni/prvky.js';
 import { zkontrolujUplnost } from '../js/uplnost.js';
 
 const upoz = (p) => zkontrolujUplnost(p).filter((n) => n.kod.startsWith('GRAF_')).map((n) => n.kod);
@@ -58,5 +59,12 @@ test('půdorys: hranice požárních úseků, uzávěry a zdroje vody; karta bez
 test('evakuační plán se grafikou DZP nekontroluje', () => {
   const p = M.novyProjekt({ typ: 'evakuacni_plan' });
   p.listy[1].vykres.prvky.push({ id: 's', druh: 'stena', body: [[0, 0], [1, 0]], tloustkaM: 0.3, barva: '#000', vrstva: 'zaklad' });
+  assert.deepEqual(upoz(p), []);
+});
+
+test('situace: plocha s výplní podle významu „komunikace“ je komunikace pro techniku (žádné falešné upozornění)', () => {
+  const p = M.novyProjekt(), sit = p.listy.find((l) => l.typ === 'situace');
+  sit.vykres.prvky.push(zn('a', 'DZP-001'), zn('b', 'DZP-055'), zn('c', 'DZP-042'), zn('d', 'DZP-045'),
+    P.pouzijVyznam({ id: 'pl', druh: 'plocha', body: [[0, 0], [5, 0], [5, 5]], vrstva: 'komunikace' }, 'komunikace'));
   assert.deepEqual(upoz(p), []);
 });

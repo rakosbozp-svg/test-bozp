@@ -4,11 +4,32 @@ import { dist, rad, deg, delkaLomene, nejblizsiNaLomene, bodNaLomene, bodVPolygo
 import { normalizujVelikost } from '../model.js';
 import { rozlozeniEvak } from './evakplan.js';
 
-export const DRUHY = ['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna', 'text', 'znacka', 'dvere'];
+export const DRUHY = ['stena', 'cara', 'trasa', 'plocha', 'obdelnik', 'elipsa', 'volna', 'text', 'znacka', 'dvere', 'prijezd'];
 export const TYPY_DVERI = ['jednokridle', 'dvoukridle', 'vrata'];
 export const MERITKA = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 1500, 2000, 2500, 5000, 10000];
 
 // Barvy podle metodiky Hanuška 1996, kap. 2.3.1
+// Výplně podle významu (barvy převzaté ze vzorů uživatele): předvolba jen zapíše výplň, krytí, obrys a tloušťku obrysu do prvku.
+export const VYPLNE = {
+  zelen: { nazev: 'Zeleň', vypln: '#94f993', kryti: 1, barva: '#555555', tloustka: 0.18 },
+  komunikace: { nazev: 'Komunikace a zpevněné plochy', vypln: '#f6f884', kryti: 1, barva: '#555555', tloustka: 0.18 },
+  objekt: { nazev: 'Řešený objekt', vypln: '#c0c0c0', kryti: 1, barva: '#000000', tloustka: 0.7 },
+  okoli: { nazev: 'Okolní zástavba', vypln: '#e3e3e3', kryti: 1, barva: '#555555', tloustka: 0.25 },
+  voda: { nazev: 'Vodní plocha', vypln: '#a6d8ff', kryti: 1, barva: '#1e5fd0', tloustka: 0.18 },
+};
+const S_VYPLNI = ['plocha', 'obdelnik', 'elipsa'];
+export function vyznamVyplne(p) {
+  if (!S_VYPLNI.includes(p?.druh) || typeof p.vypln !== 'string') return null;
+  const c = p.vypln.toLowerCase();
+  return Object.keys(VYPLNE).find((k) => VYPLNE[k].vypln === c) ?? null;
+}
+export function pouzijVyznam(p, klic) {
+  const d = Object.hasOwn(VYPLNE, klic) ? VYPLNE[klic] : null;
+  if (!d) throw new Error(`Neznámý význam výplně: ${klic}`);
+  Object.assign(p, { vypln: d.vypln, kryti: d.kryti, barva: d.barva, tloustka: d.tloustka });
+  return p;
+}
+
 export const BARVY = {
   modra: ['#1e5fd0', 'modrá – hašení (vodní zdroje, sklady nářadí)'],
   cervena: ['#d62b1f', 'červená – komplikace a nebezpečí'],
@@ -32,6 +53,7 @@ const VYCHOZI = {
   volna: { tloustka: 0.5, barva: '#000000' },
   text: { vyska: 3, barva: '#000000', uhel: 0 },
   znacka: { velikost: 8, uhel: 0 },
+  prijezd: { sirka: 6, text: 'směr příjezdu', barva: '#000000' },   // šipka směru příjezdu; sirka = šířka dříku v mm na papíře
   dvere: { sirkaM: 0.9, typ: 'jednokridle', typAuto: true, smer: 1, zavesy: 1, stenaId: null, seg: 0, t: 0.5, x: 0, y: 0, uhel: 0 },
 };
 
@@ -143,11 +165,54 @@ export function nastavSirkuDveri(d, w, prvky) {
 }
 export function nastavTypDveri(d, typ) { if (!TYPY_DVERI.includes(typ)) throw new Error('Neznámý typ dveří'); d.typ = typ; d.typAuto = false; }
 
+// Přibližná šířka znaku písma Arial v em (diakritika jako základní písmeno) – zalomení textu v razítku platí stejně pro obrazovku i PDF.
+function em(c) {
+  const z = c.normalize('NFD')[0] || c;
+  if (z === ' ') return 0.28;
+  if ('iljI.,:;\'!|'.includes(z)) return 0.25;
+  if ('ft()[]/-'.includes(z)) return 0.31;
+  if (z === 'r') return 0.34;
+  if (z === 'm' || z === 'M') return 0.84;
+  if (z === 'w') return 0.73;
+  if (z === 'W') return 0.95;
+  if (z >= '0' && z <= '9') return 0.56;
+  if (z >= 'A' && z <= 'Z') return 0.7;
+  if (z >= 'a' && z <= 'z') return 0.54;
+  return 0.62;
+}
+export const sirkaTextu = (t, vel, tucne = false) => { let s = 0; for (const c of String(t)) s += em(c); return s * vel * (tucne ? 1.08 : 1); };
+
+// Šipka směru příjezdu (svět v m): obrys [a+n·w/2, b′+n·w/2, b′+n·hw, b, b′−n·hw, b′−n·w/2, a−n·w/2], hrot 2× šířka, délka 1,35× šířka
+// (nejvýš 45 % délky). Text je čitelný (svislý zdola nahoru), zmenší se do dříku, pod 1,8 mm se vynechá. null = neplatná šipka.
+export function geometriePrijezdu(p, pomer) {
+  const b = p.body;
+  if (!Array.isArray(b) || b.length !== 2 || !b.every((q) => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1]))) return null;
+  const [a, c] = b, dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy);
+  if (!(d > 0) || !(pomer > 0)) return null;
+  const sirka = Number.isFinite(p.sirka) && p.sirka > 0 ? p.sirka : 6;
+  const ux = dx / d, uy = dy / d, nx = -uy, ny = ux, w = mmNaM(sirka, pomer), hw = w, hl = Math.min(1.35 * w, 0.45 * d);
+  const bx = c[0] - ux * hl, by = c[1] - uy * hl;
+  const obrys = [[a[0] + nx * w / 2, a[1] + ny * w / 2], [bx + nx * w / 2, by + ny * w / 2], [bx + nx * hw, by + ny * hw], [c[0], c[1]],
+    [bx - nx * hw, by - ny * hw], [bx - nx * w / 2, by - ny * w / 2], [a[0] - nx * w / 2, a[1] - ny * w / 2]];
+  let text = null;
+  const t = String(p.text ?? '').trim();
+  if (t) {
+    let uhel = deg(Math.atan2(dy, dx));
+    if (uhel > 89.99 || uhel < -90.01) uhel += 180;
+    if (uhel > 180) uhel -= 360;
+    const vel0 = 0.52 * sirka, drik = ((d - hl) * 1000) / pomer;
+    const vel = Math.round(Math.min(vel0, (vel0 * 0.9 * drik) / sirkaTextu(t, vel0, true)) * 100) / 100;
+    if (vel >= 1.8) text = { cx: (a[0] + bx) / 2, cy: (a[1] + by) / 2, uhel, vel };
+  }
+  return { obrys, text };
+}
+
 // ---------- rozměry, výběr, transformace ----------
 export function bboxPrvku(p, pomer, prvky = []) {
   switch (p.druh) {
     case 'stena': { const b = bbox(p.body), r = p.tloustkaM / 2; return b && { x0: b.x0 - r, y0: b.y0 - r, x1: b.x1 + r, y1: b.y1 + r }; }
     case 'cara': case 'trasa': case 'plocha': case 'volna': return bbox(p.body);
+    case 'prijezd': { const g = geometriePrijezdu(p, pomer); return g ? bbox(g.obrys) : null; }
     case 'obdelnik': { const h = [[-p.w / 2, -p.h / 2], [p.w / 2, -p.h / 2], [p.w / 2, p.h / 2], [-p.w / 2, p.h / 2]].map(([x, y]) => otoc([p.cx + x, p.cy + y], [p.cx, p.cy], rad(p.uhel || 0))); return bbox(h); }
     case 'elipsa': { const pts = []; for (let i = 0; i < 24; i++) { const a = (i / 24) * 2 * Math.PI; pts.push(otoc([p.cx + p.rx * Math.cos(a), p.cy + p.ry * Math.sin(a)], [p.cx, p.cy], rad(p.uhel || 0))); } return bbox(pts); }
     case 'text': { const h = mmNaM(p.vyska, pomer), lines = String(p.text).split('\n'), w = Math.max(...lines.map((l) => l.length), 1) * h * 0.55; return bbox([[p.x, p.y - h], [p.x + w, p.y - h], [p.x + w, p.y + (lines.length - 1) * h * 1.2], [p.x, p.y + (lines.length - 1) * h * 1.2]].map((q) => otoc(q, [p.x, p.y], rad(p.uhel || 0)))); }
@@ -165,6 +230,7 @@ export function zasah(p, bod, tol, pomer, prvky = []) {
     case 'stena': return (near(p.body) ?? Infinity) <= Math.max(tol, p.tloustkaM / 2);
     case 'cara': case 'trasa': case 'volna': return (near(p.body) ?? Infinity) <= tol;
     case 'plocha': return bodVPolygonu(bod, p.body) || (near(p.body, true) ?? Infinity) <= tol;
+    case 'prijezd': { const g = geometriePrijezdu(p, pomer); return !!g && (bodVPolygonu(bod, g.obrys) || (near(g.obrys, true) ?? Infinity) <= tol); }
     case 'obdelnik': { const q = otoc(bod, [p.cx, p.cy], -rad(p.uhel || 0)); return Math.abs(q[0] - p.cx) <= p.w / 2 + tol && Math.abs(q[1] - p.cy) <= p.h / 2 + tol; }   // vybírá se i uvnitř (pohodlné na dotyku); nad ním ležící prvky mají přednost
     case 'elipsa': { const q = otoc(bod, [p.cx, p.cy], -rad(p.uhel || 0)); return ((q[0] - p.cx) / (p.rx + tol)) ** 2 + ((q[1] - p.cy) / (p.ry + tol)) ** 2 <= 1; }
     default: { const b = bboxPrvku(p, pomer, prvky); return !!b && bod[0] >= b.x0 - tol && bod[0] <= b.x1 + tol && bod[1] >= b.y0 - tol && bod[1] <= b.y1 + tol; }
@@ -226,11 +292,13 @@ export const pouziteZnacky = (prvky) => [...new Set(prvky.filter((p) => p.druh =
 export function synchronizujLegendu(vykres) { vykres.legenda = pouziteZnacky(vykres.prvky); }
 
 // Rozložení listu A4 (mm): rám výkresu a razítko dole.
+// Pás nad rámem listu DZP pro nadpis „GRAFICKÁ ČÁST …“ a písmena sítě 10 m (mm).
+export const HLAVICKA_MM = 5;
 export function rozlozeniListu(vykres) {
   if (vykres.evakPlan) return rozlozeniEvak(vykres);   // list evakuačního plánu: A3 a větší, vlastní rozvržení (ČSN ISO 23601)
   const na = vykres.orientace === 'na_vysku';
   const W = na ? 210 : 297, H = na ? 297 : 210, M = 10, R = 24;
-  return { W, H, ram: { x: M, y: M, w: W - 2 * M, h: H - 2 * M - R }, razitko: { x: M, y: H - M - R, w: W - 2 * M, h: R } };
+  return { W, H, ram: { x: M, y: M + HLAVICKA_MM, w: W - 2 * M, h: H - 2 * M - R - HLAVICKA_MM }, razitko: { x: M, y: H - M - R, w: W - 2 * M, h: R } };
 }
 
 export function navrhniMeritko(vykres) {

@@ -368,7 +368,7 @@ test('obrázek pro Claude je jen kreslicí plocha (bez razítka); bez „Poslat 
   await p.zadej('Kresli.'); await p.hotovo();
   const [o] = (await p.ai()).volani[1].obrazky;
   assert.equal(o.w, 1600);
-  assert.ok(Math.abs(o.w / o.h - 283.648 / 172.648) < 0.01, `poměr ${o.w}×${o.h} odpovídá rámu A4 na šířku, ne celému listu (1,414)`);
+  assert.ok(Math.abs(o.w / o.h - 283.648 / 167.648) < 0.01, `poměr ${o.w}×${o.h} odpovídá rámu A4 na šířku (277 × 161 mm, nad rámem pás pro nadpis), ne celému listu (1,414)`);
   await p.click('[data-ai-volba=prilozitVykres]');
   assert.equal(await p.locator('[data-ai-volba=kontrola]').isDisabled(), true);
   await p.scenare([{ kroky: [{ nastroje: [{ name: 'uprav', input: { zmeny: [] } }] }], konec: '• Ok.' }]);
