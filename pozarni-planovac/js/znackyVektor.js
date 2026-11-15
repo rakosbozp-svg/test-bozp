@@ -49,12 +49,21 @@ function vybuch(cx, cy) {
 // výstražný trojúhelník (DZP-003, DZP-050, DZP-053): bílý s červeným okrajem
 const trojuhelnik = (w) => mnohouhelnik([[w / 2, 0.55], [w - 0.45, 9.5], [0.45, 9.5]], BILA, ` stroke="${CERVENA}" stroke-width="0.9" stroke-linejoin="round"`);
 
+// zákaz hašení vodou (DZP-074): modrý kruh, bílý šikmý pruh s červenou čarou (rohy pruhů leží na kružnici – bez děr)
+function zakazVody(cx, cy, r) {
+  const ux = Math.cos(-0.62), uy = Math.sin(-0.62), nx = -uy, ny = ux;
+  const pruh = (pul, rr) => { const L = Math.sqrt(rr * rr - pul * pul); return [[cx - ux * L - nx * pul, cy - uy * L - ny * pul], [cx + ux * L - nx * pul, cy + uy * L - ny * pul], [cx + ux * L + nx * pul, cy + uy * L + ny * pul], [cx - ux * L + nx * pul, cy - uy * L + ny * pul]]; };
+  return kruh(cx, cy, r, MODRA, 0.01, MODRA) + mnohouhelnik(pruh(1.25, r - 0.05), BILA) + mnohouhelnik(pruh(0.62, r - 0.75), CERVENA);
+}
+
 // TOTAL / CENTRAL STOP: červený rámeček se značkou vypínače a písmenem vpravo dole
 const stop = (vnitrek, pismeno, w) => `<rect x="0.35" y="0.35" width="9.3" height="9.3" fill="${BILA}" stroke="${CERVENA}" stroke-width="0.7"/>`
   + vnitrek + blesk([[8.55, 2.7], [7.35, 5.15], [8.35, 5.15], [7.15, 7.75]], CERVENA, 0.42) + text(w - 1.9, 9.6, 4.6, CERVENA, pismeno, true);
 
 // id → { w, h (jednotky viewBoxu), svg (obsah bez obalu) }
 export const VEKTOR = {
+  'DZP-024': { w: 27.5, h: 10, svg: `<rect x="0.5" y="1" width="13" height="8" fill="${BILA}" stroke="${CERVENA}" stroke-width="0.7"/>` + blesk([[8.0, 1.9], [6.2, 5.0], [7.8, 5.0], [6.0, 8.1]], CERVENA, 0.45) + text(20.7, 7.3, 5.6, CERVENA, '22kV') },
+  'DZP-074': { w: 10.6, h: 10, svg: zakazVody(5.3, 5, 4.75) },
   'DZP-105': { w: 9.4, h: 10, svg: mnohouhelnik([[4.7, 0], [9.4, 5], [6.9, 5], [6.9, 10], [2.5, 10], [2.5, 5], [0, 5]], CERNA) },
   'DZP-108': { w: 7.3, h: 10, svg: mnohouhelnik([[3.65, 0], [7.3, 3.7], [4.2, 3.7], [4.2, 10], [3.1, 10], [3.1, 3.7], [0, 3.7]], CERNA) },
   'DZP-001': { w: 8.1, h: 10, svg: hydrant(8.1) },
