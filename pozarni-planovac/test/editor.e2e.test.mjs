@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VEKTOR } from '../js/znackyVektor.js';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -175,14 +176,18 @@ test('vrstvy: skrytí, zamčení a aktivní vrstva', skip, async () => {
 
 test('značky z katalogu, velikost 1–500 s desetinami, legenda a trvanlivost po znovuotevření', skip, async () => {
   const p = await nova();
-  await p.nastroj('znacka'); await p.fill('.znacky-dlg input[type=search]', 'hydrant'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt');
+  await p.nastroj('znacka'); await p.fill('.znacky-dlg input[type=search]', 'hydrant'); const idZnacky = await p.locator('.zd-bunka').first().getAttribute('data-id'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt');
   await p.klik(8, 8);
   assert.equal(await p.pocet('znacka'), 1);
   await p.nastroj('vyber'); await p.klik(8, 8);
   await p.panel('vlastnosti');
   const text = p.locator('#panel-obsah [data-vel-text]');
   await text.fill('2,5'); await text.dispatchEvent('change');
-  const sirka = async () => { await p.klid(); return Number(await p.locator('#svet [data-druh=znacka]').getAttribute('width')); };
+  const sirka = async () => {   // obrázek: atribut width; vektor (js/znackyVektor.js): měřítko × delší strana značky
+    await p.klid(); const el = p.locator('#svet [data-druh=znacka]'), w = await el.getAttribute('width');
+    if (w !== null) return Number(w);
+    const z = VEKTOR[idZnacky]; return Number(/scale\(([\d.e-]+)\)/.exec(await el.getAttribute('transform'))[1]) * Math.max(z.w, z.h);
+  };
   assert.ok(Math.abs(await sirka() - 0.25) < 1e-6, '2,5 mm × 1:100 = 0,25 m');
   await p.locator('#panel-obsah [data-vel-krok="1"]').click();
   assert.equal(await p.locator('#panel-obsah [data-vel-text]').inputValue(), '2,6');
@@ -208,7 +213,8 @@ test('export SVG a PNG obsahuje legendu, délky tras a značky', skip, async () 
   await p.nastroj('znacka'); await p.locator('.zd-bunka').first().click(); await p.waitForSelector('.znacky-dlg', { state: 'detached' }); await p.waitForSelector('[data-nastroj=znacka].akt'); await p.klik(10, 8);
   const [d1] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-svg]')]);
   const f = join(tmp, 'v.svg'); await d1.saveAs(f); const svg = readFileSync(f, 'utf8');
-  assert.ok(svg.includes('Legenda pro dokumentaci zdolávání požárů') && svg.includes('20,0 m') && svg.includes('data:image/png;base64'));
+  assert.ok(svg.includes('Legenda pro dokumentaci zdolávání požárů') && svg.includes('20,0 m') && svg.includes('data-druh="znacka"'));
+  assert.ok(!/<image[^>]+href="(?!data:)/.test(svg), 'export je soběstačný: obrázky jen jako data URI, nejčastější značky jako vektor');
   assert.ok(svg.includes('1 : 100') && !svg.includes('NaN'));
   const [d2] = await Promise.all([p.waitForEvent('download'), p.click('[data-akce=export-png]')]);
   const g = join(tmp, 'v.png'); await d2.saveAs(g); const png = readFileSync(g);

@@ -34,7 +34,7 @@ test('jedna HTML bez serveru: projekt, kreslení, značky z vloženého katalogu
     const W = (x, y) => p.evaluate(([a, b]) => { const m = document.querySelector('#svet').getScreenCTM(), q = new DOMPoint(a, b).matrixTransform(m); return [q.x, q.y]; }, [x, y]);
     await p.click('[data-nastroj=stena]'); for (const [x, y] of [[3, 3], [15, 3], [15, 12]]) await p.mouse.click(...await W(x, y)); await p.keyboard.press('Enter');
     await p.click('[data-nastroj=znacka]'); await p.fill('.znacky-dlg input[type=search]', 'hydrant');
-    assert.match(await p.locator('.zd-bunka img').first().getAttribute('src'), /^data:image\/png;base64,/);
+    assert.match(await p.locator('.zd-bunka img').first().getAttribute('src'), /^data:image\/(png|svg\+xml);base64,/);   // vložený katalog, nejčastější značky jako ostrý vektor
     await p.locator('.zd-bunka').first().click(); await p.waitForSelector('[data-nastroj=znacka].akt'); await p.mouse.click(...await W(8, 8));
     await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     assert.equal(await p.locator('#svet [data-druh=znacka]').count(), 1);

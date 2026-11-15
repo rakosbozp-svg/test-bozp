@@ -4,6 +4,7 @@ import { esc } from './formular.js';
 import { najdiZnacku } from './znacky.js';
 import { rozvrzeniListu, umistiBunky, VELIKOSTI_PISMA, IKONA_MM } from './kartaRozvrzeni.js';
 import { jeZnackaKarty, svgZnackyKarty } from './kartaZnacky.js';
+import { obrazekZnacky } from './znackyVektor.js';
 
 const segment = (s) => {
   if (s.chybi) return '<span class="chybi">…</span>';
@@ -15,7 +16,7 @@ const text = (seg) => seg.map(segment).join('');
 const znacka = (id, mm) => {
   if (!id) return '';
   if (jeZnackaKarty(id)) return svgZnackyKarty(id, mm);
-  const z = najdiZnacku(id); return z ? `<img src="${esc(z.png)}" alt="${esc(z.nazev)}" title="${esc(z.id)} – ${esc(z.nazev)}" style="max-height:${mm}mm">` : '';
+  const z = najdiZnacku(id); return z ? `<img src="${esc(obrazekZnacky(z))}" alt="${esc(z.nazev)}" title="${esc(z.id)} – ${esc(z.nazev)}" style="max-height:${mm}mm">` : '';
 };
 
 function tabulka(t) {

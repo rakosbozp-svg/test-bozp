@@ -3,6 +3,7 @@ import { rozlozeniListu, mmNaM, dvereGeom, delkaTrasy, formatDelky, meritkoOvere
 export { sirkaTextu };
 import { trasaEvakSvg, jsteZdeSvg, slozEvakSvg, MIN_STENA_MM, MIN_PRICKA_MM } from './evakplan.js';
 import { delkaLomene } from './geom.js';
+import { maVektor, skupinaVektoru, vektorDoBoxu } from '../znackyVektor.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const f = (n) => (Math.round(n * 1000) / 1000).toString();
@@ -67,8 +68,9 @@ function prvekSvg(p, ctx) {
       return `<text ${id} x="${f(p.x)}" y="${f(p.y)}" font-size="${f(h)}" font-family="Arial,sans-serif"${p.tucne === true ? ' font-weight="700"' : ''} fill="${barva(p.barva)}" transform="rotate(${uhel} ${f(p.x)} ${f(p.y)})">${lines.map((l, i) => `<tspan x="${f(p.x)}" dy="${i ? f(h * 1.2) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
     }
     case 'znacka': {
-      const w = mmNaM(cislo(p.velikost, 8), pomer), z = znacka(p.znackaId);
-      const r = `rotate(${uhel} ${f(p.x)} ${f(p.y)})`;
+      const w = mmNaM(cislo(p.velikost, 8), pomer);
+      if (maVektor(p.znackaId)) return skupinaVektoru(p.znackaId, p.x, p.y, w, cislo(p.uhel, 0), id);   // ostrý vektor (js/znackyVektor.js)
+      const z = znacka(p.znackaId), r = `rotate(${uhel} ${f(p.x)} ${f(p.y)})`;
       return z
         ? `<image ${id} href="${esc(z)}" x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" preserveAspectRatio="xMidYMid meet" transform="${r}"/>`
         : `<g ${id} transform="${r}"><rect x="${f(p.x - w / 2)}" y="${f(p.y - w / 2)}" width="${f(w)}" height="${f(w)}" fill="#fff" stroke="#c00" stroke-width="${f(k(0.4))}" stroke-dasharray="${f(k(1))}"/><text x="${f(p.x)}" y="${f(p.y)}" font-size="${f(w * 0.6)}" text-anchor="middle" dominant-baseline="central" fill="#c00">?</text></g>`;
@@ -141,7 +143,7 @@ function legenda(v, o) {
   const zalom = (t) => { const out = []; let cur = ''; for (const w2 of String(t).split(' ')) { if ((cur + ' ' + w2).trim().length > 36 && cur) { out.push(cur); cur = w2; } else cur = (cur + ' ' + w2).trim(); } if (cur) out.push(cur); return out.slice(0, 3); };
   const radky = polozky.map((it, i) => {   // souřadnice uvnitř legendy (před zmenšením)
     const cx = 2 + Math.floor(i / r.radku) * SLOUPEC_LEG, cy = 8 + (i % r.radku) * RADEK_LEG;
-    const ikona = it.trasa ? `<line x1="${f(cx)}" y1="${f(cy + 3)}" x2="${f(cx + 6)}" y2="${f(cy + 3)}" stroke="#2f9e44" stroke-width="0.8" stroke-dasharray="2,1"/>` : `<image href="${esc(o.symbolHref(it.znacka))}" x="${f(cx)}" y="${f(cy)}" width="6" height="6" preserveAspectRatio="xMidYMid meet"/>`;
+    const ikona = it.trasa ? `<line x1="${f(cx)}" y1="${f(cy + 3)}" x2="${f(cx + 6)}" y2="${f(cy + 3)}" stroke="#2f9e44" stroke-width="0.8" stroke-dasharray="2,1"/>` : maVektor(it.znacka) ? vektorDoBoxu(it.znacka, cx, cy, 6, 6) : `<image href="${esc(o.symbolHref(it.znacka))}" x="${f(cx)}" y="${f(cy)}" width="6" height="6" preserveAspectRatio="xMidYMid meet"/>`;
     const ls = zalom(it.text);
     return `${ikona}<text x="${f(cx + 7.5)}" y="${f(cy + 2.4)}" font-size="2.1" font-family="Arial,sans-serif">${ls.map((l, j) => `<tspan x="${f(cx + 7.5)}" dy="${j ? 2.4 : 0}">${esc(l)}</tspan>`).join('')}</text>`;
   });

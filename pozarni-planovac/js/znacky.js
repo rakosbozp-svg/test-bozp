@@ -1,4 +1,5 @@
 // Katalog značek DZP (znacky/katalog.json) a výběr značky.
+import { obrazekZnacky } from './znackyVektor.js';
 let katalog = null;
 export async function nactiKatalog() {
   if (katalog) return katalog;
@@ -22,7 +23,7 @@ export function vyberZnacku() {
     const kresli = () => {
       const f = odstran(q.value);
       mriz.innerHTML = katalog.filter((z) => !f || odstran(z.nazev).includes(f) || z.id.toLowerCase().includes(f))
-        .map((z) => `<button type="button" class="zd-bunka" role="listitem" data-id="${z.id}" title="${z.id}"><img loading="lazy" src="${z.png}" alt=""><span>${z.nazev}</span></button>`).join('') || '<p>Nic nenalezeno.</p>';
+        .map((z) => `<button type="button" class="zd-bunka" role="listitem" data-id="${z.id}" title="${z.id}"><img loading="lazy" src="${obrazekZnacky(z)}" alt=""><span>${z.nazev}</span></button>`).join('') || '<p>Nic nenalezeno.</p>';
     };
     q.addEventListener('input', kresli);
     mriz.addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) { dlg.dataset.vybrano = b.dataset.id; dlg.close(); } });

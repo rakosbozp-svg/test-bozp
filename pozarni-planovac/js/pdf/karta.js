@@ -3,6 +3,7 @@
 // ani tak, pokračuje na další straně – nic se nezahodí – a vykresliKartu to vrátí ({ stran > 1 }), aby aplikace upozornila.
 import { rozvrzeniListu, umistiBunky, VELIKOSTI_PISMA, IKONA_MM as IKONA } from '../kartaRozvrzeni.js';
 import { jeZnackaKarty, skupinaZnackyKarty } from '../kartaZnacky.js';
+import { maVektor, vektorDoBoxu } from '../znackyVektor.js';
 import { vykresliSvgDoPdf } from './svg2pdf.js';
 import { bezpecnyText } from './pismo.js';
 
@@ -111,6 +112,7 @@ export async function vykresliKartu(ctx, list, projekt) {
     if (!id) return;
     const s = Math.min(w - 2 * PADH, h - 2 * PADV, ZNACKA_MAX);
     if (jeZnackaKarty(id)) { vektory.push(skupinaZnackyKarty(id, x + PADH, yTop + (h - s) / 2, w - 2 * PADH, s)); return; }
+    if (maVektor(id)) { vektory.push(vektorDoBoxu(id, x + PADH, yTop + (h - s) / 2, w - 2 * PADH, s)); return; }
     const img = ctx.znacka(id); if (!img) return;
     const k = Math.min((w - 2 * PADH) * MM / img.width, s * MM / img.height);
     page.drawImage(img, { x: x * MM + (w * MM - img.width * k) / 2, y: Y(yTop + h / 2) - (img.height * k) / 2, width: img.width * k, height: img.height * k });

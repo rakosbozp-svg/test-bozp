@@ -1,6 +1,7 @@
 // Formulář operativní karty podle vzoru HZS SČK (list A4). Pole jsou řízena daty (js/kartaPole.js); každý vstup má data-cesta,
 // stejnou jako cesta v nálezech kontroly úplnosti, aby šlo z nálezu skočit na pole.
 import { najdiZnacku, vyberZnacku } from './znacky.js';
+import { obrazekZnacky } from './znackyVektor.js';
 import { textVzdalenosti, ctiGps } from './geo.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -71,7 +72,7 @@ function mimoVzor(list) {
 
 function znackaHtml(id) {
   const z = id && najdiZnacku(id);
-  return z ? `<img class="zn" src="${z.png}" alt="${esc(z.nazev)}" title="${z.id} – ${esc(z.nazev)}">` : '<span class="zn zn-prazdna">bez značky</span>';
+  return z ? `<img class="zn" src="${esc(obrazekZnacky(z))}" alt="${esc(z.nazev)}" title="${z.id} – ${esc(z.nazev)}">` : '<span class="zn zn-prazdna">bez značky</span>';
 }
 
 function nebezpeci(list) {

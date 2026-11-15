@@ -7,6 +7,7 @@ import { sapJakoText, nastavKontextSaP, kontextSaP } from '../sap.js';
 import { vykresliSvgDoPdf } from './svg2pdf.js';
 import { renderListu } from '../kresleni/render.js';
 import { rozlozeniListu, pouziteZnacky } from '../kresleni/prvky.js';
+import { maVektor } from '../znackyVektor.js';
 import { ulozSoubor } from '../stazeni.js';
 
 const MM = 72 / 25.4;
@@ -57,7 +58,7 @@ export async function exportujPdf(projekt, volby = {}) {
     if (l.vykres) pouziteZnacky(l.vykres.prvky).forEach((i) => ids.add(i));
   }
   const bajty = new Map(), uri = new Map(), emb = new Map();
-  for (const id of ids) { const z = katalog.get(id); if (!z) continue; const b = await bajtyZnacky(z); bajty.set(id, b); uri.set(id, dataUri(b)); }
+  for (const id of ids) { const z = katalog.get(id); if (!z || maVektor(id)) continue; const b = await bajtyZnacky(z); bajty.set(id, b); uri.set(id, dataUri(b)); }   // vektorové značky kreslí svg2pdf
   const ctxZaklad = {
     lib: L, pdfDoc, fonty, obrazky: new Map(),
     znacka: (id) => { if (!id || !bajty.has(id)) return null; if (!emb.has(id)) emb.set(id, null); return emb.get(id); },

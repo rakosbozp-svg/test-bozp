@@ -6,6 +6,7 @@ import { zeptejSe, potvrd, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
 import { FORMATY, KATEGORIE } from './evakplan.js';
 import { normalizujVelikost, VELIKOST_MIN, VELIKOST_MAX, VELIKOST_KROK } from '../model.js';
+import { obrazekZnacky } from '../znackyVektor.js';
 
 const NAZVY = { stena: 'Stěna', cara: 'Čára', trasa: 'Úniková cesta', plocha: 'Nástupní plocha a komunikace pro techniku', obdelnik: 'Obdélník', elipsa: 'Elipsa', volna: 'Volná kresba', prijezd: 'Směr příjezdu', text: 'Text', znacka: 'Značka', dvere: 'Dveře' };
 const f1 = (n) => zCisla(Math.round(n * 100) / 100);
@@ -90,7 +91,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
     if (p.druh === 'obdelnik') typ += num('Střed X (m)', 'cx') + num('Střed Y (m)', 'cy') + num('Šířka (m)', 'w') + num('Výška (m)', 'h') + num('Otočení (°)', 'uhel');
     if (p.druh === 'elipsa') typ += num('Střed X (m)', 'cx') + num('Střed Y (m)', 'cy') + num('Poloosa X (m)', 'rx') + num('Poloosa Y (m)', 'ry') + num('Otočení (°)', 'uhel');
     if (p.druh === 'text') typ = `<label class="f"><span>Text</span><textarea rows="3" data-h="${reg(c((t) => { p.text = t; }))}">${esc(p.text)}</textarea></label>${velikost('Výška písma', p.vyska, (n) => { p.vyska = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}${zaskrt('Tučně', p.tucne === true, c((x) => { p.tucne = x; }))}`;
-    if (p.druh === 'znacka') typ = `<p><img class="zn-nahled" src="${esc(ed.katalog.get(p.znackaId)?.png || '')}" alt=""> ${esc(ed.katalog.get(p.znackaId)?.nazev || p.znackaId || 'bez značky')}</p>${tlacitko('Změnit značku…', () => ed.zmenaZnacky(p))}${velikost('Velikost značky', p.velikost, (n) => { p.velikost = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}`;
+    if (p.druh === 'znacka') typ = `<p><img class="zn-nahled" src="${esc(obrazekZnacky(ed.katalog.get(p.znackaId)))}" alt=""> ${esc(ed.katalog.get(p.znackaId)?.nazev || p.znackaId || 'bez značky')}</p>${tlacitko('Změnit značku…', () => ed.zmenaZnacky(p))}${velikost('Velikost značky', p.velikost, (n) => { p.velikost = normalizujVelikost(n); ed.commit(); })}${num('X (m)', 'x')}${num('Y (m)', 'y')}${num('Otočení (°)', 'uhel')}`;
     if (p.druh === 'dvere') {
       const st = p.stenaId ? P.najdi(v.prvky, p.stenaId) : null;
       typ = `${pole('Šířka dveří (m)', f1(p.sirkaM), (t) => { const n = naCislo(t); if (n > 0) { P.nastavSirkuDveri(p, n, v.prvky); ed.commit(); } }, { cislo: true })}

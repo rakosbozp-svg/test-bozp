@@ -66,6 +66,7 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
     await page.fill('.znacky-dlg input[type=search]', 'hydrant');
     await page.click('.zd-bunka >> nth=0');
     await page.waitForSelector('.zn-btn img.zn');
+    assert.match(await page.locator('.zn-btn img.zn[alt="Nebezpečí – výbuch"]').first().getAttribute('src'), /^data:image\/svg\+xml;base64,/, 'formulář: ostrá značka se správným alt');
     // FVE
     await page.selectOption('[data-fve=pritomna]', 'ano');
     await page.fill('[data-fve=vykonKWp]', '460');
@@ -73,6 +74,7 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
     await page.click('[data-z=nahled]');
     assert.ok((await page.textContent('#nahled-a4')).includes('Hala PREFA 1'));
     assert.ok((await page.textContent('#nahled-a4')).includes('460 kWp'));
+    assert.match(await page.locator('#nahled-a4 img[alt="Nebezpečí – výbuch"]').first().getAttribute('src'), /^data:image\/svg\+xml;base64,/, 'náhled A4: ostrá značka se správným alt');
     await page.click('[data-z=formular]');
 
     // listy: přidat, přejmenovat, kopie, smazat

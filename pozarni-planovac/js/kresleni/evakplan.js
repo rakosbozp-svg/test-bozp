@@ -4,6 +4,7 @@
 // Texty se zalamují podle skutečných šířek písma (js/sirkaPisma.js); co se do rámečku nevejde, se nezahodí potichu –
 // rozlozeniPokynu/rozlozeniLegendy/rozlozeniPopisu to vrátí a kontrola úplnosti upozorní.
 import { sirkaTextu, zalomText, zkratText, KAPITALKY } from '../sirkaPisma.js';
+import { maVektor, vektorDoBoxu } from '../znackyVektor.js';
 
 export const FORMATY = {   // rozměr na výšku (mm); z = min. výška záhlaví, p = min. výška velkých písmen záhlaví (tabulka 1 normy; A4 dopočteno z pravidla 7 % / 60 %)
   A4: { w: 210, h: 297, z: 15, p: 9 }, A3: { w: 297, h: 420, z: 21, p: 13 }, A2: { w: 420, h: 594, z: 30, p: 18 },
@@ -161,7 +162,7 @@ function legendaSvg(r, v, o) {
     let ik = '';
     if (it.kruh) ik = `<circle cx="${f(x + sym / 2)}" cy="${f(y + sym / 2)}" r="2.6" fill="${BARVY.modra}"/>`;
     else if (it.cesta) ik = `<rect x="${f(x)}" y="${f(y + 0.5)}" width="${sym}" height="6" fill="${BARVY.svetleZelena}"/>${sipkaSvg(x + sym / 2, y + 3.5, 1, 0, 5, BARVY.zelena)}`;
-    else ik = `<image href="${esc(o.symbolHref(it.znacka))}" x="${f(x)}" y="${f(y)}" width="${sym}" height="${sym}" preserveAspectRatio="xMidYMid meet"/>`;
+    else ik = maVektor(it.znacka) ? vektorDoBoxu(it.znacka, x, y, sym, sym) : `<image href="${esc(o.symbolHref(it.znacka))}" x="${f(x)}" y="${f(y)}" width="${sym}" height="${sym}" preserveAspectRatio="xMidYMid meet"/>`;
     const y0 = y + (radky.length > 1 ? L.sz * 0.95 : sym / 2 + L.sz * 0.36);
     return ik + `<text x="${f(x + sym + 2)}" y="${f(y0)}" font-size="${L.sz}" font-family="${PISMO}">${radky.map((l, j) => `<tspan x="${f(x + sym + 2)}" dy="${j ? f(L.rad) : 0}">${esc(l)}</tspan>`).join('')}</text>`;
   });
@@ -217,7 +218,7 @@ function prehledSvg(L, v, bb, o) {
     else if (p.druh === 'trasa') kres.push(`<polyline points="${pl(p.body)}" fill="none" stroke="${BARVY.zelena}" stroke-width="0.6"/>`);
     else if (p.druh === 'plocha') kres.push(`<polygon points="${pl(p.body)}" fill="#cfcfcf" stroke="#555" stroke-width="0.3"/>`);
     else if (p.druh === 'obdelnik') kres.push(`<rect x="${f(X(p.cx - p.w / 2))}" y="${f(Y(p.cy - p.h / 2))}" width="${f(p.w * sc)}" height="${f(p.h * sc)}" fill="none" stroke="#555" stroke-width="0.3"/>`);
-    else if (p.druh === 'znacka' && p.znackaId === ID_SHROMAZDISTE) kres.push(`<image href="${esc(o.symbolHref(p.znackaId))}" x="${f(X(p.x) - MIN_ZNACKA_MM / 2)}" y="${f(Y(p.y) - MIN_ZNACKA_MM / 2)}" width="${MIN_ZNACKA_MM}" height="${MIN_ZNACKA_MM}" preserveAspectRatio="xMidYMid meet"/>`);   // i v přehledu min. 7 mm (čl. 6)
+    else if (p.druh === 'znacka' && p.znackaId === ID_SHROMAZDISTE) kres.push(maVektor(p.znackaId) ? vektorDoBoxu(p.znackaId, X(p.x) - MIN_ZNACKA_MM / 2, Y(p.y) - MIN_ZNACKA_MM / 2, MIN_ZNACKA_MM, MIN_ZNACKA_MM) : `<image href="${esc(o.symbolHref(p.znackaId))}" x="${f(X(p.x) - MIN_ZNACKA_MM / 2)}" y="${f(Y(p.y) - MIN_ZNACKA_MM / 2)}" width="${MIN_ZNACKA_MM}" height="${MIN_ZNACKA_MM}" preserveAspectRatio="xMidYMid meet"/>`);   // i v přehledu min. 7 mm (čl. 6)
   }
   kres.push(`<rect x="${f(X(o0.x))}" y="${f(Y(o0.y))}" width="${f(vw * sc)}" height="${f(vh * sc)}" fill="${BARVY.modra}" fill-opacity=".18" stroke="${BARVY.modra}" stroke-width="0.6"/>`);
   return `<g data-celkovy-plan="1">${ramecek(r, 'PŘEHLEDOVÝ PLÁN')}${kres.join('')}</g>`;

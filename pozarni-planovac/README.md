@@ -126,6 +126,7 @@ Okénka vzoru HZS SČK (razítko listu a operativní karta) zůstávají beze zm
 - **Směr příjezdu:** nový nástroj. Klik = odkud, druhý klik = kam (hrot). Vznikne velká černá šipka s bílým textem (text a šířku jde změnit).
 - **Tučný text:** zaškrtávátko „Tučně“ u textu, např. pro názvy ulic a objektu.
 - **Legenda:** nadpis „Legenda pro dokumentaci zdolávání požárů“.
+- **Ostré značky:** 23 nejčastějších značek DZP je překreslených jako vektor (`js/znackyVektor.js`): vchody, hydranty, uzávěry vody, plynu a hořlavých kapalin, vypínače, TOTAL / CENTRAL STOP, hranice požárního úseku, nebezpečí (vysoká hořlavost, výbuch, obecná výstraha), místo soustředění a řízení evakuace, ústředna EPS a komunikace. Jsou ostré v editoru, legendě, výběru značek, kartě i PDF a mají stejný poměr stran jako obrázky v katalogu, takže starší projekty se nerozhodí. Ostatní značky se dál kreslí z obrázků katalogu.
 - **Claude v editoru** umí totéž: `vyznam` u ploch, `tucne` u textu, druh `prijezd`. Pokyny „Styl DZP“ mu říkají, jak situaci kreslit.
 
 ## Kreslení s Claude (panel „Claude“ v editoru výkresu)
