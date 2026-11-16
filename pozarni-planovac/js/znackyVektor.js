@@ -64,6 +64,10 @@ const stop = (vnitrek, pismeno, w) => `<rect x="0.35" y="0.35" width="9.3" heigh
 export const VEKTOR = {
   'DZP-024': { w: 27.5, h: 10, svg: `<rect x="0.5" y="1" width="13" height="8" fill="${BILA}" stroke="${CERVENA}" stroke-width="0.7"/>` + blesk([[8.0, 1.9], [6.2, 5.0], [7.8, 5.0], [6.0, 8.1]], CERVENA, 0.45) + text(20.7, 7.3, 5.6, CERVENA, '22kV') },
   'DZP-074': { w: 10.6, h: 10, svg: zakazVody(5.3, 5, 4.75) },
+  'DZP-057': { w: 10.25, h: 10, svg: kruh(4.4, 4.4, 3.95, CERNA, 0.45, BILA) + text(4.4, 6.25, 5.2, CERNA, 'A') + text(8.9, 9.7, 4.0, CERNA, 'U') },
+  'DZP-060': { w: 10, h: 10, svg: mnohouhelnik([[5, 0.5], [9.5, 5], [5, 9.5], [0.5, 5]], 'none', ` stroke="${CERNA}" stroke-width="0.45" stroke-linejoin="round"`) + mnohouhelnik([[5, 5.3], [7.1, 7.4], [5, 9.5], [2.9, 7.4]], 'none', ` stroke="${CERNA}" stroke-width="0.45" stroke-linejoin="round"`) },
+  'DZP-084': { w: 10.6, h: 10, svg: `<rect x="0.45" y="4.3" width="9.7" height="5.25" fill="${BILA}" stroke="${CERNA}" stroke-width="0.45"/>` + kruh(5.3, 6.9, 1.45, CERNA, 0.4) + cara(0.45, 4.3, 2.8, 0.3, CERNA, 0.4) + cara(10.15, 4.3, 7.8, 0.3, CERNA, 0.4) },
+  'DZP-095': { w: 20, h: 1, svg: `<line x1="0.3" y1="0.5" x2="19.7" y2="0.5" stroke="${MODRA}" stroke-width="0.7" stroke-dasharray="4.6,1.4,1.2,1.4"/>` },
   'DZP-105': { w: 9.4, h: 10, svg: mnohouhelnik([[4.7, 0], [9.4, 5], [6.9, 5], [6.9, 10], [2.5, 10], [2.5, 5], [0, 5]], CERNA) },
   'DZP-108': { w: 7.3, h: 10, svg: mnohouhelnik([[3.65, 0], [7.3, 3.7], [4.2, 3.7], [4.2, 10], [3.1, 10], [3.1, 3.7], [0, 3.7]], CERNA) },
   'DZP-001': { w: 8.1, h: 10, svg: hydrant(8.1) },

@@ -11,7 +11,7 @@ import { exportujPdf } from '../js/pdf/export.js';
 const KAT = JSON.parse(readFileSync(new URL('../znacky/katalog.json', import.meta.url), 'utf8')).znacky;
 const katalog = new Map(KAT.map((z) => [z.id, z]));
 const NEJCASTEJSI = ['DZP-105', 'DZP-108', 'DZP-004', 'DZP-001', 'DZP-007', 'DZP-055', 'DZP-002', 'DZP-005', 'DZP-008', 'DZP-017',
-  'DZP-020', 'DZP-104', 'DZP-107', 'DZP-062', 'DZP-053', 'DZP-042', 'DZP-045', 'DZP-054', 'DZP-058', 'DZP-003', 'DZP-050', 'DZP-011', 'DZP-014', 'DZP-024', 'DZP-074'];
+  'DZP-020', 'DZP-104', 'DZP-107', 'DZP-062', 'DZP-053', 'DZP-042', 'DZP-045', 'DZP-054', 'DZP-058', 'DZP-003', 'DZP-050', 'DZP-011', 'DZP-014', 'DZP-024', 'DZP-074', 'DZP-057', 'DZP-060', 'DZP-084', 'DZP-095'];
 const POVOLENE = new Set(['g', 'path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse', 'text', 'tspan']);
 
 test('vektorové značky: nejčastější značky DZP mají vektor se stejným poměrem stran jako katalog', () => {
