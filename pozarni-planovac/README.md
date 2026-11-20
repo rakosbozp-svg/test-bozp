@@ -19,7 +19,7 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
 - **Operativní karta na jeden list A4** přesně v okénkách vzoru HZS SČK (`js/kartaRozvrzeni.js`): náhled, tisk z prohlížeče i export PDF mají stejné rozvržení a písmo; písmo se zmenšuje od 8,5 do 7 pt, a když se karta nevejde ani tak, pokračuje na další straně (nic se neztratí) a aplikace upozorní (Hanuška 1996, kap. 3.1).
 
 ## Co zůstává na zpracovateli (nejde dopočítat – vyžaduje místo, HZS nebo normu)
-- Skutečný stav na místě (uzávěry, vypínače, TOTAL/CENTRAL STOP, KTPO, OPPO, látky, FVE), kontakty, stupeň poplachu a stanice HZS, ověřený průtok hydrantu (zkouška).
+- Skutečný stav na místě (uzávěry, vypínače, TOTAL/CENTRAL STOP, KTPO, OPPO, látky, FVE), kontakty, stanice HZS, ověřený průtok hydrantu (zkouška). Stupeň poplachu doplňuje HZS – okénko na kartě zůstává prázdné.
 - Taktické volby ve výpočtu SaP (varianta požáru, hlavní směr, forma šíření, fronta hašení) a schválení DZP s HZS.
 - Evakuační plány: barvy podle ISO 3864-4 jsou přibližné (normu nemáme); z ČSN ISO 23601 nebyly čitelné str. 5–6 (čl. 5 od bodu e), podrobnosti čl. 7.4 a text přílohy A – kontrola odkazuje jen na články, které jsou ve výtahu; „písmo min. 2 mm“ bere aplikace přísněji jako výšku velkých písmen. Ze 17 evakuačních značek je 5 dodaných, 7 náhrad ze značek DZP a 5 bez obrázku (přenosný hasicí přístroj, výtah, schodiště, elektrické zařízení, opatření pro osoby se zdravotním postižením) – dodejte oficiální ISO 7010 (nahrají se v projektu evakuačního plánu).
 - Vyplnitelné PDF dotazníku je ověřené testy, ne ve všech prohlížečích PDF.
@@ -40,10 +40,12 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
   je vidět pixelace. Skutečné vektory jsou možné až z dodaných PNG E001–E019/F001–F006 nebo z CAD zdroje ČAHD.
   Názvy jsou text z PDF; `overeno: false` u všech, dokud je nepotvrdíš.
 - **Datový model** (`js/model.js`): projekt → listy (karta, situace, půdorys, schéma, text), pole karty dle vzoru HZS SČK A4
-  (`js/kartaPole.js`; pravidlo „NE“, předtištěné řádky hořlavin a výbušnin, TOTAL/CENTRAL STOP, KTPO, OPPO, PBZ je/není;
+  (`js/kartaPole.js`; pravidlo „NE“ – okénko s „NE“ se na kartě netiskne a zbylá okénka řádku se rozšíří (hodnota s další informací, např. „NE, uzávěr je v sousedním objektu“, se tiskne), předtištěné řádky hořlavin a výbušnin, TOTAL/CENTRAL STOP, KTPO, OPPO, PBZ je/není;
   na konci seznamu PBZ navíc ADSP – autonomní detekce a signalizace požáru, PBZ podle vyhl. 246/2001 Sb., § 2 odst. 2 písm. a), vzor ji nemá),
   výkres s měřítkem/severkou/vrstvami/legendou, revize, migrace starších souborů (vedlejší uzávěry starší karty se zachovají jako
   „údaje mimo vzor“ a netisknou se), očista importovaných souborů (`js/ocista.js`), velikost prvků 1–500 (krok 0,1).
+  Zpracovatel nových karet a evakuačních plánů je předvyplněný (`js/zpracovani.js`, ve formuláři jde přepsat) a datum zpracování
+  na kartě, v razítku výkresů i v evakuačním plánu je vždy den poslední úpravy projektu – ručně se nezadává a export ho nemění.
 - **Kontrola úplnosti** (`js/uplnost.js`): hlášení nesou popisky polí; „NE“ nejde u názvu, adresy a zpracovatele; hasivo u nebezpečí,
   výkon FVE v kWp, ověřený průtok hydrantu, doporučení s vypnutím energií, měřítko, severka, legenda, revize, existence značek.
 - **Litice** (`data/litice.projekt.json`): jen potvrzené údaje o FVE a poznámky o rozsahu a polohách.
@@ -110,7 +112,7 @@ Druh dokumentace „Operativní plán“ (režim DZP) se zakládá podle Metodic
 Kontrola úplnosti hlídá povinné části (kap. 2.1–2.3), náhled i export PDF obsahují textové listy. Klik na nález otevře příslušný list.
 
 ### Přebírání údajů karta ↔ operativní plán
-V listech OP je tlačítko **Převzít údaje z operativní karty…**, v kartě **Převzít údaje z operativního plánu…**. Zdrojem může být list v tomto projektu i v jiném projektu DZP uloženém v prohlížeči. Aplikace ukáže návrh (co se kam zapíše); prázdná pole jsou předvybraná, pole s hodnotou jsou odškrtnutá a označená „Přepíše“. Do plánu se převádí: budova (charakter objektu), osoby, nebezpečí s hasivy, PBZ, uzávěry/vypínače a FVE, vodní zdroje (s průtokem a ověřením), příjezd a omezení, doporučení, kontakty, stupeň poplachu. Do karty jen jednoznačná pole (vybraná budova, osoby, doporučení, stupeň poplachu) – nebezpečí, vodní zdroje a PBZ jsou v kartě strukturované a z textu plánu se nerozkládají. Údaje se kopírují jednorázově, nejsou trvale propojené.
+V listech OP je tlačítko **Převzít údaje z operativní karty…**, v kartě **Převzít údaje z operativního plánu…**. Zdrojem může být list v tomto projektu i v jiném projektu DZP uloženém v prohlížeči. Aplikace ukáže návrh (co se kam zapíše); prázdná pole jsou předvybraná, pole s hodnotou jsou odškrtnutá a označená „Přepíše“. Do plánu se převádí: budova (charakter objektu), osoby, nebezpečí s hasivy, PBZ, uzávěry/vypínače a FVE, vodní zdroje (s průtokem a ověřením), příjezd a omezení, doporučení, kontakty. Do karty jen jednoznačná pole (vybraná budova, osoby, doporučení) – nebezpečí, vodní zdroje a PBZ jsou v kartě strukturované a z textu plánu se nerozkládají. Údaje se kopírují jednorázově, nejsou trvale propojené.
 
 ### Výpočet SaP (Hanuška 1996, část druhá) – list „OP – výpočet SaP“
 Kalkulačka podle kap. 3–5 a tabulek č. 1, 2, 4 metodiky (protokol v náhledu a PDF má vzorec a výsledek na zvláštních řádcích): dojezdy jednotek (tDO = tv + 60·L/45), doba volného rozvoje tVR, t1/t2/t3, rádius šíření R (v době prvních proudů i lokalizace), plocha požáru a hašení pro kruhovou, úhlovou (f podle úhlu) a pravoúhlou formu, pravidlo 85 % plochy úseku, dodávka na hašení (Sh·Ip nebo Oh·Io) a ochlazování nádrží, počet proudů, automobilů (podle družstva i 0,75·Qc), hasičů (1,25·Σk·N), porovnání s vydatností zdroje, ochranná doba dýchacího přístroje, dálková doprava (čerpadla i kyvadlo) a zásoba pěnidla. Každý krok se vypisuje se vzorcem a dosazenými hodnotami; chybějící vstupy se hlásí. Tlačítko zapíše shrnutí do základního textu OP. Pozn.: ve vzorci tVR má zdroj u tBR index „Po“, vysvětlivka i schéma „Pr“ – použito „Pr“ a uvedeno v protokolu. Technika z tab. 9 (1996) není přednastavená – výkon čerpadla zadává zpracovatel.

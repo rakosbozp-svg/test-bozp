@@ -45,16 +45,18 @@ test('vyplněný plán s únikovou cestou nemá chyby; materiál bez střežení
   assert.deepEqual(kody(p), ['EVAK_E_STREZENI']);
   e.materialStrezeni = 'NE'; assert.deepEqual(kody(p), []);
   assert.ok(evakJakoText(e, p).includes('Parkoviště u brány'));
-  assert.match(evakJakoText(e, p), /datum: 1\. 10\. 2026/, 'datum česky, ne ISO');
+  p.zmeneno = '2026-10-01T08:00:00.000Z';
+  assert.match(evakJakoText(e, p), /Zpracoval: Z\. Zpracovatel, č\. osvědčení: Z-OZO 1\/2020, datum: 1\. 10\. 2026/, 'datum zpracování = den poslední úpravy, česky');
 });
 
-test('§ 33/2 a)–d) a § 40/2: „NE“ nestačí, datum a odborná způsobilost zpracovatele jsou povinné', () => {
+test('§ 33/2 a)–d) a § 40/2: „NE“ nestačí, odborná způsobilost zpracovatele je povinná', () => {
   const p = M.novyProjekt({ typ: 'evakuacni_plan' }), e = p.listy[0].evak;
   Object.assign(e.organizator, { jmeno: 'NE' }); e.mistoRizeni = 'ne'; e.cesty = 'NE'; e.prvniPomoc = 'NE'; e.kontrolaPoctu.jmeno = 'NE'; e.prostredky = 'NE'; e.material = 'NE';
   const n = zkontrolujUplnost(p), text = (kod) => n.find((x) => x.kod === kod)?.text || '';
   for (const kod of ['EVAK_A_OSOBA', 'EVAK_A_MISTO', 'EVAK_C_CESTY', 'EVAK_D_POMOC', 'EVAK_C_KONTROLA']) assert.match(text(kod), /„NE“ zde nestačí/, kod);
   assert.ok(!kody(p).includes('EVAK_B_PROSTREDKY') && !kody(p).includes('EVAK_E_MATERIAL'), 'u prostředků a materiálu „NE“ stačí');
-  for (const kod of ['OSVEDCENI', 'EVAK_DATUM']) assert.ok(kody(p).includes(kod), kod);
+  assert.ok(kody(p).includes('OSVEDCENI'));
+  assert.ok(!kody(p).includes('EVAK_DATUM') && !kody(p).includes('ZPRACOVAL'), 'datum zpracování se vyplní samo (den poslední úpravy), zpracovatel je předvyplněný');
 });
 
 test('§ 33/2/f v jednotlivých podlažích: rozsah plánu proti označení podlaží na listech', async () => {

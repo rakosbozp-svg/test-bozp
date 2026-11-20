@@ -71,7 +71,6 @@ function kontrolaKarty(k, p, chyba, upoz) {
     if (prazdne(v)) chyba(kod, `${c}.${cesta}`, `${pop(cesta)}: nevyplněno${BEZ_NE.has(cesta) ? '.' : ` ${NE_NAVOD}.`}`);
     else if (BEZ_NE.has(cesta) && jeNe(v)) chyba(kod, `${c}.${cesta}`, `${pop(cesta)}: „NE“ zde nelze – údaj musí být uveden${cesta.startsWith('zpracoval') ? ' (DZP smí zpracovat jen osoba podle § 11 odst. 1 nebo 2 zákona o požární ochraně – Zásady HZS SČK, kap. 1)' : ''}.`);
   }
-  if (prazdne(k.stupenPoplachu)) upoz('KARTA_POPLACH', `${c}.stupenPoplachu`, 'Stupeň poplachu: doplňte podle požárního poplachového plánu kraje po konzultaci s HZS. U osamocených a dispozičně jednoduchých objektů se OK zpracovává bez stanovení stupně poplachu – pak vepište „NE“ (Zásady HZS SČK, kap. 3).');
   if (!Number.isFinite(o.gps.sirka) || !Number.isFinite(o.gps.delka)) chyba('GPS', `${c}.objekt.gps`, 'GPS souřadnice objektu nejsou vyplněné (vzor je uvádí v záhlaví karty).');
 
   const sekce = (id) => SEKCE.find((s) => s.id === id).pole.map((x) => x[0]);

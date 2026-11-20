@@ -56,7 +56,6 @@ export function navrhZKarty(k, { opText, opZaklad }) {
     for (const t of tel) if (!opText.telefony.some((x) => tx(x.telefon) && tx(x.telefon) === t.telefon)) o.push({ cil: 'opText', pridat: 'telefony', popis: `Telefon – ${t.funkce}`, hodnota: t, stavajici: null });
   }
   if (opZaklad) {
-    dej('opZaklad', opZaklad, 'ots.stupenPoplachu', 'Stupeň požárního poplachu', tx(k.stupenPoplachu));
     dej('opZaklad', opZaklad, 'ots.osoby', 'Počet osob a směnnost', tx(k.objekt.obsazeniOsobami));
     const eps = stavPbz(k.pbz.eps);
     dej('opZaklad', opZaklad, 'ots.signalizace', 'EPS, ohlašovna', eps === null ? '' : eps ? `EPS: ano${upresneniPbz(k.pbz.eps) ? ` – ${upresneniPbz(k.pbz.eps)}` : ''}` : 'EPS: není');
@@ -75,7 +74,6 @@ export function navrhZPlanu({ opText, opZaklad }, budova, k) {
     dej('charakter.konstrukce', 'Konstrukce objektu', budova.konstrukce); dej('charakter.pozarniUseky', 'Požární úseky', budova.useky);
   }
   if (opText) { dej('objekt.obsazeniOsobami', 'Obsazení osobami', opText.udaje.osoby); dej('doporuceni', 'Doporučení pro velitele zásahu', opText.doporuceni); }
-  if (opZaklad) dej('stupenPoplachu', 'Stupeň poplachu', opZaklad.ots.stupenPoplachu);
   return o;
 }
 

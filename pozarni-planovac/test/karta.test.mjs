@@ -14,6 +14,8 @@ import { naCislo, ctiSouradnici } from '../js/formular.js';
 import { cisloZOdpovedi } from '../js/dotaznik.js';
 import { rozborPbr, navrhZPbr } from '../js/pbr.js';
 import { pouzijNavrh } from '../js/prebirani.js';
+import { jeNe } from '../js/kartaPole.js';
+import { datumUpravy, VYCHOZI_ZPRACOVATEL } from '../js/zpracovani.js';
 
 const katalog = new Map(JSON.parse(readFileSync(new URL('../znacky/katalog.json', import.meta.url), 'utf8')).znacky.map((z) => [z.id, z]));
 const mame = (cmd) => spawnSync(cmd, ['-v']).status !== null;
@@ -114,13 +116,12 @@ test('migrace starší karty: vedlejší uzávěry do „mimo vzor“, výtahy z
   assert.ok(kody({ ...p, listy: [{ ...p.listy[0], karta: m }, p.listy[1]] }).has('MIMO_VZOR'));
 });
 
-test('kontrola karty: „NE“ nejde u názvu, adresy a zpracovatele; stupeň poplachu jen upozornění; PBZ jedním hlášením', () => {
+test('kontrola karty: „NE“ nejde u názvu, adresy a zpracovatele; PBZ jedním hlášením', () => {
   const p = projektSeVzorem(), k = p.listy[0].karta;
   assert.ok(![...zkontrolujUplnost(p)].some((x) => x.hladina === 'chyba'), 'vzorová karta nemá chyby');
   k.objekt.nazev = 'NE'; k.zpracoval.cisloOsvedceni = 'ne';
   const n = zkontrolujUplnost(p), nal = (kod) => n.find((x) => x.kod === kod);
   assert.equal(nal('ID_OBJEKT').hladina, 'chyba'); assert.match(nal('OSVEDCENI').text, /§ 11 odst\. 1 nebo 2/);
-  k.stupenPoplachu = ''; assert.equal(zkontrolujUplnost(p).find((x) => x.kod === 'KARTA_POPLACH').hladina, 'upozorneni');
   k.pbz.eps = ''; k.pbz.pk = '';
   const pbz = zkontrolujUplnost(p).filter((x) => x.kod === 'PBZ');
   assert.equal(pbz.length, 1); assert.match(pbz[0].text, /EPS, PK/);
@@ -179,3 +180,80 @@ test('ADSP (autonomní detekce a signalizace požáru) je v seznamu PBZ na konci
   }
 });
 
+
+// ---------- zadání uživatele: okénka s „NE“ se netisknou, stupeň poplachu doplní HZS, zpracovatel a datum se vyplní samy ----------
+const textyKarty = (R) => R.tabulky.flatMap((t) => t.radky.flatMap((r) => r.bunky.flatMap((b) => (b.seg || []).map((s) => s.t))));
+const pasy = (R) => R.tabulky[1].radky.filter((r) => r.pas).map((r) => r.bunky[0].seg[0].t.replace(/ {5}/g, '|').replace(/ /g, '').replace(/\|/g, ' '));
+const radekSeStitkem = (t, stitek) => t.radky.find((r) => r.bunky.some((b) => (b.seg || []).some((s) => s.t === stitek)));
+
+test('„NE“ se pozná i jako „není“ / „nejsou“ / s poznámkou v závorce; hodnota s další informací ne', () => {
+  for (const v of ['NE', ' ne ', 'není', 'Nejsou', 'NE.', 'NE (dle PBŘ se nenavrhuje)', 'nenavrženo (PBŘ)']) assert.ok(jeNe(v), v);
+  for (const v of ['', null, undefined, 'NE, uzávěr je v sousedním objektu', 'Nebezpečí výbuchu', 'NEHOŘLAVÁ', 'ANO']) assert.ok(!jeNe(v), String(v));
+});
+
+test('okénka s „NE“ se na kartě netisknou a zbylá okénka řádku převezmou jejich šířku; nevyplněné zůstává s „…“', () => {
+  const p = projektSeVzorem(), k = p.listy[0].karta;
+  let R = rozvrzeniKarty(sestavKartu(k, p));   // vzor: „NE“ u výbušnin, uzávěru topení, TOTAL STOP a u šesti PBZ
+  assert.ok(!textyKarty(R).some((t) => jeNe(t)), 'na kartě není žádné „NE“');
+  const zn = (r) => r.bunky.filter((b) => b.zn !== undefined).map((b) => b.zn);
+  assert.deepEqual(R.tabulky[1].radky.filter((r) => zn(r).some((z) => /^V:(plyn|el)$/.test(z))).map(zn), [['V:plyn', 'V:voda'], ['V:el', 'V:central']]);
+  assert.equal(R.tabulky[1].radky.filter((r) => zn(r).includes('DZP-053')).length, 0, 'řádek výbušnin s „NE“ chybí');
+
+  Object.assign(k.objekt, { omezeni: 'NE', obsazeniOsobami: 'není' }); k.charakter.priccky = 'nejsou';
+  k.nebezpeci[0].popis = 'NE'; k.fve.pritomna = false;
+  Object.assign(k.pbz, { ktpo: 'NE', oppo: 'NE', eps: 'NE', zdp: 'NE', adsp: 'NE' });
+  k.vodniZdroje.push({ id: 'v3', typ: 'jiny', popis: 'NE', prutokLs: null, overenPrutok: false, objemM3: null, gps: { sirka: null, delka: null }, znackaId: null });
+  R = rozvrzeniKarty(sestavKartu(k, p));
+  assert.ok(!textyKarty(R).some((t) => jeNe(t)));
+  assert.equal(R.tabulky[0].radky[0].bunky[1].rowspan, 4, 'bez řádku OBSAZENÍ OSOBAMI je STUPEŇ POPLACHU přes 4 řádky');
+  const prijezd = radekSeStitkem(R.tabulky[0], 'PŘÍJEZD Z:');
+  assert.deepEqual(prijezd.bunky.map((b) => b.span || 1), [1, 4], 'bez OMEZENÍ převezme šířku příjezd');
+  const steny = radekSeStitkem(R.tabulky[1], 'STĚNY:');
+  assert.ok(!radekSeStitkem(R.tabulky[1], 'PŘÍČKY:')); assert.deepEqual(steny.bunky.map((b) => b.span || 1), [2, 1, 1, 7, 1, 1]);
+  assert.deepEqual(pasy(R), ['CHARAKTER OBJEKTU', 'UZÁVĚRY MÉDIÍ / POŽÁRNĚ BEZPEČNOSTNÍ ZAŘÍZENÍ', 'VODNÍ ZDROJE A HASEBNÍ LÁTKY', 'DOPORUČENÍ PRO VELITELE ZÁSAHU'], 'bez nebezpečí a FVE chybí i pás NEBEZPEČÍ');
+  assert.ok(!radekSeStitkem(R.tabulky[1], 'PBZ'), 'bez KTPO, OPPO a PBZ se okénko PBZ netiskne');
+  assert.equal(R.tabulky[1].radky.filter((r) => r.bunky.some((b) => b.zn === 'DZP-004' || b.zn === 'DZP-022')).length, 2, 'ostatní vodní zdroje zůstávají');
+  assert.ok(!R.tabulky[1].radky.some((r) => r.bunky[0].zn === null), 'vodní zdroj „NE“ (bez značky) se netiskne');
+
+  k.media.hlavniUzaverVody = ''; k.charakter.strecha = '';
+  R = rozvrzeniKarty(sestavKartu(k, p));
+  assert.ok(R.tabulky[1].radky.some((r) => zn(r).includes('V:voda')), 'nevyplněný uzávěr vody zůstává');
+  assert.ok(radekSeStitkem(R.tabulky[1], 'STŘECHA:').bunky.some((b) => b.seg?.some((s) => s.chybi)), 'nevyplněné okénko má „…“');
+  for (const t of R.tabulky) for (const r of umistiBunky(t)) assert.ok(r.bunky.every((b) => b.w > 0));
+});
+
+test('STUPEŇ POPLACHU je vždy prázdný bez teček (doplní HZS) – i když je v datech hodnota', () => {
+  const p = projektSeVzorem(), k = p.listy[0].karta;
+  k.stupenPoplachu = 'II.';
+  const bunka = rozvrzeniKarty(sestavKartu(k, p)).tabulky[0].radky[0].bunky[1];
+  assert.equal(bunka.seg[0].t, 'STUPEŇ POPLACHU');
+  assert.ok(!bunka.seg.some((s) => s.chybi || /II\./.test(s.t)), 'žádná hodnota ani „…“');
+  assert.ok(bunka.seg.some((s) => s.t === 'Kladno'), 'stanice HZS zůstává');
+  assert.ok(!zkontrolujUplnost(p).some((x) => x.kod === 'KARTA_POPLACH'), 'kontrola stupeň nevyžaduje');
+});
+
+test('zpracovatel je předvyplněný (přepsat jde), datum zpracování je den poslední úpravy projektu', () => {
+  assert.equal(VYCHOZI_ZPRACOVATEL, 'Šimon Rákoš');
+  const p = M.novyProjekt(), k = p.listy[0].karta;
+  assert.equal(k.zpracoval.jmeno, VYCHOZI_ZPRACOVATEL);
+  assert.equal(M.novyProjekt({ typ: 'evakuacni_plan' }).listy[0].evak.zpracoval.jmeno, VYCHOZI_ZPRACOVATEL);
+  const stary = JSON.parse(JSON.stringify(p)); stary.listy[0].karta.zpracoval.jmeno = '';
+  assert.equal(M.migruj(stary).listy[0].karta.zpracoval.jmeno, VYCHOZI_ZPRACOVATEL, 'prázdný zpracovatel starší karty se doplní');
+  const jiny = JSON.parse(JSON.stringify(p)); jiny.listy[0].karta.zpracoval.jmeno = 'Ing. Jan Novák';
+  assert.equal(M.migruj(jiny).listy[0].karta.zpracoval.jmeno, 'Ing. Jan Novák', 'přepsaný zpracovatel zůstane');
+
+  p.zmeneno = '2026-11-20T09:30:00.000Z'; k.zpracoval.datum = '2020-01-01';
+  assert.equal(datumUpravy(p.zmeneno), '20. 11. 2026'); assert.equal(datumUpravy(undefined), ''); assert.equal(datumUpravy('nesmysl'), '');
+  assert.equal(sestavKartu(k, p).zpracoval.datum, '20. 11. 2026', 'ručně zadané datum se nepoužije');
+  M.pridejRevizi(p, { popis: 'změna' });
+  assert.equal(sestavKartu(k, p).zpracoval.datum, datumUpravy(p.zmeneno), 'po úpravě je datum dnešní');
+});
+
+test('PDF: vzorová karta bez „NE“, s datem poslední úpravy (poppler)', { skip: !mame('pdftotext') && 'poppler není dostupný' }, async () => {
+  const p = projektSeVzorem();
+  const b = await exportujPdf(p, { katalog, listy: [p.listy[0].id], varovani: [] });
+  const f = join(tmp, 'bez-ne.pdf'); writeFileSync(f, b);
+  const txt = spawnSync('pdftotext', ['-layout', f, '-']).stdout.toString();
+  assert.doesNotMatch(txt, /(^|\s)NE(\s|$)/m);
+  assert.ok(txt.includes(datumUpravy(p.zmeneno)) && txt.includes('STUPEŇ POPLACHU'));
+});

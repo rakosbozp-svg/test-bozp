@@ -3,8 +3,8 @@
 
 // [cesta, popisek, typ, šířka ('S' = úzké pole), volby] – volby.ne === false: pole nesmí být „NE“ (údaj vždy existuje)
 export const SEKCE = [
-  { id: 'hlavicka', nazev: 'Objekt a provoz', barva: 'zluta', pole: [
-    ['stupenPoplachu', 'Stupeň poplachu', 'text', 'S'], ['uzemniOdbor', 'Stanice HZS', 'text', 'S'],
+  { id: 'hlavicka', nazev: 'Objekt a provoz', barva: 'zluta', napoveda: 'Stupeň poplachu doplní HZS – okénko na kartě zůstane prázdné. Okénka, do kterých vepíšete „NE“, se na kartě netisknou (zbylá okénka řádku se rozšíří).', pole: [
+    ['uzemniOdbor', 'Stanice HZS', 'text', 'S'],
     ['objekt.nazev', 'Objekt', 'text', '', { ne: false }], ['objekt.provozovatel', 'Provozovatel', 'text', '', { ne: false }], ['objekt.ic', 'IČ', 'text', 'S'],
     ['objekt.adresa', 'Adresa', 'text', '', { ne: false }],
     ['objekt.gps.sirka', 'GPS – šířka (N)', 'cislo', 'S'], ['objekt.gps.delka', 'GPS – délka (E)', 'cislo', 'S'],
@@ -22,7 +22,7 @@ export const SEKCE = [
     ['charakter.stropy', 'Stropy', 'text'], ['charakter.strecha', 'Střecha', 'text'], ['charakter.typUnikoveCesty', 'Typ únikové cesty', 'text', 'S'],
     ['charakter.pozarniUseky', 'Požární úseky', 'text'],
   ] },
-  { id: 'media', nazev: 'Uzávěry médií', barva: 'zelena', napoveda: 'Pořadí a značky podle vzoru HZS SČK. TOTAL STOP = vypnutí včetně napájení požárně bezpečnostních zařízení, CENTRAL STOP = vypnutí mimo napájení požárně bezpečnostních zařízení (značky DZP-104 a DZP-107). Co nelze doplnit, vepište „NE“.', pole: [
+  { id: 'media', nazev: 'Uzávěry médií', barva: 'zelena', napoveda: 'Pořadí a značky podle vzoru HZS SČK. TOTAL STOP = vypnutí včetně napájení požárně bezpečnostních zařízení, CENTRAL STOP = vypnutí mimo napájení požárně bezpečnostních zařízení (značky DZP-104 a DZP-107). Co nelze doplnit, vepište „NE“ – okénko s „NE“ se na kartě netiskne.', pole: [
     ['media.hlavniUzaverPlynu', 'Hlavní uzávěr plynu – umístění', 'text'], ['media.hlavniUzaverVody', 'Hlavní uzávěr vody – umístění', 'text'],
     ['media.hlavniUzaverTopeni', 'Hlavní uzávěr topení – umístění', 'text'], ['media.hlavniVypinacEl', 'Hlavní vypínač el. proudu – umístění', 'text'],
     ['media.totalStop', 'TOTAL STOP – umístění', 'text'], ['media.centralStop', 'CENTRAL STOP – umístění', 'text'],
@@ -33,7 +33,7 @@ export const SEKCE = [
     ['znalostObjektu.funkce', 'Znalost o objektu má – funkce (např. školník)', 'text', 'S'],
   ] },
   { id: 'podpisy', nazev: 'Zpracoval a schválil', barva: 'seda', pole: [
-    ['zpracoval.jmeno', 'Zpracoval – jméno a příjmení', 'text', '', { ne: false }], ['zpracoval.cisloOsvedceni', 'Číslo osvědčení', 'text', 'S', { ne: false }], ['zpracoval.datum', 'Datum zpracování', 'datum', 'S'],
+    ['zpracoval.jmeno', 'Zpracoval – jméno a příjmení', 'text', '', { ne: false }], ['zpracoval.cisloOsvedceni', 'Číslo osvědčení', 'text', 'S', { ne: false }], ['zpracoval.datum', 'Datum zpracování (den poslední úpravy)', 'datumUpravy', 'S'],
     ['schvalil.jmeno', 'Schválil – jméno a příjmení', 'text'], ['schvalil.funkce', 'Schválil – funkce', 'text'], ['schvalil.datum', 'Datum schválení', 'datum', 'S'],
   ] },
 ];
@@ -56,6 +56,11 @@ export const PBZ_UMISTENI = [['ktpo', 'KTPO', 'klíčový trezor požární ochr
 const NENI = /^(ne|není|nejsou|nenavrhuje se|nenavrženo)(?![\p{L}\d])/iu, NEVIM = /^(nevím|nezn[aá]mo|\?)/iu, ANO = /^(ano|je|jsou)(?![\p{L}\d])[\s,;:–-]*/iu;
 export const stavPbz = (v) => { const t = String(v ?? '').trim(); return t === '' || NEVIM.test(t) ? null : NENI.test(t) ? false : true; };
 export const upresneniPbz = (v) => { const t = String(v ?? '').trim(); return stavPbz(t) === true ? t.replace(ANO, '').trim() : ''; };
+
+// Okénko „nelze doplnit“: jen „NE“ (i „není“, „nejsou“, „nenavrženo“…), nejvýš s poznámkou v závorce. Na kartě se netiskne
+// (zadání uživatele). Hodnota s další informací („NE, uzávěr je v sousedním objektu“) se tiskne, aby se informace neztratila.
+const JEN_NE = /^(ne|není|nejsou|nenavrhuje se|nenavrženo)\s*(\([^()]*\))?\s*\.?$/iu;
+export const jeNe = (v) => typeof v === 'string' && JEN_NE.test(v.trim());
 
 export const POPISEK = Object.fromEntries([
   ...SEKCE.flatMap((s) => s.pole.map(([c, p]) => [c, p])),

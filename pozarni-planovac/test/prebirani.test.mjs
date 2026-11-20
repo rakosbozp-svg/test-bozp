@@ -27,7 +27,8 @@ test('karta → operativní plán: návrh převede údaje, nebezpečí, vodu, PB
   assert.match(t.udaje.latky, /Technický benzin 200 l – vhodné hasivo: pěna/);
   assert.match(t.voda.zdroje, /Vnější hydrant – u brány, průtok 6,5 l\/s \(ověřen\)/);
   assert.match(t.udaje.rozvody, /Hlavní vypínač el\. proudu: trafostanice/); assert.match(t.udaje.rozvody, /FVE: 460 kWp, 488 panelů, bez baterie, vypínač silové části: STOP FVE u NN rozvodny/);
-  assert.equal(t.telefony.length, 2); assert.equal(cile.opZaklad.ots.stupenPoplachu, 'II.');
+  assert.equal(t.telefony.length, 2);
+  assert.equal(cile.opZaklad.ots.stupenPoplachu, '', 'stupeň poplachu se z karty nepřebírá (na kartě ho doplňuje HZS)');
   assert.deepEqual(navrhZKarty(vyplnenaKarta(), cile), [], 'podruhé už není co převzít (žádné duplicity)');
 });
 
@@ -47,6 +48,7 @@ test('operativní plán → karta: jen jednoznačná pole vybrané budovy', () =
   const k = M.novyList('karta').karta, n = navrhZPlanu({ opText: t, opZaklad: z }, t.objekty[1], k);
   pouzijNavrh(n, new Set(n.map((_, i) => i)), { karta: k });
   assert.equal(k.objekt.nazev, 'Lakovna'); assert.equal(k.charakter.ucelStavby, 'lakování'); assert.equal(k.charakter.podlazi, '');
-  assert.equal(k.objekt.obsazeniOsobami, '10 osob'); assert.equal(k.doporuceni, 'Pozor na ředidla'); assert.equal(k.stupenPoplachu, 'I.');
+  assert.equal(k.objekt.obsazeniOsobami, '10 osob'); assert.equal(k.doporuceni, 'Pozor na ředidla');
+  assert.ok(!n.some((x) => x.cesta === 'stupenPoplachu'), 'stupeň poplachu se do karty nepřebírá (doplňuje ho HZS)');
   assert.ok(k.nebezpeci.every((x) => x.popis === ''), 'nebezpečí se z textu plánu nepřebírají');
 });

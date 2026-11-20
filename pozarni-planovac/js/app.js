@@ -4,6 +4,7 @@ import { pripoj as pripojUloziste, kodChyby } from './zaloha/uloziste.js';
 import { vytvorAutozalohu } from './zaloha/autozaloha.js';
 import { nactiKatalog } from './znacky.js';
 import { vykresliKartu, pripoj, esc } from './formular.js';
+import { datumUpravy } from './zpracovani.js';
 import { nahledKarty, prizpusobNahled } from './nahled.js';
 import { vykresliEvak, pripojEvak, nahledEvak } from './evakuace.js';
 import { panelUplnosti, panelProjektu, METODIKA } from './panely.js';
@@ -47,6 +48,7 @@ function ohlas(text, trvale = false) {
 let casovac = null;
 function uloz(ihned = false) {
   S.p.zmeneno = new Date().toISOString();
+  { const den = datumUpravy(S.p.zmeneno); document.querySelectorAll('[data-datum-upravy]').forEach((el) => { el.textContent = den; }); }   // datum zpracování = den poslední úpravy
   const jed = () => {
     casovac = null;
     if (!S.p) return;
@@ -493,7 +495,7 @@ function obsah(list) {
   if (!list) { host.innerHTML = '<p class="prazdno">Projekt nemá žádný list. Přidejte ho vlevo.</p>'; return; }
   if (list.typ === 'karta') {
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledKarty(list, S.p)}</div>`; prizpusobNahled(host); pismoKarty.then(() => { if (host.isConnected) prizpusobNahled(host); }); return; }
-    const kresli = () => { vykresliKartu(list, host); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); host.querySelector('.prevzit-lista').insertAdjacentHTML('beforeend', TLACITKO_PBR); pripoj(list, host, naZmenu); pripojPbr(host, kresli); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
+    const kresli = () => { vykresliKartu(list, host, S.p); host.insertAdjacentHTML('afterbegin', TLACITKO_PREVZIT('z operativního plánu')); host.querySelector('.prevzit-lista').insertAdjacentHTML('beforeend', TLACITKO_PBR); pripoj(list, host, naZmenu); pripojPbr(host, kresli); obal(host, () => prevzitDoKarty(list).then((n) => n && kresli())); panel(true); };
     const naZmenu = (prekreslit) => {
       uloz();
       if (prekreslit) { const y = window.scrollY; kresli(); window.scrollTo(0, y); } else panel(true);
@@ -547,8 +549,8 @@ function obsah(list) {
     kresli();
   } else if (list.typ === 'evak_text') {
     if (S.zalozka === 'nahled') { host.innerHTML = `<div id="nahled-a4">${nahledEvak(list, S.p)}</div>`; return; }
-    const naZmenu = (prekreslit) => { uloz(); if (prekreslit) { const y = window.scrollY; vykresliEvak(list, host); pripojEvak(list, host, naZmenu); window.scrollTo(0, y); } panel(true); };
-    vykresliEvak(list, host); pripojEvak(list, host, naZmenu);
+    const naZmenu = (prekreslit) => { uloz(); if (prekreslit) { const y = window.scrollY; vykresliEvak(list, host, S.p); pripojEvak(list, host, naZmenu); window.scrollTo(0, y); } panel(true); };
+    vykresliEvak(list, host, S.p); pripojEvak(list, host, naZmenu);
   } else if (list.typ === 'text') {
     host.innerHTML = `<label class="f"><span>Text listu „${esc(list.nazev)}“</span><textarea rows="24" id="t-text">${esc(list.text)}</textarea></label>`;
     $('#t-text').oninput = (e) => { list.text = e.target.value; uloz(); };

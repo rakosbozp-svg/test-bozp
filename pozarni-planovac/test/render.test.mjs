@@ -9,7 +9,7 @@ const o = (extra = {}) => ({ objektNazev: 'Hala PREFA 1', nazevListu: 'Půdorys 
 
 export function ukazka() {
   const v = novyList('pudorys').vykres;
-  v.severka.uhel = 20; v.razitko.zpracoval = 'Ing. Test'; v.razitko.datum = '2026-10-07';
+  v.severka.uhel = 20; v.razitko.zpracoval = 'Ing. Test';
   const stena = P.novyPrvek('stena', { body: [[2, 2], [20, 2], [20, 12], [2, 12], [2, 2]] });
   const dv = P.novyPrvek('dvere'), dv2 = P.novyPrvek('dvere', { sirkaM: 1.6, typ: 'dvoukridle', typAuto: false }), vr = P.novyPrvek('dvere', { sirkaM: 3, typ: 'vrata', typAuto: false });
   v.prvky.push(stena, dv, dv2, vr);

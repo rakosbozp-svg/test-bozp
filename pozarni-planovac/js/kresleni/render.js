@@ -4,6 +4,7 @@ export { sirkaTextu };
 import { trasaEvakSvg, jsteZdeSvg, slozEvakSvg, MIN_STENA_MM, MIN_PRICKA_MM } from './evakplan.js';
 import { delkaLomene } from './geom.js';
 import { maVektor, skupinaVektoru, vektorDoBoxu } from '../znackyVektor.js';
+import { datumUpravy } from '../zpracovani.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const f = (n) => (Math.round(n * 1000) / 1000).toString();
@@ -155,13 +156,14 @@ const TYP_LISTU = { situace: 'SITUACE', pudorys: 'PŮDORYS', schema: 'SCHÉMA' }
 const spoj = (casti, odd) => casti.map((x) => String(x ?? '').trim()).filter(Boolean).join(odd);
 const datumCz = (d) => { const t = String(d ?? '').trim(), m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t); return m ? `${Number(m[3])}. ${Number(m[2])}. ${m[1]}` : t; };
 
-// Údaje razítka: vlastní hodnota listu, jinak z operativní karty projektu (zpracoval + č. osvědčení, schválil + funkce, datum)
-// a název objektu. zKarty = hodnoty, které by se doplnily z karty (nápověda v panelu).
-export function udajeRazitka(v, { karta = null, objektNazev = '' } = {}) {
+// Údaje razítka: vlastní hodnota listu, jinak z operativní karty projektu (zpracoval + č. osvědčení, schválil + funkce) a název objektu.
+// Datum je vždy den poslední úpravy projektu (zmeneno, js/zpracovani.js) – ručně se nevyplňuje, starší razitko.datum se nepoužije.
+// zKarty = hodnoty, které by se doplnily z karty (nápověda v panelu).
+export function udajeRazitka(v, { karta = null, objektNazev = '', zmeneno = null } = {}) {
   const r = v.razitko || {}, zp = karta?.zpracoval || {}, sch = karta?.schvalil || {};
-  const zKarty = { nazev: String(objektNazev ?? '').trim(), zpracoval: spoj([zp.jmeno, zp.cisloOsvedceni], ' '), schvalil: spoj([sch.jmeno, sch.funkce], ', '), datum: String(zp.datum ?? '').trim() };
+  const zKarty = { nazev: String(objektNazev ?? '').trim(), zpracoval: spoj([zp.jmeno, zp.cisloOsvedceni], ' '), schvalil: spoj([sch.jmeno, sch.funkce], ', ') };
   const vl = (k) => String(r[k] ?? '').trim();
-  return { nazev: vl('nazev') || zKarty.nazev, zpracoval: vl('zpracoval') || zKarty.zpracoval, schvalil: vl('schvalil') || zKarty.schvalil, datum: vl('datum') || zKarty.datum, zKarty };
+  return { nazev: vl('nazev') || zKarty.nazev, zpracoval: vl('zpracoval') || zKarty.zpracoval, schvalil: vl('schvalil') || zKarty.schvalil, datum: datumUpravy(zmeneno), zKarty };
 }
 export { datumCz };
 
@@ -212,7 +214,7 @@ function razitko(v, o, L) {
     stitek(x1 + P, r.y + 3.2, 'NÁZEV:') + radky(x1 + P, yN, nazev, 'font-weight="700"') + radky(x1 + P, yL, list) +
     (druh ? T((x2 + x3) / 2, r.y + H1 / 2 + szDruh * 0.36, druh, szDruh, 'font-weight="700" text-anchor="middle"') : '') +
     stitek(r.x + P, yd + 3.2, 'SCHVÁLIL:') + radky(r.x + P, yd + 6.6, sch) +
-    stitek(xd + P, yd + 3.2, 'ZPRACOVAL:') + T(x3 - P, yd + 3.2, `datum: ${datumCz(u.datum)}`, 2.4, 'text-anchor="end"') + radky(xd + P, yd + 6.6, zpr) + `</g>`;
+    stitek(xd + P, yd + 3.2, 'ZPRACOVAL:') + T(x3 - P, yd + 3.2, `datum: ${u.datum}`, 2.4, 'text-anchor="end"') + radky(xd + P, yd + 6.6, zpr) + `</g>`;
 }
 
 // ---------- síť 10 m: popisky sloupců (A, B, … Z, AA …) nad rámem a řádků (1, 2, …) vlevo od rámu ----------

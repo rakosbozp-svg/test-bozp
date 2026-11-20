@@ -163,11 +163,12 @@ test('legenda: jen viditelné vrstvy, vždy uvnitř rámu (sloupce, zmenšení),
 test('razítko podle vzoru HZS: údaje z karty, zalomení dlouhého názvu, druh listu ve žlutém poli, datum d. m. rrrr', () => {
   const p = M.novyProjekt(), k = p.listy[0].karta, v = p.listy[1].vykres;
   Object.assign(k.zpracoval, { jmeno: 'Ing. Josef Novák', cisloOsvedceni: 'Z-OZO 111/0000', datum: '2020-01-01' }); Object.assign(k.schvalil, { jmeno: 'Ing. Karel Novák', funkce: '' });
-  const u = udajeRazitka(v, { karta: k, objektNazev: 'MŠ' });
-  assert.deepEqual([u.zpracoval, u.schvalil, u.datum, u.nazev], ['Ing. Josef Novák Z-OZO 111/0000', 'Ing. Karel Novák', '2020-01-01', 'MŠ']);
+  const u = udajeRazitka(v, { karta: k, objektNazev: 'MŠ', zmeneno: '2020-01-01T10:00:00.000Z' });
+  assert.deepEqual([u.zpracoval, u.schvalil, u.datum, u.nazev], ['Ing. Josef Novák Z-OZO 111/0000', 'Ing. Karel Novák', '1. 1. 2020', 'MŠ']);
+  v.razitko.datum = '2019-05-05'; assert.equal(udajeRazitka(v, { karta: k, zmeneno: '2020-01-01T10:00:00.000Z' }).datum, '1. 1. 2020', 'datum razítka je vždy den poslední úpravy projektu');
   v.razitko.zpracoval = 'Vlastní'; assert.equal(udajeRazitka(v, { karta: k }).zpracoval, 'Vlastní');
   const dlouhy = 'Mateřská škola Neználek – pavilon B s tělocvičnou, jídelnou a přístavbou z roku 2019 včetně technického zázemí';
-  const svg = renderListu(v, o({ karta: k, objektNazev: dlouhy }));
+  const svg = renderListu(v, o({ karta: k, objektNazev: dlouhy, zmeneno: '2020-01-01T10:00:00.000Z' }));
   assert.ok(svg.includes('S I T U A C E') && svg.includes('datum: 1. 1. 2020') && svg.includes('Ing. Karel Novák') && svg.includes('MĚŘÍTKO:'));
   const z = zalomDoBunky(dlouhy, 60, 3.4, { tucne: true, min: 2.4 });
   assert.equal(z.radky.length, 2); assert.ok(z.radky[1].endsWith('…')); assert.ok(z.radky.every((r) => sirkaTextu(r, z.vel, true) <= 60));

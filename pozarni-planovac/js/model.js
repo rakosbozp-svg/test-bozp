@@ -8,6 +8,7 @@ import { prazdnyOpZaklad, prazdnyOpText } from './operativniplan.js';
 import { prazdnySap } from './sap.js';
 import { prazdnyDotaznik } from './dotaznik.js';
 import { ocistiProjekt } from './ocista.js';
+import { VYCHOZI_ZPRACOVATEL } from './zpracovani.js';
 
 export const SCHEMA_VERSION = 1;
 export const NE = 'NE';
@@ -29,7 +30,7 @@ const uid = (p) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
 
 export const prazdnaKarta = () => ({
-  stupenPoplachu: '',
+  stupenPoplachu: '',            // netiskne se a ve formuláři není: stupeň poplachu doplňuje HZS (zadání uživatele); pole zůstává kvůli starším souborům
   uzemniOdbor: '',               // „Stanice HZS“ ve vzoru (místně příslušná stanice)
   objekt: {
     nazev: '', provozovatel: '', ic: '', adresa: '',
@@ -54,7 +55,8 @@ export const prazdnaKarta = () => ({
   vodniZdroje: [],               // {id, typ: hydrant|nadrz|jiny, popis, prutokLs, objemM3, gps, znackaId, overenPrutok}
   doporuceni: '',                // pouze podstatné; musí obsahovat, co se stane při vypnutí energií
   znalostObjektu: { jmeno: '', mobil: '', funkce: '' },
-  zpracoval: { jmeno: '', cisloOsvedceni: '', datum: '' },
+  // zpracovatel předvyplněný (js/zpracovani.js); datum se nepoužívá – datum zpracování je vždy den poslední úpravy projektu
+  zpracoval: { jmeno: VYCHOZI_ZPRACOVATEL, cisloOsvedceni: '', datum: '' },
   schvalil: { jmeno: '', funkce: '', datum: '' },
   mimoVzor: [],                  // {nazev, hodnota} – údaje ze starší verze karty, které vzor nemá (netisknou se, viz migrujKartu)
 });
@@ -66,6 +68,7 @@ function migrujKartu(k, puvodni = null) {
   const jeNe = (v) => String(v).trim().toUpperCase() === 'NE';
   const odloz = (nazev, v) => { if (!nic(v) && !jeNe(v) && !k.mimoVzor.some((x) => x.nazev === nazev && x.hodnota === String(v))) k.mimoVzor.push({ nazev, hodnota: String(v) }); };
   if (!Array.isArray(k.mimoVzor)) k.mimoVzor = [];
+  if (nic(k.zpracoval?.jmeno)) k.zpracoval.jmeno = VYCHOZI_ZPRACOVATEL;   // zpracovatelem je vždy uživatel, dokud ho nepřepíše
   for (const [klic, nazev] of [['vedlejsiUzaverVody', 'Vedlejší uzávěr vody'], ['vedlejsiUzaverPlynu', 'Vedlejší uzávěr plynu'], ['vedlejsiUzaverTopeni', 'Vedlejší uzávěr topení'], ['vedlejsiVypinacEl', 'Vedlejší vypínač el. proudu']]) {
     if (klic in k.media) { odloz(nazev, k.media[klic]); delete k.media[klic]; }
   }
@@ -247,7 +250,7 @@ export function migruj(data) {
   p.listy ||= [];
   for (const l of p.listy) {
     if (l.typ === 'karta') l.karta = migrujKartu(sloz(prazdnaKarta(), l.karta || {}), l.karta);
-    if (l.typ === 'evak_text') l.evak = sloz(prazdnaEvak(), l.evak || {});
+    if (l.typ === 'evak_text') { l.evak = sloz(prazdnaEvak(), l.evak || {}); if (!String(l.evak.zpracoval?.jmeno ?? '').trim()) l.evak.zpracoval.jmeno = VYCHOZI_ZPRACOVATEL; }
     if (l.typ === 'op_zaklad') l.opZaklad = sloz(prazdnyOpZaklad(), l.opZaklad || {});
     if (l.typ === 'op_text') l.opText = sloz(prazdnyOpText(), l.opText || {});
     if (l.typ === 'op_sap') l.opSap = sloz(prazdnySap(), l.opSap || {});

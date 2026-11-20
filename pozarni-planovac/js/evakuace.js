@@ -3,6 +3,7 @@
 // Grafické listy podlaží se kontrolují v js/uplnost.js podle výtahu požadavků ČSN ISO 23601 (nezávazná norma) jako upozornění.
 import { esc, dostan, nastav } from './formular.js';
 import { datumCz } from './kartaData.js';
+import { VYCHOZI_ZPRACOVATEL, datumUpravy } from './zpracovani.js';
 
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const uid = () => `e_${Math.random().toString(36).slice(2, 10)}`;
@@ -21,7 +22,7 @@ export const prazdnaEvak = () => ({
   material: '', materialStrezeni: '',                                   // § 33/2/e (nelze-li doplnit, „NE“)
   overeni: { datum: '', poznamka: '' },                                 // § 33/4 – cvičný požární poplach
   ulozeni: '',                                                          // § 33/5 – kde je plán uložen
-  zpracoval: { jmeno: '', cisloOsvedceni: '', datum: '' },
+  zpracoval: { jmeno: VYCHOZI_ZPRACOVATEL, cisloOsvedceni: '', datum: '' },   // datum se nepoužívá – datum zpracování = den poslední úpravy projektu
   schvalil: { jmeno: '', funkce: '', datum: '' },
 });
 
@@ -50,7 +51,7 @@ export const EVAK_SEKCE = [
     ['overeni.datum', 'Datum ověřovacího cvičného požárního poplachu', 'datum', 'S'], ['overeni.poznamka', 'Poznámka k ověření', 'text'],
     ['ulozeni', 'Místo uložení plánu (u jednotky HZS podniku, jinak na trvale dosažitelném místě)', 'text'] ] },
   { id: 'podpisy', nazev: 'Zpracoval a schválil', zdroj: 'Datum zpracování, jméno a odborná způsobilost zpracovatele – § 40 odst. 2; schválení – § 40 odst. 3', pole: [
-    ['zpracoval.jmeno', 'Zpracoval – jméno a příjmení', 'text'], ['zpracoval.cisloOsvedceni', 'Číslo osvědčení / oprávnění', 'text', 'S'], ['zpracoval.datum', 'Datum zpracování', 'datum', 'S'],
+    ['zpracoval.jmeno', 'Zpracoval – jméno a příjmení', 'text'], ['zpracoval.cisloOsvedceni', 'Číslo osvědčení / oprávnění', 'text', 'S'], ['zpracoval.datum', 'Datum zpracování (den poslední úpravy)', 'datumUpravy', 'S'],
     ['schvalil.jmeno', 'Schválil – jméno a příjmení', 'text'], ['schvalil.funkce', 'Funkce', 'text'], ['schvalil.datum', 'Datum schválení', 'datum', 'S'] ] },
 ];
 
@@ -85,7 +86,6 @@ export function kontrolaEvak(list, projekt, chyba, upoz) {
     [e.material, 'EVAK_E_MATERIAL', 'material', '§ 33/2/e: místo soustředění evakuovaného materiálu (nebo „NE“)', false],
     [e.zpracoval.jmeno, 'ZPRACOVAL', 'zpracoval.jmeno', '§ 40/2: jméno zpracovatele', true],
     [e.zpracoval.cisloOsvedceni, 'OSVEDCENI', 'zpracoval.cisloOsvedceni', '§ 40/2: odborná způsobilost zpracovatele (číslo osvědčení)', true],
-    [e.zpracoval.datum, 'EVAK_DATUM', 'zpracoval.datum', '§ 40/2: datum zpracování', true],
   ];
   for (const [v, kod, cesta, nazev, bezNe] of povinne) {
     if (prazdne(v)) chyba(kod, `${p}.${cesta}`, `${nazev}: nevyplněno.`);
@@ -114,7 +114,8 @@ export function kontrolaEvak(list, projekt, chyba, upoz) {
 }
 
 // ---------- formulář ----------
-const pole = (list, [cesta, label, typ, sirka, neLze]) => {
+const pole = (list, [cesta, label, typ, sirka, neLze], projekt) => {
+  if (typ === 'datumUpravy') return `<div class="f ${sirka === 'S' ? 'f-s' : ''}"><span>${esc(label)}</span><output class="vystup" data-datum-upravy>${esc(datumUpravy(projekt?.zmeneno))}</output></div>`;
   const dc = `listy[${list.id}].evak.${cesta}`, v = dostan(list.evak, cesta);
   const ne = typ === 'datum' || !neLze ? '' : `<button type="button" class="ne" data-ne="${cesta}" title="Údaj v objektu není – vepsat NE" aria-label="Vyplnit NE: ${esc(label)}">NE</button>`;
   const vstup = typ === 'area'
@@ -129,8 +130,8 @@ function seznam(list, kolekce, nadpis, zdroj, radek, tlacitko, prazdno) {
   return `<section class="sek sek-seda" id="sek-${kolekce}" data-cesta="${p}.${kolekce}"><h3>${esc(nadpis)}</h3><p class="napoveda">${esc(zdroj)}</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="${kolekce}">${esc(tlacitko)}</button></section>`;
 }
 
-export function vykresliEvak(list, host) {
-  const sekce = (s) => `<section class="sek sek-seda" id="sek-${s.id}"><h3>${esc(s.nazev)}</h3>${s.zdroj ? `<p class="napoveda">${esc(s.zdroj)}</p>` : ''}<div class="mriz">${s.pole.map((x) => pole(list, x)).join('')}</div></section>`;
+export function vykresliEvak(list, host, projekt = null) {
+  const sekce = (s) => `<section class="sek sek-seda" id="sek-${s.id}"><h3>${esc(s.nazev)}</h3>${s.zdroj ? `<p class="napoveda">${esc(s.zdroj)}</p>` : ''}<div class="mriz">${s.pole.map((x) => pole(list, x, projekt)).join('')}</div></section>`;
   const inp = (kol, x, klic, label, s = '') => `<label class="f ${s}"><span>${label}</span><input type="text" data-pol="${kol}" data-id="${x.id}" data-klic="${klic}" value="${esc(x[klic])}"></label>`;
   const [ob, ri, pr, ce, po, ma, ov, pod] = EVAK_SEKCE;
   host.innerHTML = `<p class="napoveda">Evakuační plán slouží osobám v objektu. <b>Není to DZP</b> (ta slouží zasahujícím hasičům) – oba dokumenty se nemíchají. Obsah podle vyhlášky č. 246/2001 Sb., § 33.</p>${[
@@ -176,7 +177,7 @@ export function evakJakoText(e, projekt) {
   const grafika = (projekt?.listy || []).filter((l) => l.typ === 'evak_plan');
   o.push('f) GRAFICKÉ ZNÁZORNĚNÍ SMĚRU ÚNIKOVÝCH CEST', grafika.length ? `Viz grafické listy: ${grafika.map((l) => `${l.nazev}${l.vykres?.evakPlan?.podlazi ? ` (${l.vykres.evakPlan.podlazi})` : ''}`).join('; ')}.` : '…', '');
   o.push('OVĚŘENÍ A ULOŽENÍ', `Ověřeno cvičným požárním poplachem dne: ${h(datumCz(e.overeni.datum))}${e.overeni.poznamka ? ` (${e.overeni.poznamka})` : ''}`, `Plán je uložen: ${h(e.ulozeni)}`, '');
-  o.push(`Zpracoval: ${h(e.zpracoval.jmeno)}, č. osvědčení: ${h(e.zpracoval.cisloOsvedceni)}, datum: ${h(datumCz(e.zpracoval.datum))}`, `Schválil: ${h(e.schvalil.jmeno)}${e.schvalil.funkce ? `, ${e.schvalil.funkce}` : ''}, datum: ${h(datumCz(e.schvalil.datum))}`);
+  o.push(`Zpracoval: ${h(e.zpracoval.jmeno)}, č. osvědčení: ${h(e.zpracoval.cisloOsvedceni)}, datum: ${h(datumUpravy(projekt?.zmeneno))}`, `Schválil: ${h(e.schvalil.jmeno)}${e.schvalil.funkce ? `, ${e.schvalil.funkce}` : ''}, datum: ${h(datumCz(e.schvalil.datum))}`);
   return o.join('\n');
 }
 

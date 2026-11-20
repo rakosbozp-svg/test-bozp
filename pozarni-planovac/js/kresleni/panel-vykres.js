@@ -1,6 +1,6 @@
 // Panely editoru výkresu: Vlastnosti (prvek / list / podklad) a Vrstvy.
 import * as P from './prvky.js';
-import { esc, udajeRazitka, datumCz, POLOHY_LEGENDY } from './render.js';
+import { esc, udajeRazitka, POLOHY_LEGENDY } from './render.js';
 import { naCislo, zCisla } from '../formular.js';
 import { zeptejSe, potvrd, oznam } from '../dialogy.js';
 import { ikona } from '../ikony.js';
@@ -47,7 +47,7 @@ export function vykresliPanelVykresu(druh, host, ed) {
         })}" data-klik="1">${ikona('zavrit', 16)}</button></li>`).reverse().join('') + `</ul>${tlacitko('+ Nová vrstva', async () => { const n = await zeptejSe('Název nové vrstvy'); if (n?.trim()) { ed.v.vrstvy.push({ id: `v_${Math.random().toString(36).slice(2, 8)}`, nazev: n.trim(), viditelna: true, zamcena: false }); ed.commit(); } })}`;
   } else if (vyber.length === 0) {
     const v = ed.v, nast = ed.projekt.nastaveni, karta = ed.projekt.listy.find((l) => l.karta)?.karta || null;
-    const { zKarty } = udajeRazitka(v, { karta, objektNazev: karta?.objekt.nazev || '' });
+    const { zKarty, datum } = udajeRazitka(v, { karta, objektNazev: karta?.objekt.nazev || '', zmeneno: ed.projekt.zmeneno });
     const pz = v.pozadi, pr = pz && ed.projekt.prilohy[pz.prilohaId];
     html = `<h3>List</h3>
       ${v.evakPlan ? evakPanel(ed, v, { pole, vyberHtml, tlacitko, zmen, reg, zaskrt }) : ''}
@@ -62,8 +62,8 @@ export function vykresliPanelVykresu(druh, host, ed) {
       ${v.meritkoZdroj ? `<p class="${v.meritkoZdroj.overeno ? '' : 'varuj'}">${ikona(v.meritkoZdroj.overeno ? 'ok' : 'pozor', 14)} ${v.meritkoZdroj.zdroj === 'claude' ? 'Rozměry výkresu' : 'Měřítko importu'}: ${esc(v.meritkoZdroj.popis)} – ${v.meritkoZdroj.overeno ? 'ověřeno' : 'NEOVĚŘENO'}.</p>${v.meritkoZdroj.overeno ? '' : tlacitko('Kalibrovat podle známé délky', () => ed.nastavNastroj('kalibrace'))}` : ''}
       ${v.evakPlan ? '' : `<h4>Razítko</h4>
       ${['nazev:Název objektu', 'zpracoval:Zpracoval (jméno, č. osvědčení)', 'schvalil:Schválil (jméno, funkce)'].map((x) => { const [k, n] = x.split(':'); return pole(n, v.razitko[k], zmen((t) => { v.razitko[k] = t; }), { napoveda: zKarty[k] ? `z karty: ${zKarty[k]}` : '' }); }).join('')}
-      <label class="f"><span>Datum${zKarty.datum ? ` (prázdné = z karty: ${esc(datumCz(zKarty.datum))})` : ''}</span><input type="date" value="${esc(v.razitko.datum)}" data-h="${reg(zmen((t) => { v.razitko.datum = t; }))}"></label>
-      ${zKarty.zpracoval || zKarty.schvalil || zKarty.datum ? '<p class="napoveda">Prázdná pole razítka se vyplní z operativní karty projektu (Zpracoval, Schválil, datum zpracování).</p>' : ''}`}
+      <p class="napoveda">Datum v razítku: <b>${esc(datum)}</b> – vždy den poslední úpravy projektu (nevyplňuje se ručně).</p>
+      ${zKarty.zpracoval || zKarty.schvalil ? '<p class="napoveda">Prázdná pole razítka se vyplní z operativní karty projektu (Zpracoval, Schválil).</p>' : ''}`}
       <h4>Výchozí velikosti nových prvků</h4>
       ${velikost('Značka', nast.velikostZnacky, (n) => { nast.velikostZnacky = normalizujVelikost(n); ed.uloz(); })}
       ${velikost('Text', nast.velikostTextu, (n) => { nast.velikostTextu = normalizujVelikost(n); ed.uloz(); })}

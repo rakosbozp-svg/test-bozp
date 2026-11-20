@@ -36,6 +36,12 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
     await page.waitForSelector('.editor');
     assert.match(page.url(), /#\/p\//);
 
+    // stupeň poplachu doplní HZS (pole ve formuláři není), zpracovatel je předvyplněný, datum zpracování = den poslední úpravy
+    assert.equal(await page.$('[data-pole="stupenPoplachu"]'), null);
+    assert.equal(await page.inputValue('[data-pole="zpracoval.jmeno"]'), 'Šimon Rákoš');
+    const dnes = await page.evaluate(() => { const d = new Date(); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`; });
+    assert.equal(await page.textContent('[data-datum-upravy]'), dnes);
+
     // vyplnění pole + persistence po reloadu
     await page.fill('[data-pole="objekt.nazev"]', 'Hala PREFA 1');
     await page.click('[data-ne="objekt.omezeni"]');
@@ -74,6 +80,10 @@ test('E2E: dashboard, formulář, uložení, kontrola úplnosti, listy, záloha'
     await page.click('[data-z=nahled]');
     assert.ok((await page.textContent('#nahled-a4')).includes('Hala PREFA 1'));
     assert.ok((await page.textContent('#nahled-a4')).includes('460 kWp'));
+    assert.ok(!(await page.textContent('#nahled-a4')).includes('OMEZENÍ'), 'okénko OMEZENÍ s „NE“ se netiskne');
+    const stupen = await page.locator('#nahled-a4 td:has-text("STUPEŇ POPLACHU")').innerHTML();
+    assert.ok(!stupen.split('Stanice HZS')[0].includes('chybi'), 'stupeň poplachu bez teček');
+    assert.ok((await page.textContent('#nahled-a4')).includes(`DATUM${dnes}`), 'datum zpracování na kartě');
     assert.match(await page.locator('#nahled-a4 img[alt="Nebezpečí – výbuch"]').first().getAttribute('src'), /^data:image\/svg\+xml;base64,/, 'náhled A4: ostrá značka se správným alt');
     await page.click('[data-z=formular]');
 

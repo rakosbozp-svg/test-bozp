@@ -1,8 +1,9 @@
 // Obsah operativní karty jako prostá data (bez HTML). Jediný zdroj pro náhled na obrazovce i pro PDF, aby se nikdy nerozešly.
 // Rozvržení do okének vzoru HZS SČK je v js/kartaRozvrzeni.js.
 import { zCisla } from './formular.js';
-import { PBZ, stavPbz, upresneniPbz } from './kartaPole.js';
+import { PBZ, stavPbz, upresneniPbz, jeNe } from './kartaPole.js';
 import { vzdalenostM } from './geo.js';
+import { datumUpravy } from './zpracovani.js';
 
 const prazdne = (v) => v === null || v === undefined || String(v).trim() === '';
 const tx = (v) => (prazdne(v) ? '' : String(v).trim());
@@ -31,12 +32,17 @@ function textVody(v, gpsObjektu) {
   return `${tx(v.popis)}${prutok}${objem}${g ? `, GPS: ${g}` : ''}${vzd}`;
 }
 
+// Spojí části okénka (např. telefon a jméno kontaktu) bez částí s „NE“; když jsou všechny vyplněné části „NE“, vrátí „NE“
+// (okénko se pak na kartě netiskne), když není vyplněno nic, vrátí '' (okénko se tiskne jako nevyplněné).
+const spojBezNe = (casti, odd) => { const t = casti.map(tx).filter(Boolean), vid = t.filter((x) => !jeNe(x)); return vid.length ? vid.join(odd) : t.length ? 'NE' : ''; };
+
 export function sestavKartu(k, projekt) {
   const o = k.objekt, c = k.charakter, m = k.media, p = k.pbz;
   const pbzAno = PBZ.filter(([klic]) => stavPbz(p[klic]) === true).map(([klic, zkratka]) => ({ zkratka, upresneni: upresneniPbz(p[klic]) }));
   return {
-    hlava: { stupen: tx(k.stupenPoplachu), stanice: tx(k.uzemniOdbor), objekt: tx(o.nazev), provozovatel: tx(o.provozovatel), ic: tx(o.ic), adresa: tx(o.adresa), gps: gpsText(o.gps),
-      pracovniDoba: tx(o.provoz.pracovniDoba), kontakt: [tx(o.provoz.kontaktTelefon), tx(o.provoz.kontaktJmeno)].filter(Boolean).join(' – '), obsazeni: tx(o.obsazeniOsobami), prijezd: tx(o.prijezdZ), omezeni: tx(o.omezeni) },
+    // stupeň poplachu se netiskne – doplňuje ho HZS (okénko karty zůstává prázdné)
+    hlava: { stanice: tx(k.uzemniOdbor), objekt: tx(o.nazev), provozovatel: tx(o.provozovatel), ic: tx(o.ic), adresa: tx(o.adresa), gps: gpsText(o.gps),
+      pracovniDoba: tx(o.provoz.pracovniDoba), kontakt: spojBezNe([o.provoz.kontaktTelefon, o.provoz.kontaktJmeno], ' – '), obsazeni: tx(o.obsazeniOsobami), prijezd: tx(o.prijezdZ), omezeni: tx(o.omezeni) },
     charakter: { ucel: tx(c.ucelStavby), podlazi: tx(c.podlazi), pudorys: tx(c.pudorysM), konstrukce: tx(c.konstrukce), unikoveCesty: tx(c.unikoveCesty), vyska: tx(c.celkovaVyskaM),
       steny: tx(c.steny), priccky: tx(c.priccky), vytahy: tx(c.vytahy), vytahE: c.vytahEvakuacni === true, vytahP: c.vytahPozarni === true, plocha: tx(c.zastavenaPlochaM2),
       stropy: tx(c.stropy), strecha: tx(c.strecha), typUnik: tx(c.typUnikoveCesty), useky: tx(c.pozarniUseky) },
@@ -46,10 +52,10 @@ export function sestavKartu(k, projekt) {
     vypinace: [['V:el', m.hlavniVypinacEl], ['V:total', m.totalStop], ['V:central', m.centralStop]].map(([znacka, t]) => ({ znacka, text: tx(t) })),
     ktpo: tx(p.ktpo), oppo: tx(p.oppo),
     pbz: pbzAno, pbzZadne: PBZ.every(([klic]) => stavPbz(p[klic]) === false),
-    vody: k.vodniZdroje.map((v) => ({ znackaId: v.znackaId || null, text: textVody(v, o.gps) })),
+    vody: k.vodniZdroje.map((v) => ({ znackaId: v.znackaId || null, text: textVody(v, o.gps), ne: jeNe(v.popis) })),
     doporuceni: tx(k.doporuceni),
     znalost: { jmeno: tx(k.znalostObjektu.jmeno), mobil: tx(k.znalostObjektu.mobil), funkce: tx(k.znalostObjektu.funkce) },
-    zpracoval: { jmeno: tx(k.zpracoval.jmeno), cislo: tx(k.zpracoval.cisloOsvedceni), datum: datumCz(k.zpracoval.datum) },
+    zpracoval: { jmeno: tx(k.zpracoval.jmeno), cislo: tx(k.zpracoval.cisloOsvedceni), datum: datumUpravy(projekt.zmeneno) },   // datum = den poslední úpravy projektu
     schvalil: { jmeno: tx(k.schvalil.jmeno), funkce: tx(k.schvalil.funkce), datum: datumCz(k.schvalil.datum) },
     revize: projekt.revize.map((x) => `č. ${x.cislo} (${datumCz(x.datum)}): ${tx(x.popis)}`),
   };

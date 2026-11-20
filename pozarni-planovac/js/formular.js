@@ -3,6 +3,7 @@
 import { najdiZnacku, vyberZnacku } from './znacky.js';
 import { obrazekZnacky } from './znackyVektor.js';
 import { textVzdalenosti, ctiGps } from './geo.js';
+import { datumUpravy } from './zpracovani.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -24,7 +25,9 @@ export const naCislo = (t) => {
 };
 export const zCisla = (n) => (n === null || n === undefined ? '' : String(n).replace('.', ','));
 
-const pole = (list, [cesta, label, typ, sirka]) => {
+const pole = (list, [cesta, label, typ, sirka], projekt) => {
+  // datum zpracování se nevyplňuje: je to den poslední úpravy projektu (app.js ho po každé úpravě přepíše v [data-datum-upravy])
+  if (typ === 'datumUpravy') return `<div class="f ${sirka === 'S' ? 'f-s' : ''}"><span>${esc(label)}</span><output class="vystup" data-datum-upravy>${esc(datumUpravy(projekt?.zmeneno))}</output></div>`;
   const dc = `listy[${list.id}].karta.${cesta}`;
   const v = dostan(list.karta, cesta);
   const ne = (typ === 'text' || typ === 'area') && !BEZ_NE.has(cesta) ? `<button type="button" class="ne" data-ne="${cesta}" title="Nelze doplnit – vepsat NE" aria-label="Vyplnit NE: ${esc(label)}">NE</button>` : '';
@@ -38,8 +41,8 @@ const pole = (list, [cesta, label, typ, sirka]) => {
 
 const TYPY_VODY = [['hydrant', 'Vnější hydrant'], ['nadrz', 'Požární nádrž'], ['jiny', 'Jiný zdroj']];
 
-export function vykresliKartu(list, host) {
-  const sekce = (s) => `<section class="sek sek-${s.barva}" id="sek-${s.id}"><h3>${esc(s.nazev)}</h3>${s.napoveda ? `<p class="napoveda">${esc(s.napoveda)}</p>` : ''}<div class="mriz">${s.pole.map((p) => pole(list, p)).join('')}</div></section>`;
+export function vykresliKartu(list, host, projekt = null) {
+  const sekce = (s) => `<section class="sek sek-${s.barva}" id="sek-${s.id}"><h3>${esc(s.nazev)}</h3>${s.napoveda ? `<p class="napoveda">${esc(s.napoveda)}</p>` : ''}<div class="mriz">${s.pole.map((p) => pole(list, p, projekt)).join('')}</div></section>`;
   const [hl, ch, me, dop, pod] = SEKCE;
   host.innerHTML = [
     mimoVzor(list), sekce(hl), sekce(ch),
@@ -57,7 +60,7 @@ function pbz(list) {
     const st = stavPbz(d[k]);
     return `<div class="f pbz-radek" data-cesta="${p}.${k}"><span>${z} – ${n}</span><span class="f-r"><select data-pbz="${k}" aria-label="${z}: je v objektu?"><option value="">— neuvedeno —</option><option value="ano" ${st === true ? 'selected' : ''}>je v objektu</option><option value="ne" ${st === false ? 'selected' : ''}>není</option></select>${st === true ? `<input type="text" data-pbz-upresneni="${k}" placeholder="upřesnění (nepovinné), např. ústředna ve vrátnici" aria-label="${z}: upřesnění" value="${esc(upresneniPbz(d[k]))}">` : ''}</span></div>`;
   }).join('');
-  return `<section class="sek sek-zelena" id="sek-pbz"><h3>Požárně bezpečnostní zařízení (PBZ)</h3><p class="napoveda">Vzor HZS SČK: „* nehodící se smaž“ – u každého zařízení zvolte, zda v objektu je. Na kartě se vytisknou jen zařízení, která v objektu jsou (je-li vše „není“, vytiskne se „NE“). KTPO a OPPO mají ve vzoru vlastní okénko – vepište umístění, nebo „NE“.</p>
+  return `<section class="sek sek-zelena" id="sek-pbz"><h3>Požárně bezpečnostní zařízení (PBZ)</h3><p class="napoveda">Vzor HZS SČK: „* nehodící se smaž“ – u každého zařízení zvolte, zda v objektu je. Na kartě se vytisknou jen zařízení, která v objektu jsou (je-li vše „není“, nevytiskne se nic). KTPO a OPPO mají ve vzoru vlastní okénko – vepište umístění, nebo „NE“ (okénko s „NE“ se na kartě netiskne).</p>
     <div class="mriz">${umisteni}</div><div class="mriz pbz-mriz">${zarizeni}</div>
     <p><button type="button" class="btn mal" data-akce="pbz-vse-ne" title="Nastaví „není“ u zařízení, která jsou zatím neuvedená">Zbylá zařízení: není</button></p></section>`;
 }
@@ -84,7 +87,7 @@ function nebezpeci(list) {
       <label class="f f-s"><span>Vhodné hasivo</span><input type="text" data-pol="nebezpeci" data-id="${n.id}" data-klic="hasivo" value="${esc(n.hasivo)}"></label>
       <button type="button" class="btn mal" data-akce="smaz" data-kolekce="nebezpeci" title="Odebrat položku">Odebrat</button>
     </div>`).join('') || '<p class="prazdno">Zatím žádná položka. Bez nebezpečí přidejte položku s textem „NE“.</p>';
-  return `<section class="sek sek-cervena" id="sek-nebezpeci" data-cesta="${p}.nebezpeci"><h3>Nebezpečí</h3><p class="napoveda">Vzor HZS SČK má dva předtištěné řádky – hořlavé látky a výbušniny (předpřipravená okénka se nemažou). Nehodí-li se, vepište „NE“; u chemických látek uveďte vhodná hasiva. Další nebezpečí přidejte tlačítkem.</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="nebezpeci">+ Přidat nebezpečí</button></section>`;
+  return `<section class="sek sek-cervena" id="sek-nebezpeci" data-cesta="${p}.nebezpeci"><h3>Nebezpečí</h3><p class="napoveda">Vzor HZS SČK má dva předtištěné řádky – hořlavé látky a výbušniny (předpřipravená okénka se nemažou). Nehodí-li se, vepište „NE“ – řádek s „NE“ se na kartě netiskne. U chemických látek uveďte vhodná hasiva. Další nebezpečí přidejte tlačítkem.</p><div class="seznam">${radky}</div><button type="button" class="btn" data-akce="pridej" data-kolekce="nebezpeci">+ Přidat nebezpečí</button></section>`;
 }
 
 function fve(list) {
