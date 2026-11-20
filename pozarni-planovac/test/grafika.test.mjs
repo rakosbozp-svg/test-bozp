@@ -11,8 +11,8 @@ test('situace: chybějící vodní zdroj, nástupní plocha, uzávěry a místo 
   const p = M.novyProjekt(), sit = p.listy.find((l) => l.typ === 'situace');
   assert.deepEqual(upoz(p), [], 'prázdný výkres neřeší (hlásí obecná kontrola)');
   sit.vykres.prvky.push({ id: 's', druh: 'stena', body: [[0, 0], [10, 0]], tloustkaM: 0.3, barva: '#000', vrstva: 'zaklad' });
-  assert.deepEqual(upoz(p).sort(), ['GRAF_SIT_EVAKUACE', 'GRAF_SIT_NASTUP', 'GRAF_SIT_POPLACH', 'GRAF_SIT_UZAVERY', 'GRAF_SIT_VODA']);
-  sit.vykres.prvky.push(zn('a', 'DZP-001'), zn('b', 'DZP-055'), zn('c', 'DZP-042'), zn('d', 'DZP-045'),
+  assert.deepEqual(upoz(p).sort(), ['GRAF_SIT_EVAKUACE', 'GRAF_SIT_NASTUP', 'GRAF_SIT_POPLACH', 'GRAF_SIT_PRIJEZD', 'GRAF_SIT_UZAVERY', 'GRAF_SIT_VCHODY', 'GRAF_SIT_VODA']);
+  sit.vykres.prvky.push(zn('a', 'DZP-001'), zn('b', 'DZP-055'), zn('c', 'DZP-042'), zn('d', 'DZP-045'), zn('e', 'DZP-105'), P.novyPrvek('prijezd', { body: [[0, 20], [0, 5]] }),
     { id: 'pl', druh: 'plocha', body: [[0, 0], [5, 0], [5, 5]], vypln: '#f2d200', kryti: 0.6, barva: '#000', tloustka: 0.3, vrstva: 'komunikace' });
   assert.deepEqual(upoz(p), []);
   assert.ok(zkontrolujUplnost(p).filter((n) => n.kod.startsWith('GRAF_')).every((n) => n.hladina === 'upozorneni'));
@@ -26,7 +26,7 @@ test('soulad s kartou: FVE, plyn, EPS, hydrant a nebezpečí uvedené v kartě m
   const u = upoz(p);
   for (const kod of ['GRAF_KARTA_FVE', 'GRAF_KARTA_PLYN', 'GRAF_KARTA_EPS', 'GRAF_KARTA_HYDRANT', 'GRAF_KARTA_NEBEZPECI']) assert.ok(u.includes(kod), kod);
   assert.ok(!u.includes('GRAF_KARTA_VYPINAC'), '„NE“ se nehlásí');
-  sit.vykres.prvky.push(zn('1', 'DZP-104'), zn('2', 'DZP-005'), zn('3', 'DZP-054'), zn('4', 'DZP-004'), zn('5', 'DZP-053'));
+  sit.vykres.prvky.push(zn('1', 'DZP-104'), zn('2', 'DZP-005'), zn('3', 'DZP-054'), zn('4', 'DZP-004'), zn('5', 'DZP-053'), P.novyPrvek('text', { x: 1, y: 1, text: 'FVE' }));
   assert.ok(!upoz(p).some((x) => x.startsWith('GRAF_KARTA')));
 });
 
@@ -64,7 +64,32 @@ test('evakuační plán se grafikou DZP nekontroluje', () => {
 
 test('situace: plocha s výplní podle významu „komunikace“ je komunikace pro techniku (žádné falešné upozornění)', () => {
   const p = M.novyProjekt(), sit = p.listy.find((l) => l.typ === 'situace');
-  sit.vykres.prvky.push(zn('a', 'DZP-001'), zn('b', 'DZP-055'), zn('c', 'DZP-042'), zn('d', 'DZP-045'),
+  sit.vykres.prvky.push(zn('a', 'DZP-001'), zn('b', 'DZP-055'), zn('c', 'DZP-042'), zn('d', 'DZP-045'), zn('e', 'DZP-105'), P.novyPrvek('prijezd', { body: [[0, 20], [0, 5]] }),
     P.pouzijVyznam({ id: 'pl', druh: 'plocha', body: [[0, 0], [5, 0], [5, 5]], vrstva: 'komunikace' }, 'komunikace'));
   assert.deepEqual(upoz(p), []);
+});
+
+// Připomínky HZS ke kontrolované DZP (FVE, 2026): „zakreslit příjezd“, „brány + vstupy na pozemek“, „umístění vchodu do objektu???“,
+// „dvě studny ???“, přístup na střechu po žebřících, „trafostanici nakreslit“, „označení FVE“.
+test('situace: příjezd jednotek a brány / vchody se hlásí, když chybí', () => {
+  const p = M.novyProjekt(), sit = p.listy.find((l) => l.typ === 'situace');
+  sit.vykres.prvky.push({ id: 's', druh: 'stena', body: [[0, 0], [10, 0]], tloustkaM: 0.3, barva: '#000', vrstva: 'zaklad' });
+  assert.ok(upoz(p).includes('GRAF_SIT_PRIJEZD') && upoz(p).includes('GRAF_SIT_VCHODY'));
+  sit.vykres.prvky.push(P.novyPrvek('prijezd', { body: [[0, 20], [0, 5]] }), zn('v', 'DZP-108'));
+  assert.ok(!upoz(p).includes('GRAF_SIT_PRIJEZD') && !upoz(p).includes('GRAF_SIT_VCHODY'));
+});
+
+test('co karta zmiňuje (studna, požární žebřík, trafostanice, FVE), má být ve výkresu', () => {
+  const p = M.novyProjekt(), k = p.listy.find((l) => l.typ === 'karta').karta, sit = p.listy.find((l) => l.typ === 'situace');
+  sit.vykres.prvky.push(zn('c', 'DZP-042'));
+  k.doporuceni = 'Odběrná místa: dvě studny u brány. Přístup na střechu po požárních žebřících. Hlavní vypínač v trafostanici TS 12.';
+  const zminky = () => zkontrolujUplnost(p).filter((n) => n.kod === 'GRAF_KARTA_ZMINKA').map((n) => n.text);
+  assert.equal(zminky().length, 3);
+  assert.ok(zminky().some((t) => /studnu.*DZP-010/.test(t)) && zminky().some((t) => /žebřík.*DZP-065/.test(t)) && zminky().some((t) => /trafostanici.*DZP-024/.test(t)));
+  sit.vykres.prvky.push(zn('1', 'DZP-010'), zn('2', 'DZP-068'), zn('3', 'DZP-024'));
+  assert.deepEqual(zminky(), []);
+  k.fve.pritomna = true;
+  assert.ok(upoz(p).includes('GRAF_KARTA_FVE_PLOCHA'), 'FVE bez popisku ve výkresu');
+  sit.vykres.prvky.push(P.novyPrvek('text', { x: 1, y: 1, text: 'FVE na střeše' }));
+  assert.ok(!upoz(p).includes('GRAF_KARTA_FVE_PLOCHA'));
 });

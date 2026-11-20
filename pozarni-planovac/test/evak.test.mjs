@@ -55,8 +55,9 @@ test('§ 33/2 a)–d) a § 40/2: „NE“ nestačí, odborná způsobilost zprac
   const n = zkontrolujUplnost(p), text = (kod) => n.find((x) => x.kod === kod)?.text || '';
   for (const kod of ['EVAK_A_OSOBA', 'EVAK_A_MISTO', 'EVAK_C_CESTY', 'EVAK_D_POMOC', 'EVAK_C_KONTROLA']) assert.match(text(kod), /„NE“ zde nestačí/, kod);
   assert.ok(!kody(p).includes('EVAK_B_PROSTREDKY') && !kody(p).includes('EVAK_E_MATERIAL'), 'u prostředků a materiálu „NE“ stačí');
-  assert.ok(kody(p).includes('OSVEDCENI'));
-  assert.ok(!kody(p).includes('EVAK_DATUM') && !kody(p).includes('ZPRACOVAL'), 'datum zpracování se vyplní samo (den poslední úpravy), zpracovatel je předvyplněný');
+  assert.ok(!['EVAK_DATUM', 'ZPRACOVAL', 'OSVEDCENI'].some((kod) => kody(p).includes(kod)), 'datum zpracování se vyplní samo (den poslední úpravy), zpracovatel i číslo osvědčení jsou předvyplněné');
+  p.listy[0].evak.zpracoval.cisloOsvedceni = '';
+  assert.ok(kody(p).includes('OSVEDCENI'), 'smazané číslo osvědčení je chyba (§ 40/2)');
 });
 
 test('§ 33/2/f v jednotlivých podlažích: rozsah plánu proti označení podlaží na listech', async () => {

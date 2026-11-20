@@ -3,7 +3,7 @@
 // Grafické listy podlaží se kontrolují v js/uplnost.js podle výtahu požadavků ČSN ISO 23601 (nezávazná norma) jako upozornění.
 import { esc, dostan, nastav } from './formular.js';
 import { datumCz } from './kartaData.js';
-import { VYCHOZI_ZPRACOVATEL, datumUpravy } from './zpracovani.js';
+import { VYCHOZI_ZPRACOVATEL, VYCHOZI_CISLO_OSVEDCENI, datumUpravy } from './zpracovani.js';
 
 const prazdne = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const uid = () => `e_${Math.random().toString(36).slice(2, 10)}`;
@@ -22,7 +22,7 @@ export const prazdnaEvak = () => ({
   material: '', materialStrezeni: '',                                   // § 33/2/e (nelze-li doplnit, „NE“)
   overeni: { datum: '', poznamka: '' },                                 // § 33/4 – cvičný požární poplach
   ulozeni: '',                                                          // § 33/5 – kde je plán uložen
-  zpracoval: { jmeno: VYCHOZI_ZPRACOVATEL, cisloOsvedceni: '', datum: '' },   // datum se nepoužívá – datum zpracování = den poslední úpravy projektu
+  zpracoval: { jmeno: VYCHOZI_ZPRACOVATEL, cisloOsvedceni: VYCHOZI_CISLO_OSVEDCENI, datum: '' },   // datum se nepoužívá – datum zpracování = den poslední úpravy projektu
   schvalil: { jmeno: '', funkce: '', datum: '' },
 });
 

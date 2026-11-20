@@ -44,9 +44,13 @@ Webová aplikace pro dokumentaci zdolávání požárů (operativní karta, oper
   na konci seznamu PBZ navíc ADSP – autonomní detekce a signalizace požáru, PBZ podle vyhl. 246/2001 Sb., § 2 odst. 2 písm. a), vzor ji nemá),
   výkres s měřítkem/severkou/vrstvami/legendou, revize, migrace starších souborů (vedlejší uzávěry starší karty se zachovají jako
   „údaje mimo vzor“ a netisknou se), očista importovaných souborů (`js/ocista.js`), velikost prvků 1–500 (krok 0,1).
-  Zpracovatel nových karet a evakuačních plánů je předvyplněný (`js/zpracovani.js`, ve formuláři jde přepsat) a datum zpracování
+  Zpracovatel nových karet a evakuačních plánů je předvyplněný i s číslem osvědčení (`js/zpracovani.js`; číslo se doplní jen výchozímu
+  zpracovateli, ve formuláři jde přepsat) a datum zpracování
   na kartě, v razítku výkresů i v evakuačním plánu je vždy den poslední úpravy projektu – ručně se nezadává a export ho nemění.
-- **Kontrola úplnosti** (`js/uplnost.js`): hlášení nesou popisky polí; „NE“ nejde u názvu, adresy a zpracovatele; hasivo u nebezpečí,
+- **Kontrola úplnosti** (`js/uplnost.js`): hlášení nesou popisky polí; „NE“ nejde u názvu, adresy a zpracovatele; IČ provozovatele;
+  obecné pokyny k zásahu v doporučení, které HZS při kontrole škrtá (např. „hasit z bezpečné vzdálenosti“, „zvážit vstup na střechu“);
+  situace bez šipky příjezdu a bez bran / vchodů (DZP-105, DZP-108); zmínky v kartě, které chybí ve výkresu (studna DZP-010, požární
+  žebřík DZP-065, trafostanice DZP-024, popisek FVE) – podle ručních připomínek HZS SČK ke kontrolované DZP; hasivo u nebezpečí,
   výkon FVE v kWp, ověřený průtok hydrantu, doporučení s vypnutím energií, měřítko, severka, legenda, revize, existence značek.
 - **Litice** (`data/litice.projekt.json`): jen potvrzené údaje o FVE a poznámky o rozsahu a polohách.
 

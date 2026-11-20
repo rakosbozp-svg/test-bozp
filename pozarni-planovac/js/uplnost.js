@@ -55,13 +55,19 @@ export function zkontrolujUplnost(projekt, katalogZnacek = null) {
 }
 
 const jeNe = (v) => typeof v === 'string' && v.trim().toUpperCase() === 'NE';
+// Obecné pokyny k zásahu, které HZS při kontrole DZP škrtá (ruční připomínky HZS SČK ke kontrolované DZP FVE, 2026): velitel je zná
+// z taktických postupů; do doporučení patří fakta o objektu a postup dohodnutý s HZS (např. „FVE se nechá vyhořet, chladit okolní konstrukce“).
+const OBECNE_POKYNY = [
+  [/přizpůsobit jízdu/i, 'přizpůsobit jízdu'], [/odborně způsobil/i, 'odpojení odborně způsobilou osobou'], [/omezit (co nejvíce )?pohyb/i, 'omezit pohyb hasičů'],
+  [/vyvarovat se/i, 'vyvarovat se kontaktu'], [/bezpečné vzdálenosti/i, 'hasit z bezpečné vzdálenosti'], [/zvážit vstup/i, 'zvážit vstup'], [/výškov\S* techni/i, 'výšková technika'],
+];
 const NE_NAVOD = '(návod HZS SČK: co nelze doplnit, vepište „NE“)';
 
 // Operativní karta podle vzoru a návodu HZS SČK: každé předpřipravené okénko je vyplněné, nebo má „NE“.
 function kontrolaKarty(k, p, chyba, upoz) {
   const o = k.objekt, c = `${p}.karta`, pop = (cesta) => POPISEK[cesta] || cesta;
   const povinne = [
-    ['KARTA_STANICE', 'uzemniOdbor'], ['ID_OBJEKT', 'objekt.nazev'], ['ID_PROVOZOVATEL', 'objekt.provozovatel'], ['ADRESA', 'objekt.adresa'],
+    ['KARTA_STANICE', 'uzemniOdbor'], ['ID_OBJEKT', 'objekt.nazev'], ['ID_PROVOZOVATEL', 'objekt.provozovatel'], ['ICO', 'objekt.ic'], ['ADRESA', 'objekt.adresa'],
     ['PRACOVNI_DOBA', 'objekt.provoz.pracovniDoba'], ['KONTAKT', 'objekt.provoz.kontaktTelefon'], ['KONTAKT_JMENO', 'objekt.provoz.kontaktJmeno'],
     ['OBSAZENI', 'objekt.obsazeniOsobami'], ['PRIJEZD', 'objekt.prijezdZ'], ['OMEZENI', 'objekt.omezeni'],
     ['ZNALOST', 'znalostObjektu.jmeno'], ['ZNALOST_MOBIL', 'znalostObjektu.mobil'], ['ZPRACOVAL', 'zpracoval.jmeno'], ['OSVEDCENI', 'zpracoval.cisloOsvedceni'],
@@ -106,6 +112,8 @@ function kontrolaKarty(k, p, chyba, upoz) {
     if (!jeNe(v.popis) && (prazdne(v.gps?.sirka) || prazdne(v.gps?.delka))) upoz('VODA_GPS', `${c}.vodniZdroje[${v.id}]`, 'Vodní zdroj: chybí GPS (vzor ji uvádí).');
   }
 
+  const obecne = OBECNE_POKYNY.filter(([re]) => re.test(k.doporuceni || '')).map(([, t]) => `„${t}“`);
+  if (obecne.length) upoz('DOPORUCENI_OBECNE', `${c}.doporuceni`, `Doporučení obsahuje obecné pokyny k zásahu (${obecne.join(', ')}) – HZS je při kontrole škrtá. Uveďte jen fakta o objektu (co kde je, co zůstane pod napětím, co se stane po vypnutí energií) a postup dohodnutý s HZS.`);
   if (prazdne(k.doporuceni)) chyba('DOPORUCENI', `${c}.doporuceni`, 'Doporučení pro velitele zásahu není vyplněné (uveďte i, co se stane při vypnutí energií).');
   else if (!/vyp[ií]n|vypn|odpoj|energi|STOP|elektr|\bel\.|plyn|proud/i.test(k.doporuceni)) upoz('DOPORUCENI_ENERGIE', `${c}.doporuceni`, 'Doporučení: uveďte, co se stane při vypnutí energií (návod HZS SČK).');
   if (prazdne(k.schvalil.jmeno) || prazdne(k.schvalil.funkce)) upoz('SCHVALIL', `${c}.schvalil.jmeno`, 'Schválil: doplňte jméno a funkci (tabulka SCHVÁLIL vzoru HZS SČK).');

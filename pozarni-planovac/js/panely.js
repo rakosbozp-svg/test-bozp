@@ -33,9 +33,17 @@ export const METODIKA = `
 <li>Značka, která není v příloze č. 1 metodiky, se popíše v legendě na témže výkresu.</li><li>Značky se kreslí shodnou tloušťkou čar a velikost se přizpůsobí měřítku.</li></ul>
 <p class="zdroj">Hanuška 1996, kap. 2.3; vzor HZS SCK. <i>Aplikace nabízí barvy metodiky, síť 10 × 10 m, severku, měřítko, razítko a legendu; vše ověřuje zpracovatel.</i></p></details>
 <details><summary>Pravidla vyplnění karty (HZS SCK)</summary><ul>
-<li>Předpřipravená okénka nemažte; co nelze doplnit, vepište „NE“.</li><li>U chemických látek uveďte vhodná hasiva.</li><li>U FVE uveďte výkon v kWp.</li>
+<li>Co nelze doplnit, vepište „NE“ (návod: předpřipravená okénka nemazat) – plánovač okénko s „NE“ na kartě netiskne.</li><li>U chemických látek uveďte vhodná hasiva.</li><li>U FVE uveďte výkon v kWp.</li>
 <li>U vnějších hydrantů uveďte ověřený průtok v l/s.</li><li>V doporučení veliteli jen podstatné informace a co se stane při vypnutí energií.</li>
 <li>Kartu uložte jako PDF a odešlete ke konzultaci na místně příslušný ÚO HZS, nebo podejte ke schválení.</li></ul><p class="zdroj">Návod k vyplnění OK, HZS SCK. Vzor platí pro HZS Středočeského kraje.</p></details>
+<details><summary>Časté připomínky HZS při kontrole DZP</summary><ul>
+<li>Doporučení: jen fakta o objektu a postup dohodnutý s HZS. Obecné pokyny k hašení HZS škrtá (hasit z bezpečné vzdálenosti, vyvarovat se kontaktu s vodivými částmi, omezit pohyb hasičů, zajistit odpojení odborně způsobilou osobou, zvážit vstup na střechu, výšková technika, přizpůsobit jízdu).</li>
+<li>Žádný popisný text v charakteru objektu – příjezd a omezení (průjezdná výška podjezdu) patří do okének PŘÍJEZD / OMEZENÍ a do výkresu.</li>
+<li>Provozovatel s IČ, obsazení osobami (např. trvalá obsluha, vrátnice H24), stanice HZS; stupeň poplachu doplňuje HZS.</li>
+<li>Na co text odkazuje („viz grafická část“), musí být ve výkresu: hlavní vypínač, hasicí přístroje, studny, hydranty, vchod se STOP tlačítkem FVE. U hydrantu druh a průtok.</li>
+<li>Situace: příjezd jednotek, brány a vstupy na pozemek, vchody do objektu, zásahové cesty (u FVE přístup na střechu – požární žebříky), zdroje požární vody, FVE a trafostanice, legenda; každá budova popsaná, název objektu shodný s kartou.</li>
+<li>Barvy podle metodiky: žlutě jen pojízdné komunikace a nástupní plochy – ne skládky materiálu ani nezpevněné plochy. Uzávěry a vypínače značkou na přesném místě, ne vlastním nápisem v kroužku.</li></ul>
+<p class="zdroj">Ruční připomínky HZS SČK ke kontrolované DZP FVE (2026). <i>Plánovač na většinu z nich upozorní v kontrole úplnosti.</i></p></details>
 <details><summary>Kdo smí DZP zpracovat a jak se předkládá</summary>
 <p>DZP smí zpracovat osoba podle § 11 odst. 1 nebo 2 zákona o požární ochraně (OZO nebo technik PO). Předkládá se ke schválení ve 2 listinných vyhotoveních se žádostí (Zásady HZS SCK, kap. 1 a 4).</p><p class="zdroj">Údaje jsou převzaty z dodaných Zásad HZS SCK; ověřte jejich aktuální znění.</p></details>
 <details><summary>Co vyžaduje odborné nebo místní ověření</summary><ul>

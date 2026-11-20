@@ -76,7 +76,8 @@ test('kontrola úplnosti: prázdná karta má chyby, vyplněná NE je akceptová
   const p = M.novyProjekt();
   const kody = (n) => new Set(n.map((x) => x.kod));
   let n = zkontrolujUplnost(p, katalog.znacky);
-  for (const kod of ['ID_OBJEKT', 'GPS', 'PRIJEZD', 'NEBEZPECI_POPIS', 'VODA', 'DOPORUCENI', 'FVE_ROZHODNUTI', 'OSVEDCENI']) assert.ok(kody(n).has(kod), kod);
+  for (const kod of ['ID_OBJEKT', 'ICO', 'GPS', 'PRIJEZD', 'NEBEZPECI_POPIS', 'VODA', 'DOPORUCENI', 'FVE_ROZHODNUTI']) assert.ok(kody(n).has(kod), kod);
+  assert.ok(!kody(n).has('ZPRACOVAL') && !kody(n).has('OSVEDCENI'), 'zpracovatel a číslo osvědčení jsou předvyplněné');
   assert.ok(kody(n).has('SEVERKA') && kody(n).has('KARTA_PUDORYS') && kody(n).has('REVIZE_CHYBI'));
   assert.ok(souhrn(n).chyby > 10);
 

@@ -20,10 +20,14 @@ export const KATEGORIE = {
   poplach: R(null, 45, 48, 51),                                                   // 2.3.2 g): místo řízení evakuace, tlačítko poplachu, telefon s ohlašovnou
   nebezpeci: R(null, 3, 6, 9, 12, 15, 18, 21, 27, 29, 32, 35, 41, 47, 50, 53, 56, 74),   // výstrahy, nebezpečné látky, zákaz hašení vodou
   eps: R(null, 54),
-  vchod: R(null, 105, 108),
+  vchod: R(null, 105, 108),                                                       // hlavní / vedlejší vchod do objektu, podniku (i brána areálu)
+  zebrik: R(null, 65, 68, 71), studna: R(null, 10), trafo: R(null, 24),
   useky: R(null, 62),                                                             // 2.3.3 c): hranice požárního úseku
 };
 const ZLUTA = '#f2d200';
+const ZMINKY = [   // [výraz v textu karty, co (4. pád), skupina značek, značka do hlášení]
+  [/studn/i, 'studnu', 'studna', 'DZP-010'], [/žebří[kc]/i, 'požární žebřík', 'zebrik', 'DZP-065'], [/trafostanic|transformovn|\bTS\s?\d/i, 'trafostanici', 'trafo', 'DZP-024'],
+];
 const ne = (v) => v === null || v === undefined || String(v).trim() === '' || String(v).trim().toUpperCase() === 'NE';
 
 const maZnacku = (prvky, kat) => prvky.some((p) => p.druh === 'znacka' && KATEGORIE[kat].has(p.znackaId));
@@ -43,6 +47,9 @@ export function kontrolaGrafikyDzp(projekt, upoz) {
       if (!maNastup(pr)) upoz('GRAF_SIT_NASTUP', c, `${n(l)}: chybí nástupní plocha / komunikace pro techniku (žlutá plocha nebo značka, Hanuška 2.3.2 c) – ověřte.`);
       if (!maZnacku(pr, 'uzaver')) upoz('GRAF_SIT_UZAVERY', c, `${n(l)}: chybí uzávěry vody, el. energie, plynu a ovládací a řídicí centra (Hanuška 2.3.2 b) – ověřte.`);
       if (!maZnacku(pr, 'evakuace')) upoz('GRAF_SIT_EVAKUACE', c, `${n(l)}: chybí místo soustředění evakuovaných osob (Hanuška 2.3.2 d) – ověřte, zda je určeno.`);
+      // připomínky HZS ke kontrolované DZP: „zakreslit příjezd“, „brány + vstupy na pozemek“, „umístění vchodu do objektu???“
+      if (!pr.some((p) => p.druh === 'prijezd')) upoz('GRAF_SIT_PRIJEZD', c, `${n(l)}: není zakreslen příjezd jednotek (šipka směru příjezdu) – HZS ho při kontrole DZP vyžaduje.`);
+      if (!maZnacku(pr, 'vchod')) upoz('GRAF_SIT_VCHODY', c, `${n(l)}: nejsou zakresleny brány a vstupy na pozemek ani vchody do objektu (DZP-105 hlavní, DZP-108 vedlejší) – HZS je při kontrole DZP vyžaduje.`);
       if (!maZnacku(pr, 'poplach')) upoz('GRAF_SIT_POPLACH', c, `${n(l)}: chybí místo, odkud lze vyhlásit požární poplach nebo řídit evakuaci (Hanuška 2.3.2 g) – ověřte.`);
     }
     if (l.typ === 'pudorys') {
@@ -69,6 +76,11 @@ export function kontrolaGrafikyDzp(projekt, upoz) {
     if (!ne(d.media.centralStop) && !maZnacku(vse, 'centralStop')) upoz('GRAF_KARTA_CENTRAL', c, `Výkresy: ${kn} uvádí CENTRAL STOP, ve výkresech chybí jeho značka (DZP-107).`);
     if (d.fve.pritomna === true && !maZnacku(vse, 'fveVypnuti')) upoz('GRAF_KARTA_FVE', c, `Výkresy: ${kn} uvádí FVE, ve výkresech chybí značka vypínače silové části / TOTAL STOP / CENTRAL STOP.`);
     if (stavPbz(d.pbz.eps) === true && !maZnacku(vse, 'eps')) upoz('GRAF_KARTA_EPS', c, `Výkresy: ${kn} uvádí ústřednu EPS, ve výkresech chybí její značka.`);
+    // zmínky v textu karty, které HZS ve výkresu hledá („dvě studny ???“, požární žebříky na fasádě, „trafostanici nakreslit“)
+    const texty = [d.doporuceni, d.fve.popis, d.fve.vypinacSilovaCast, ...Object.values(d.media), ...Object.values(d.charakter), ...d.nebezpeci.map((x) => x.popis), ...d.vodniZdroje.map((x) => x.popis), d.objekt.prijezdZ, d.objekt.omezeni]
+      .filter((t) => typeof t === 'string' && !ne(t)).join('\n');
+    for (const [re, co, kat, id] of ZMINKY) if (re.test(texty) && !maZnacku(vse, kat)) upoz('GRAF_KARTA_ZMINKA', c, `Výkresy: ${kn} zmiňuje ${co}, ve výkresech chybí značka ${id} – co karta uvádí, má být ve výkresu (HZS při kontrole hledá každou zmínku).`);
+    if (d.fve.pritomna === true && !vse.some((p) => p.druh === 'text' && /FVE|fotovolt/i.test(p.text || ''))) upoz('GRAF_KARTA_FVE_PLOCHA', c, `Výkresy: ${kn} uvádí FVE – vyznačte a popište ji ve výkresu (plocha panelů, střídače, popisek „FVE“).`);
     if (d.nebezpeci.some((x) => !ne(x.popis)) && !maZnacku(vse, 'nebezpeci')) upoz('GRAF_KARTA_NEBEZPECI', c, `Výkresy: ${kn} uvádí nebezpečí, ve výkresech chybí výstražná značka.`);
   }
 }

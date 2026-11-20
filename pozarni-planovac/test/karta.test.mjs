@@ -15,7 +15,7 @@ import { cisloZOdpovedi } from '../js/dotaznik.js';
 import { rozborPbr, navrhZPbr } from '../js/pbr.js';
 import { pouzijNavrh } from '../js/prebirani.js';
 import { jeNe } from '../js/kartaPole.js';
-import { datumUpravy, VYCHOZI_ZPRACOVATEL } from '../js/zpracovani.js';
+import { datumUpravy, VYCHOZI_ZPRACOVATEL, VYCHOZI_CISLO_OSVEDCENI } from '../js/zpracovani.js';
 
 const katalog = new Map(JSON.parse(readFileSync(new URL('../znacky/katalog.json', import.meta.url), 'utf8')).znacky.map((z) => [z.id, z]));
 const mame = (cmd) => spawnSync(cmd, ['-v']).status !== null;
@@ -256,4 +256,26 @@ test('PDF: vzorová karta bez „NE“, s datem poslední úpravy (poppler)', { 
   const txt = spawnSync('pdftotext', ['-layout', f, '-']).stdout.toString();
   assert.doesNotMatch(txt, /(^|\s)NE(\s|$)/m);
   assert.ok(txt.includes(datumUpravy(p.zmeneno)) && txt.includes('STUPEŇ POPLACHU'));
+});
+
+test('připomínky HZS: IČ provozovatele je povinné, obecné pokyny k zásahu v doporučení se hlásí', () => {
+  const p = projektSeVzorem(), k = p.listy[0].karta;
+  k.objekt.ic = '';
+  assert.equal(zkontrolujUplnost(p).find((x) => x.kod === 'ICO')?.hladina, 'chyba');
+  k.objekt.ic = 'NE'; assert.ok(!kody(p).has('ICO'), 'bez IČ (fyzická osoba) stačí „NE“');
+  assert.ok(!kody(p).has('DOPORUCENI_OBECNE'), 'vzorové doporučení obsahuje jen fakta');
+  k.doporuceni += '\nVyvarovat se přímému kontaktu s vodivými částmi, hasit z bezpečné vzdálenosti. Zvážit vstup na střechu, hasit z výškové techniky.';
+  const n = zkontrolujUplnost(p).find((x) => x.kod === 'DOPORUCENI_OBECNE');
+  assert.equal(n.hladina, 'upozorneni'); assert.match(n.text, /hasit z bezpečné vzdálenosti/); assert.match(n.text, /zvážit vstup/); assert.match(n.text, /výšková technika/);
+});
+
+test('výchozí číslo osvědčení patří jen výchozímu zpracovateli', () => {
+  assert.equal(VYCHOZI_CISLO_OSVEDCENI, 'Z-OZO-32/2026');
+  const p = M.novyProjekt();
+  assert.deepEqual(p.listy[0].karta.zpracoval, { jmeno: VYCHOZI_ZPRACOVATEL, cisloOsvedceni: VYCHOZI_CISLO_OSVEDCENI, datum: '' });
+  assert.equal(M.novyProjekt({ typ: 'evakuacni_plan' }).listy[0].evak.zpracoval.cisloOsvedceni, VYCHOZI_CISLO_OSVEDCENI);
+  const jiny = JSON.parse(JSON.stringify(p)); Object.assign(jiny.listy[0].karta.zpracoval, { jmeno: 'Ing. Jan Novák', cisloOsvedceni: '' });
+  assert.equal(M.migruj(jiny).listy[0].karta.zpracoval.cisloOsvedceni, '', 'cizímu zpracovateli se číslo nedoplní');
+  const prazdny = JSON.parse(JSON.stringify(p)); Object.assign(prazdny.listy[0].karta.zpracoval, { jmeno: '', cisloOsvedceni: '' });
+  assert.equal(M.migruj(prazdny).listy[0].karta.zpracoval.cisloOsvedceni, VYCHOZI_CISLO_OSVEDCENI);
 });

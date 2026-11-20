@@ -4,6 +4,7 @@
 // otevření projektu ho nezmění a v exportu zůstane den, kdy byl projekt naposledy upraven.
 
 export const VYCHOZI_ZPRACOVATEL = 'Šimon Rákoš';
+export const VYCHOZI_CISLO_OSVEDCENI = 'Z-OZO-32/2026';   // doplní se jen výchozímu zpracovateli, nikdy jinému jménu
 
 // ISO čas poslední úpravy → „20. 11. 2026“ (místní čas); neplatný nebo chybějící čas → ''.
 export const datumUpravy = (zmeneno) => {
